@@ -2979,10 +2979,25 @@
 <!-- The page is a band and a grid under it: the place the map is open on across the top, and the
 	three columns this game is made of below.
 
-	The page never scrolls (`h-screen`, `overflow-hidden`) and the band takes only the height of
+	The page never scrolls (`h-dvh`, `overflow-hidden`) and the band takes only the height of
 	its one row (`flex-none`), so what the grid divides is whatever is left — which is why it is a
-	flex column with `min-h-0 flex-1` on the grid rather than the grid being the page. -->
-<div class="flex h-screen flex-col overflow-hidden">
+	flex column with `min-h-0 flex-1` on the grid rather than the grid being the page.
+
+	`h-dvh` and not `h-screen`, which is the whole of why this page fits a phone. `100vh` is the
+	LARGE viewport — the height the window would have if the browser's own bars were gone — so on
+	a phone it is the screen plus the address bar plus the toolbar, a hundred-odd pixels of page
+	laid under furniture that is actually on screen. A page that never scrolls cannot scroll them
+	out of the way either, which is the worst of both: the foot of the grid (the side's folded
+	strip, and the bottom of the terrain with it) sat under the browser's chrome with no gesture
+	that would bring it up. `100dvh` is the viewport as it stands right now, bars counted, so what
+	this box is told is what the reader can actually see.
+	It is `dvh` rather than `svh` because those bars can come and go — a rotation, a browser that
+	retracts its toolbar — and the small viewport would leave a band of nothing at the foot of the
+	page whenever they did. Nothing here makes them move: the document has no scroll of its own,
+	which is what a phone retracts chrome for, so in practice the two are the same number all
+	session and the map is never re-framed by it (see WorldMap's ResizeObserver, and the side's
+	wrapper for what a moving map box costs). -->
+<div class="flex h-dvh flex-col overflow-hidden">
 	<!-- The page's first row, and it is the whole of what stands over the three columns: the
 		game's name at the near end and what the game gets asked at the far end.
 
@@ -3437,6 +3452,20 @@
 			of what one can see of the country, which is why on that width the picture stands beside
 			the place rather than on top of it.
 
+			Square up to a point, and the point is `max-h-[40dvh]`. A 1:1 of the page's width is a
+			height read off the ONE axis of a phone that says nothing about the other: the band above
+			and the side's folded strip below are a fixed 8-odd rems between them, so on a tall
+			handset a square block leaves the terrain a third of the screen and on a short, wide one
+			it leaves it almost nothing — the same markup, and the map is the thing that pays either
+			way. The cap is what makes the block a share of the screen rather than a consequence of
+			the width: two fifths of the viewport at most, so whatever phone this is opened on the
+			map is the largest thing on it, which is the one claim this page's whole layout makes.
+			Where the square is narrower than that it is still exactly a square — the cap only bites
+			where the picture would have cost the map its box — and what does not fit inside it
+			scrolls in the panel below, which is what that panel already does at every width.
+			`md:max-h-none` for the same reason as `md:aspect-auto` beside it: from `md` up this is a
+			half of a column and the grid says how tall it is.
+
 			From `md` up it is the TOP HALF OF THE THIRD COLUMN: `md:col-start-3 md:row-start-1`, in
 			the first of two `minmax(0,1fr)` rows, with the furniture in the second. So the block and
 			the panel under it divide that column exactly in two, and the block is given a height it
@@ -3495,7 +3524,7 @@
 		{#if townBlock}
 			<div
 				transition:blur={CHROME_BLUR}
-				class="row-start-2 flex aspect-square w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:aspect-auto md:border-b-2 md:border-t-0"
+				class="row-start-2 flex aspect-square max-h-[40dvh] w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:aspect-auto md:max-h-none md:border-b-2 md:border-t-0"
 			>
 				<!-- The head of the block: two cells of one grid, where the map is standing at the near
 					one and the three tabs at the far one. What they are is one statement in two
@@ -3765,12 +3794,16 @@
 					  of. With the panel's own padding round it that comes to the 5.875rem the grid
 					  keeps clear at the foot of the page (2px + 0.75 + 4.25 + 0.75), so folded the
 					  side closes the page exactly where the map stops and covers nothing at all.
-					- Unfolded, `max-h-[66vh]`. What that mostly means is "as tall as what is in it",
+					- Unfolded, `max-h-[66dvh]`. What that mostly means is "as tall as what is in it",
 					  the statues and the plate and the marks coming to well under two thirds of a
 					  phone; the figure is the ceiling for the case where they do not, and past it this
 					  box scrolls inside itself exactly as it does from `md` up. It is stated as a
 					  length rather than left off because a transition needs two ends: `max-h-[4.25rem]` to
 					  nothing at all is not a distance, and the fold would jump.
+					  `dvh` and not `vh`, for the reason the page itself is `h-dvh` (see the wrapper at
+					  the top): this sheet grows upward from the foot of the visible page, so two
+					  thirds of the LARGE viewport is two thirds of a screen plus the browser's own
+					  bars — a sheet that would open past the top of the page it is drawn over.
 					The transition is on the max-height, which is the honest cost of animating a box
 					whose real height nothing has measured: what is drawn stops growing at the content's
 					own height while the max goes on to 66vh, so the last part of an unfold is over
@@ -3794,7 +3827,7 @@
 				<div
 					class={classNames(
 						'flex min-h-0 min-w-0 flex-col gap-2 transition-[max-height] duration-[250ms] ease-out md:max-h-none md:flex-1 md:overflow-y-auto',
-						sideOpen ? 'max-h-[66vh] overflow-y-auto' : 'max-h-[4.25rem] overflow-hidden'
+						sideOpen ? 'max-h-[66dvh] overflow-y-auto' : 'max-h-[4.25rem] overflow-hidden'
 					)}
 				>
 					{#if ready}
