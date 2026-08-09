@@ -187,8 +187,8 @@
 
 	// How many times a region has been picked. Nothing reads it for its value: it is what
 	// makes a pick a movement rather than a change of state, since the region asked for may
-	// well be the region already open — the picked town's own crumb asks for exactly that
-	// (see `pressable`), and so does clicking the pin the map is already framed on. The URL
+	// well be the region already open — clicking the pin the map is already framed on asks for
+	// exactly that, and so does a crumb naming a place the view has since wandered off. The URL
 	// does not change on either, so nothing downstream of it would, and the framing below
 	// takes this instead so that a pick always re-frames.
 	let picks = 0;
@@ -1025,6 +1025,12 @@
 	 * is worth saying once whether one path or two go through it. The plurality is passed in
 	 * rather than read off the closure so that a statement calling this names it and re-runs
 	 * when it changes.
+	 *
+	 * No step of it is marked `current` (see MapBreadcrumbs), because none of them is: the one
+	 * path left is the cut ABOVE the open region, so its every step — the root view included, and
+	 * the parent it ends on most of all — is a place the map can be taken to. Each is pressed for
+	 * what any pin, row or crumb on this map is pressed for: `open` its key, which frames that
+	 * place and redraws the polygons at its own tier, whichever tier that is.
 	 */
 	function crumbLadder(path: RegionNode[], plurality: ReturnType<typeof everyTownPlurality>) {
 		return [
@@ -1045,16 +1051,7 @@
 					key: node.key as string | null,
 					showName: node.show?.name ?? null,
 					showId: node.show?.id ?? null,
-					tileClasses: node.color ? pinColorClasses[node.color] : null,
-					// The bottom of the ladder is the one step still worth pressing. Every tier above
-					// it either has a step above it to walk back to or an empty square below it to
-					// zoom into; a town has neither — it is the last rung, so a bar that named one
-					// would have nothing that takes the map back down to it. It is pressed for what
-					// every other crumb is pressed for — frame the place it names — which for this
-					// tier is the municipality zoom. Nothing reaches it while the only bar left is
-					// the one over the column beside the map, which letters the cut ABOVE the open
-					// region and so never ends on a town; it is kept for the bar that does.
-					pressable: tier === 'Municipality'
+					tileClasses: node.color ? pinColorClasses[node.color] : null
 				};
 			})
 		];

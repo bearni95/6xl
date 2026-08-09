@@ -63,14 +63,19 @@
 		/** The tier that position stands for — what the empty square is labelled by. */
 		tier?: string;
 		/**
-		 * The step the map is on, and still a way of going somewhere: pressed for `onSelect`
-		 * like every step above it, rather than being the inert end of the path. For the crumb
-		 * whose place the map can be moved off while the bar goes on naming it — a picked town,
-		 * which the bar holds however far the view then wanders — so pressing it is the way
-		 * back to the place it names. The caller says which crumb that is; only the last one
-		 * is ever asked.
+		 * The step the map is standing on: the one crumb that is not a way of going anywhere,
+		 * since it names where you already are. **The caller says which one that is** — this bar
+		 * used to decide for itself, by taking the last step of the path for it, and that is only
+		 * true of a path walked all the way down to the open place. The one caller left letters
+		 * the cut ABOVE the open region (see +page.svelte's `aboveCrumbs`), whose last step is the
+		 * place the open one sits inside — somewhere to go, and the very step a reader who opened
+		 * this column is most likely reaching for. Guessing made it the one thing in here that
+		 * could not be pressed.
+		 *
+		 * Nothing marked, then every step is a press, which is the honest reading of a path that
+		 * names no current place.
 		 */
-		pressable?: boolean;
+		current?: boolean;
 	}[] = [];
 	export let onSelect: (key: string | null) => void;
 	// What an empty position does: the tier it stands for, handed back for the caller to zoom
@@ -163,10 +168,13 @@
 	// Nothing to be dropped open once the path fits again.
 	$: if (!collapsed) expanded = false;
 
-	// The step the map is on: the one crumb the collapsed row keeps. The last position that
+	// The end of the path: the one crumb the collapsed row keeps. The last position that
 	// names a region, not the last position — the ladder's tail is empty squares whenever the
 	// map has not drilled to the bottom, and a row folded down to one thing keeps the thing
-	// that says where you are. The squares it drops are in the column the dots button opens.
+	// that says how far you have walked. The squares it drops are in the column the dots button
+	// opens. Whether that step is where the map is standing is the caller's to say (see
+	// `current`) and not this bar's to assume — it is only the same crumb on a path walked all
+	// the way down to the open place.
 	$: lastCrumb = [...crumbs].reverse().find((crumb) => !crumb.empty);
 
 	// The ladder as it is drawn: every step that names a place, and exactly one square — the
@@ -300,13 +308,8 @@
 						the same name the badge two inches away is already printing (see the prop). -->
 					{#if dotsOnly}
 						<!-- nothing beside the dots -->
-					{:else if lastCrumb?.pressable}
-						<button
-							type="button"
-							aria-current="page"
-							class="-mx-1 min-w-0 flex-1 rounded-md px-1 py-0.5 text-left hover:bg-white/10"
-							on:click={() => pick(lastCrumb?.key ?? null)}
-						>
+					{:else if lastCrumb?.current}
+						<div aria-current="page" class="min-w-0 flex-1">
 							<MapBreadcrumb
 								label={lastCrumb.label}
 								showName={lastCrumb.showName ?? null}
@@ -315,18 +318,21 @@
 								current
 								truncated
 							/>
-						</button>
+						</div>
 					{:else}
-						<div aria-current="page" class="min-w-0 flex-1">
+						<button
+							type="button"
+							class="-mx-1 min-w-0 flex-1 rounded-md px-1 py-0.5 text-left hover:bg-white/10"
+							on:click={() => pick(lastCrumb?.key ?? null)}
+						>
 							<MapBreadcrumb
 								label={lastCrumb?.label ?? ''}
 								showName={lastCrumb?.showName ?? null}
 								showId={lastCrumb?.showId ?? null}
 								tileClasses={lastCrumb?.tileClasses ?? null}
-								current
 								truncated
 							/>
-						</div>
+						</button>
 					{/if}
 				</div>
 			{:else}
@@ -347,31 +353,12 @@
 									>
 										<MapGlyph />
 									</button>
-								{:else if crumb === lastCrumb && crumb.pressable}
-									<!-- The step the map is on, pressed like the steps above it: the view can be
-										taken off the place while the bar goes on naming it, so there is somewhere
-										for it to go after all — back to what it names. It keeps `aria-current`,
-										since it is still where you are, and it answers the pointer the way the
-										crumbs above it do. -->
-									<button
-										type="button"
-										aria-current="page"
-										class="-mx-1 rounded-md px-1 py-0.5 hover:bg-white/10 hover:no-underline"
-										on:click={() => pick(crumb.key)}
-									>
-										<MapBreadcrumb
-											label={crumb.label}
-											showName={crumb.showName ?? null}
-											showId={crumb.showId ?? null}
-											tileClasses={crumb.tileClasses ?? null}
-											current
-										/>
-									</button>
-								{:else if crumb === lastCrumb}
-									<!-- The step the map is on. `aria-current` and not a control: it is where you
-										already are, so there is nowhere for it to go — which is also why it undoes
-										DaisyUI's `cursor: pointer`, put on every child of an `li` on the assumption
-										that a crumb is a link. -->
+								{:else if crumb.current}
+									<!-- The step the map is on — the caller's to mark, and only ever the end of a
+										path walked down to the open place. `aria-current` and not a control: it is
+										where you already are, so there is nowhere for it to go — which is also why
+										it undoes DaisyUI's `cursor: pointer`, put on every child of an `li` on the
+										assumption that a crumb is a link. -->
 									<span aria-current="page" class="cursor-default hover:no-underline">
 										<MapBreadcrumb
 											label={crumb.label}
@@ -441,22 +428,7 @@
 			)}
 		>
 			{#each dropped as crumb}
-				{#if crumb === lastCrumb && crumb.pressable}
-					<button
-						type="button"
-						aria-current="page"
-						class="rounded-md px-2 py-1 text-left hover:bg-white/10"
-						on:click={() => pick(crumb.key)}
-					>
-						<MapBreadcrumb
-							label={crumb.label}
-							showName={crumb.showName ?? null}
-							showId={crumb.showId ?? null}
-							tileClasses={crumb.tileClasses ?? null}
-							current
-						/>
-					</button>
-				{:else if crumb === lastCrumb}
+				{#if crumb.current}
 					<span aria-current="page" class="rounded-md px-2 py-1">
 						<MapBreadcrumb
 							label={crumb.label}
