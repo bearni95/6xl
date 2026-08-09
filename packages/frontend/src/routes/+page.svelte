@@ -1202,13 +1202,38 @@
 	// run over the listed level instead of over every town on the map (see
 	// buildShowStandings) — biggest share first, and over the places that fly anything at all,
 	// so a region with no show is not counted against the shows that have one.
-	$: subdivisionShares = buildShowStandings(
-		new Map(
-			subdivisionNodes
-				.filter((node) => node.show)
-				.map((node) => [node.key, node.show!] as [string, RegionShow])
-		)
-	).map((standing) => ({ id: standing.id, name: standing.name, share: standing.share }));
+	//
+	// And then every show the map can fly at all, at 0%, for the ones this level flies none of.
+	// The tally is a row of marks read at a glance, and a row whose marks change place and
+	// number at every step of the walk is one that has to be read again from scratch each time:
+	// with the whole set always in it a show keeps its cell wherever the reader is standing, and
+	// a level flying none of it says so — a 0% is a reading about this level, where an absent
+	// mark is nothing at all. The 0% ones are drawn faint (see ShowShareGrid).
+	//
+	// The set is the seedable pool and not the saved collection: a show with no cast is on no
+	// town anywhere (see seedableShowIds), so a cell for it would be a mark for something that
+	// cannot appear however far the reader walks. Ordered as the tally orders anything — biggest
+	// first — which puts the whole of the 0% tail at the end, by name among themselves.
+	function buildSubdivisionShares(
+		nodes: RegionNode[],
+		pool: readonly number[],
+		saved: ReadonlyMap<number, RegionShow>
+	): { id: number; name: string; share: number }[] {
+		const flown = buildShowStandings(
+			new Map(nodes.filter((node) => node.show).map((node) => [node.key, node.show!]))
+		).map((standing) => ({ id: standing.id, name: standing.name, share: standing.share }));
+
+		const counted = new Set(flown.map((entry) => entry.id));
+		const rest = pool
+			.map((id) => saved.get(id))
+			.filter((show): show is RegionShow => Boolean(show) && !counted.has(show!.id))
+			.map((show) => ({ id: show.id, name: show.name, share: 0 }))
+			.sort((a, b) => a.name.localeCompare(b.name));
+
+		return [...flown, ...rest];
+	}
+
+	$: subdivisionShares = buildSubdivisionShares(subdivisionNodes, seedableShowIds, savedShowById);
 
 	// The open town's pin, where that place is a town — and the only one anywhere on this page
 	// that is drawn, the terrain carrying none at all now (see `hidden` in buildMarkers). It is

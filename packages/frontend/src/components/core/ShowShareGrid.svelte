@@ -6,7 +6,9 @@
 	import { showGlyphs } from '$services/shows.service';
 
 	// How a list of places divides between the shows they fly, said above the list: each
-	// show's own glyph with its share of the places below written under it, biggest first.
+	// show's own glyph with its share of the places below written under it, biggest first —
+	// and the shows none of them fly at 0%, at half strength, since what the caller hands in
+	// is the whole set rather than what this level happens to have (see +page.svelte).
 	// The map already paints this — every pin and every polygon flies its region's colour and
 	// its show's mark — but only for what is on screen at the zoom the reader happens to be
 	// at; this says it of the whole list, however long it is and however far down it runs.
@@ -77,12 +79,19 @@
 			it — the same marking the open town's own row takes in the list below, so "this one" is
 			said the one way in this column. `aria-pressed` because it is a toggle and the fill is
 			the whole of what says so; the name is on the cell either way, since a mark with no
-			lettering is unreadable without it. -->
+			lettering is unreadable without it.
+			A show none of the listed places fly is drawn at half strength. It is in the row
+			because the row is the whole set and holds every mark in its own cell wherever the
+			reader is standing (see +page.svelte); it is faint because what it says about THIS
+			level is nothing — the reading is still there to be read, and the marks that carry a
+			share are the ones the eye lands on. Faint and not gone, and not unpressable either:
+			it is a cell like the others and the press is its own undo. -->
 		<button
 			type="button"
 			class={classNames(
 				'flex flex-col items-center gap-0.5 rounded-md p-1',
-				entry.id === active ? 'bg-primary text-primary-content' : 'hover:bg-white/10'
+				entry.id === active ? 'bg-primary text-primary-content' : 'hover:bg-white/10',
+				{ 'opacity-50': entry.share <= 0 }
 			)}
 			title={entry.name}
 			aria-pressed={entry.id === active}
