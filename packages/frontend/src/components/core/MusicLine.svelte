@@ -12,8 +12,10 @@
 	// The station first because it is the steadier of the two — a station holds while its songs
 	// come and go — and because it is the wider statement: this is what you are listening to, and
 	// then this is what is on. It is the order a radio announces itself in, and it is lettered
-	// like one: the station is the bold line and the song is the plain one under it, a heading
-	// over what is playing under it rather than a caption on it.
+	// like one: the station is the larger line and the bolder, and the song is the plain smaller
+	// one under it — a heading over what is playing rather than a caption on it. Size and weight
+	// both say the same thing about which is which, because a line set large and light over a
+	// small heavy one is two answers to that question.
 	//
 	// A station *is* a show (see musicService), which is why the name above the song is the name
 	// of a show and not a second kind of thing. It comes from the same read the dial names its
@@ -33,9 +35,10 @@
 	// answers about one radio.
 	//
 	// A banner rather than a truncation for the title (see MarqueeText): a song is whatever the
-	// record is called, and the box it stands in is a fixed width. The station above it truncates,
-	// as every name of a place or a show in this game does — a show can be recognised from its
-	// head.
+	// record is called, and the box it stands in is a fixed width — and it is the smaller line of
+	// the two, so it is the one likelier to have more of itself than there is room for. The
+	// station above it truncates, as every name of a place or a show in this game does — a show
+	// can be recognised from its head.
 	//
 	// Nothing is drawn until there is a song. The plate around it says the same thing (it has its
 	// room to withhold), and this says it on its own account because a line with no song in it is
@@ -61,14 +64,15 @@
 {#if state.track}
 	<span class={classNames('flex min-w-0 flex-col text-left leading-tight', classes)}>
 		{#if stationName}
-			<!-- The station in bold, at the smaller of the two sizes: it is a heading over the
-				song rather than a line beside it, and a heading is said by weight — which leaves
-				size free to say which of the two is the longer read. -->
-			<span class="truncate text-xs font-bold opacity-70">{stationName}</span>
+			<!-- The station, in the larger size and the heavier weight: both of the things type
+				has to say which line is the heading say it here, rather than one of them saying it
+				and the other saying the opposite. -->
+			<span class="truncate text-sm font-bold opacity-70">{stationName}</span>
 		{/if}
 
-		<span class="flex min-w-0 items-center gap-1 text-sm font-medium">
-			<MusicGlyph playing={state.playing} classes="size-4 flex-none" />
+		<span class="flex min-w-0 items-center gap-1 text-xs font-medium">
+			<!-- The mark at the size of the line it stands on, which is the smaller one now. -->
+			<MusicGlyph playing={state.playing} classes="size-3 flex-none" />
 			<!-- `min-w-0` is what lets the banner be narrower than its line, and `flex-1` is what
 				gives it the rest of the line: together they are the box the title is measured
 				against. -->
