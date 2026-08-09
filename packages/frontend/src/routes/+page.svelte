@@ -3485,6 +3485,13 @@
 							centred on the map's own axis. `max-w-full` is the only cap, and it bites where a
 							long town name would otherwise outrun the terrain — at which point the grid's two
 							tracks give and the badge's `min-w-0` truncates the name inside its half.
+							It sits ON that edge and not above it (`bottom-0`, where the strip at the top
+							keeps its `top-3`): the row is the bottom of the map the way a caption is the
+							bottom of a picture, and a plate floating a few pixels clear of the edge with a
+							sliver of terrain under it reads as a thing that has come loose. So the corners
+							it meets the edge with are square (`rounded-t-lg` rather than `rounded-lg`) —
+							a rounded corner is what a plate standing free of a boundary has, and this one
+							is standing against one.
 							`pointer-events-none` on the strip with the row turning them back on, since the
 							room either side of it is terrain and terrain has to stay draggable; `z-[900]`
 							clears Leaflet's own panes as the strip above it does.
@@ -3496,7 +3503,7 @@
 							tally at the top is drawn on, which is a wash BECAUSE the tally is about what is
 							under it. This row is not — it names where the map is standing. -->
 						<div
-							class="pointer-events-none absolute inset-x-3 bottom-3 z-[900] flex justify-center"
+							class="pointer-events-none absolute inset-x-3 bottom-0 z-[900] flex justify-center"
 						>
 							<!-- Two cells of one grid, where the map is standing at the near one and the three
 								tabs at the far one. What they are is one statement in two halves — this is where
@@ -3508,7 +3515,7 @@
 								column away from the answers about it (see the band, where the middle of the row
 								used to be), and then at the head of the block under the map. -->
 							<div
-								class="pointer-events-auto grid max-w-full grid-cols-2 items-center gap-2 rounded-lg bg-base-100/80 p-2 shadow-xl"
+								class="pointer-events-auto grid max-w-full grid-cols-2 items-center gap-2 rounded-t-lg bg-base-100/80 p-2 shadow-xl"
 							>
 								<!-- The near cell is where the map is standing, said once and by one thing: the
 									badge that names the place. Lettered exactly as a crumb and as a row of the
