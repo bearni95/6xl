@@ -3457,28 +3457,34 @@
 			place belongs under the three who would have to be beaten.
 
 			It is a box of the page's own grid at both widths now, and the difference between them
-			is which track it stands in. Below `md` it is the second of the three rows: the next
-			thing down after the terrain, and a SQUARE — `aspect-square w-full`, 1:1 of the page's
-			own width. Two things are read in it — three statues and a plate under them, or a
-			booster box, which is 30:37 of whatever width it is given — and both are pictures, so
-			what they want is a picture's box rather than a strip the column happened to have left.
-			Three statues and a plate laid over a map that fills a phone would cover the better part
-			of what one can see of the country, which is why on that width the picture stands beside
-			the place rather than on top of it.
+			is which track it stands in. Below `md` it is the second of the three rows, the next
+			thing down after the terrain, and it is AS TALL AS WHAT IS IN IT: the row is `auto` and
+			this box names no height of its own, so the Municipi tab's own column — three statues at
+			3:4 of their cells, the standing under them, the plate under that — is measured and the
+			block comes to exactly it. The map is what gives: the first row is `minmax(0,1fr)` and
+			takes whatever is left over, which is the right way round for two boxes on a phone where
+			only one of them has a size of its own. A map is legible at any height; a picture of who
+			holds the town is legible at its own and at no other.
 
-			Square up to a point, and the point is `max-h-[40dvh]`. A 1:1 of the page's width is a
-			height read off the ONE axis of a phone that says nothing about the other: the band above
-			and the side's folded strip below are a fixed 8-odd rems between them, so on a tall
-			handset a square block leaves the terrain a third of the screen and on a short, wide one
-			it leaves it almost nothing — the same markup, and the map is the thing that pays either
-			way. The cap is what makes the block a share of the screen rather than a consequence of
-			the width: two fifths of the viewport at most, so whatever phone this is opened on the
-			map is the largest thing on it, which is the one claim this page's whole layout makes.
-			Where the square is narrower than that it is still exactly a square — the cap only bites
-			where the picture would have cost the map its box — and what does not fit inside it
-			scrolls in the panel below, which is what that panel already does at every width.
-			`md:max-h-none` for the same reason as `md:aspect-auto` beside it: from `md` up this is a
-			half of a column and the grid says how tall it is.
+			It was a SQUARE, `aspect-square w-full`, on the reasoning that what is read in here are
+			pictures and a picture wants a picture's box. It is the same reasoning that says this
+			should be content-sized, and the square was the wrong way of acting on it: 1:1 of the
+			page's WIDTH is a number about the one axis that has nothing to do with how tall three
+			statues and a plate come to, so it was a box that cut the column it was drawn for — the
+			plate off the bottom of the Municipi tab — while the terrain above it kept room nothing
+			was asking for. A cap on that square (two fifths of the viewport, briefly) only cut it
+			sooner. Nothing here is a share of anything now.
+
+			The one height still written down is the ceiling, `max-h-[calc(100dvh-16rem)]`, and it
+			is not about this block: it is the map's floor, said from this end. The band above and
+			the side's folded strip below come to a shade over 9rem between them, so 16rem leaves
+			the terrain something like 7rem whatever happens in here — a strip of country rather
+			than nothing at all, on a small phone with a long town in it. Past that the panel
+			scrolls, which is what it does at every width anyway. The Llocs tab is at the ceiling
+			always and by its own nature: a list of places is a scroller with no height of its own
+			(see RegionLocationList, which is given one to divide), so it fills whatever this box
+			will go to and divides that.
+			`md:max-h-none`: from `md` up this is half of a column and the grid says how tall it is.
 
 			From `md` up it is the TOP HALF OF THE THIRD COLUMN: `md:col-start-3 md:row-start-1`, in
 			the first of two `minmax(0,1fr)` rows, with the furniture in the second. So the block and
@@ -3538,7 +3544,7 @@
 		{#if townBlock}
 			<div
 				transition:blur={CHROME_BLUR}
-				class="row-start-2 flex aspect-square max-h-[40dvh] w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:aspect-auto md:max-h-none md:border-b-2 md:border-t-0"
+				class="row-start-2 flex max-h-[calc(100dvh-16rem)] w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:max-h-none md:border-b-2 md:border-t-0"
 			>
 				<!-- The head of the block: two cells of one grid, where the map is standing at the near
 					one and the three tabs at the far one. What they are is one statement in two
