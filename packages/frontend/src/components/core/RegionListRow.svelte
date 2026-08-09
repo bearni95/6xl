@@ -30,14 +30,6 @@
 	// is where a reader looks first, not somewhere they have to find anything.
 	export let marked: boolean = false;
 	export let onSelect: (key: string) => void;
-	// What the press does, when it is not opening the place. One row asks for this — the band
-	// across the top of the page, which is the place the map is already open on and so had the
-	// least to gain from a press that opens it: it is the radio's play/pause now (see
-	// RegionCurrentBadge).
-	// Given as a name for it rather than as a flag, because the only thing this row has to know
-	// about a press it does not define is what to call it: the row's own text names a place and
-	// a song, and neither of those says what pressing it does.
-	export let pressLabel: string | null = null;
 	// The width the box is drawn at, which is how its height is said — the caller's, since it
 	// is a fact about the run of rows and not about one of them (see REGION_ROW_BOX_WIDTH).
 	export let boxWidth: string = '';
@@ -53,16 +45,13 @@
 	// block of planes. A row with nothing beside the name is a plain flex box of one item,
 	// which is every row of every tier above the municipality.
 	//
-	// The head of the column used to hand a couple more things in beside the name — the radio's
-	// play/pause, stood on the crumb's own tile, and the song at the far end — for the same
-	// reason the box is out here: a button does not hold a button. Those are gone: the mark and
-	// the song are *inside* the name's button on that row now, as its second line, and the
-	// button itself is what presses them (see `line`, `pressLabel` and MusicLine). So the row is
-	// one press again, and the crumb has its tile back.
-	//
-	// `line` is that second line, handed straight through to the crumb's own slot for it: what
-	// stands under a place's name is the show it flies unless the caller has something more
-	// particular to say there.
+	// The row naming the open place used to hand a couple more things in beside the name — the
+	// radio's play/pause, stood on the crumb's own tile, and the song at the far end — for the
+	// same reason the box is out here: a button does not hold a button. Then the mark and the
+	// song became that row's second line, handed in through a slot, and the row itself was the
+	// press. Both are gone with the radio, which is a plate of its own on the band across the top
+	// of the page now (see MusicBanner): every row this game draws is one press that opens a
+	// place, and what stands under the name is the show it flies.
 </script>
 
 <div
@@ -74,35 +63,16 @@
 	<button
 		type="button"
 		aria-current={current ? 'page' : undefined}
-		aria-label={pressLabel ?? undefined}
 		class="block min-w-0 flex-1 px-2 py-1 text-left"
 		on:click={() => onSelect(row.key)}
 	>
-		<!-- The crumb is written out twice for the one reason that `$$slots` is settled when this
-			file is compiled and not when a row is drawn: content handed into a crumb inside an
-			`{#if}` is still content handed in, so a single call with the line in it would leave
-			every row in the column with an empty second line instead of the show it flies. The
-			branch is the honest way to say that one row has a line of its own and the rest do
-			not. -->
-		{#if $$slots.line}
-			<MapBreadcrumb
-				label={row.label}
-				showName={row.showName}
-				showId={row.showId}
-				tileClasses={row.tileClasses}
-				truncated
-			>
-				<slot name="line" />
-			</MapBreadcrumb>
-		{:else}
-			<MapBreadcrumb
-				label={row.label}
-				showName={row.showName}
-				showId={row.showId}
-				tileClasses={row.tileClasses}
-				truncated
-			/>
-		{/if}
+		<MapBreadcrumb
+			label={row.label}
+			showName={row.showName}
+			showId={row.showId}
+			tileClasses={row.tileClasses}
+			truncated
+		/>
 	</button>
 
 	{#if row.box}

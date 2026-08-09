@@ -1,48 +1,43 @@
 <script lang="ts">
 	import classNames from 'classnames';
-	import { onMount } from 'svelte';
 	import MarqueeText from '$components/core/MarqueeText.svelte';
 	import MusicGlyph from '$components/core/MusicGlyph.svelte';
 	import { musicService } from '$services/music.service';
 
-	// The second line of the row at the head of the column beside the map: what is playing,
-	// behind the mark that says whether it is playing.
+	// What is playing, behind the mark that says whether it is playing: the radio said in one
+	// line of text.
 	//
-	// That line was the show the open place flies, and it is still that whenever there is no
-	// song — but a station *is* a show and the map tunes the radio to the open place's own (see
-	// musicService.follow), so where the two would be written one under the other the line says
-	// the more particular of them. The show is not lost: it is the fill and the glyph on that
-	// row's own tile, which is where this map says a show first.
+	// It was the second line of the row naming the open place — the show that place flies where
+	// there was no song, the song where there was one, a station being a show — and it is the
+	// whole of the plate in the middle of the band across the top of the page now (see
+	// MusicBanner). So the show is not something this line ever says any more: it is said where
+	// the map says a show first, on the tile at the head of the row that names the place.
 	//
-	// The row it stands on is the press (see RegionListRow's `pressLabel` and
-	// RegionCurrentBadge), so this draws no button of its own — a button does not hold a button.
-	// The glyph is the same one the standalone control wears and turns over on the same store,
-	// so the triangle and the two bars are never two different answers about one radio.
+	// Its own component still, because the line and the press are two different objects: the
+	// plate decides that there is a radio to draw at all and what pressing it is called, and this
+	// is what a radio playing looks like. The glyph is the one the standalone control wears and
+	// turns over on the same store, so the triangle and the two bars are never two different
+	// answers about one radio.
 	//
 	// A banner rather than a truncation for the title (see MarqueeText): a song is whatever the
-	// record is called, and a row is a fixed width.
+	// record is called, and a plate is a fixed width.
+	//
+	// Nothing is drawn until there is a song. The plate around it says the same thing (it has a
+	// fill and a border to withhold), and this says it on its own account because a line with no
+	// song in it is a glyph beside an empty box.
 
-	/** The show that place flies, which is what the line says when no song is loaded. */
-	export let showName: string | null = null;
-	/** Anything more the caller wants on the line. The ink is the crumb's own second-line ink,
-		spelled here rather than passed in, since this *is* that line and it has to read as one
-		whichever of the two things it is saying. */
+	/** Anything more the caller wants on the line — the box it is measured in, above all. The ink
+		is spelled here rather than passed in, since this reads as one line wherever it stands. */
 	export let classes: string = '';
 
 	const LINE = 'text-xs font-medium opacity-70';
-
-	// The read that keeps the radio a clock rather than something a surface has to ask for. Made
-	// here as well as in the menu's plate because this line is up on every visit and that plate
-	// is only mounted while the drawer is open. Idempotent: every mount shares one fetch.
-	onMount(() => void musicService.load().catch(() => undefined));
 
 	const music = musicService.state;
 
 	$: state = $music;
 </script>
 
-<!-- Spans throughout: this stands inside a crumb, which stands inside a button, whose content
-	model is phrasing only. -->
+<!-- Spans throughout: this stands inside a button, whose content model is phrasing only. -->
 {#if state.track}
 	<span class={classNames('flex min-w-0 items-center gap-1', LINE, classes)}>
 		<MusicGlyph playing={state.playing} classes="size-3 flex-none" />
@@ -51,9 +46,4 @@
 			against. -->
 		<MarqueeText text={state.track.title} classes="min-w-0 flex-1" />
 	</span>
-{:else if showName}
-	<!-- The line the crumb letters everywhere else, spelled here because a slot given to a
-		crumb is the whole of its second line (see MapBreadcrumb): a map whose music never
-		arrived has to read exactly as it did before there was a radio. -->
-	<span class={classNames('truncate', LINE, classes)}>{showName}</span>
 {/if}

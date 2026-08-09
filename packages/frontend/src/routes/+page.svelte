@@ -11,6 +11,7 @@
 	import PlayerPanel from '$components/core/PlayerPanel.svelte';
 	import WorldMap from '$components/core/WorldMap.svelte';
 	import MapBreadcrumbs from '$components/core/MapBreadcrumbs.svelte';
+	import MusicBanner from '$components/core/MusicBanner.svelte';
 	import RegionCurrentBadge from '$components/core/RegionCurrentBadge.svelte';
 	import RegionLocationList from '$components/core/RegionLocationList.svelte';
 	import ShowShareGrid from '$components/core/ShowShareGrid.svelte';
@@ -3016,12 +3017,13 @@
 		belongs to neither, and the rule stands at both widths because the fold below it changes
 		the columns' axis and not this band's.
 
-		`items-stretch` is what makes them all one height: three of the four are squares, and
-		stretching means they and the name's plate take whatever height the row comes to rather
+		`items-stretch` is what makes them all one height: three of them are squares, and stretching
+		means they, the name's plate and the radio's take whatever height the row comes to rather
 		than a number written here that would have to be kept in step with it. The padding is the
 		band's rather than each child's, so they are spaced by one `gap-2` and inset by one
-		`px-2`. The far end is held against the far edge by `ml-auto` on the first of the two
-		marks there, nothing between the ends giving.
+		`px-2`. What holds the far end against the far edge is the radio in the middle, which is
+		the one item here that gives: the two marks were pushed over by an `ml-auto` for as long as
+		nothing between the ends did.
 
 		It stands exactly as it is whatever else is on screen. A full view used to veil it — blur
 		it out and make it inert for as long as a sheet was up — which was a row of furniture going
@@ -3110,20 +3112,29 @@
 			/>
 		{/if}
 
-		<!-- (Where the map is, and the radio playing for it, stood here — between the name and the
-			questions, as the one thing on this row that changes. It heads the block under the map
-			now, beside the three tabs that answer about the place it names.) -->
+		<!-- The radio, in the middle of the row: the mark that says whether it is running and the
+			title running past behind it, and the whole plate is the play/pause (see MusicBanner).
+			Where the map is standing stood here for a while and the radio was its second line,
+			which put the control inside a reading about a town; the reading heads the block under
+			the map now and the radio is here on its own account, among the things this row is
+			otherwise made of — the game's name, the way out of where you are, and what the game
+			gets asked. What is playing follows the map (see musicService.follow), so it is as much
+			about the open place as it ever was; it is simply no longer said by the thing that
+			names the place.
+			It is the one item on the row that gives: `flex-1 min-w-0` inside the component, which
+			is also what pushes the two marks below against the far edge — nothing else here has a
+			margin doing that any more. Empty until a song is loaded, and the slot holds its room
+			either way. -->
+		<MusicBanner />
 
 		<!-- What the game gets asked, first of the far end, at every width — a question is as
-			worth answering on a desktop as on a phone. `ml-auto` is what holds the pair against
-			the far edge: the row named the open place between the two ends and that middle was
-			what pushed them over, so with it gone the margin does the pushing again.
+			worth answering on a desktop as on a phone.
 			A square in the name plate's own fill, drawn to the row's height (`self-stretch
 			aspect-square`), with a white game-icons glyph that needs no colour of its own on the
 			primary. -->
 		<button
 			type="button"
-			class="ml-auto flex aspect-square flex-none cursor-pointer items-center justify-center self-stretch rounded-lg bg-primary shadow-xl"
+			class="flex aspect-square flex-none cursor-pointer items-center justify-center self-stretch rounded-lg bg-primary shadow-xl"
 			aria-label={$_('faq.open')}
 			on:click={openFaq}
 		>
@@ -3536,10 +3547,12 @@
 					the answers about it (see the band, where the middle of the row used to be). -->
 				<div class="grid w-full flex-none grid-cols-2 items-center gap-2">
 					<!-- The near cell is where the map is standing, said once and by one thing: the badge
-						that names the place, with the radio playing for it. Lettered exactly as a crumb
-						and as a row of the list under it are, and pressed for the radio's play/pause
-						while there is a song (see RegionCurrentBadge). `min-w-0` so a long name
-						truncates inside its half rather than widening the cell.
+						that names the place. Lettered exactly as a crumb and as a row of the list under
+						it are, and pressed for what every row that names a place is pressed for (see
+						RegionCurrentBadge). It carried the radio's play/pause on its second line for a
+						while; the radio is a plate of its own on the band at the top of the page now, a
+						control that follows the map not being a reading about a town. `min-w-0` so a
+						long name truncates inside its half rather than widening the cell.
 						The dots stood before it for a while — the way back up out of the place, which
 						came down here from a strip over the map on the ground that a cut belongs beside
 						its place. It is back on that strip (see the map), at the near end of the row the
@@ -3946,11 +3959,11 @@
 									whole of it again.
 									It shared this row with the radio for a while, as two halves of the column's one
 									width — both of them being things this player had switched on, as against the map
-									at the other corner. The radio has gone to the band across the top of the page,
-									where the place it is playing for is already named and already carries the show's
-									tile (see RegionCurrentBadge): the radio follows the map now, so a card of its own
-									was saying, in a second corner, what that row says by standing there. What shares
-									the row instead is the one press that belongs to this plate: the cog.
+									at the other corner. The radio has gone to the middle of the band across the top
+									of the page (see MusicBanner), where it stands among the game's own furniture: the
+									radio follows the map now, so a card of its own down here was saying, in a second
+									corner, what the map is already saying. What shares the row instead is the one
+									press that belongs to this plate: the cog.
 									No `pointer-events-auto` on it: that was needed while it stood in the column under
 									the bar, which turns its own events off so the map stays pannable through the gaps
 									between its plates. This corner is not that column.

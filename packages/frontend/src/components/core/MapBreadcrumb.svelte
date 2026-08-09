@@ -17,13 +17,13 @@
 	// neither wants its own copy of a tile, a glyph and two lines.
 	//
 	// The radio on the far end of that bar was drawn as one of these for a while: a song over
-	// the station it plays on is the same object as a place over the show it flies. The
-	// second line is still the slot that made that possible — the station was a dial rather
-	// than a word — and it is kept because a crumb's own line is still the one thing about it
-	// that can be something other than a name to be read — and the radio is what stands in it
-	// again, in the column beside the map: the crumb at the head of that column letters the
-	// song under the place's name, and names no station, a station being the show that place
-	// already flies on its tile (see MusicLine).
+	// the station it plays on is the same object as a place over the show it flies. The second
+	// line is still the slot that made that possible — the station was a dial rather than a
+	// word — and the song stood in it again later, under the name of the open place. Neither is
+	// here now: the radio is a plate of its own on the band across the top of the page (see
+	// MusicBanner), so every crumb this game draws letters the show it flies. The slot stays
+	// because a crumb's own line is the one thing about it that could be something other than a
+	// name to be read.
 
 	// The place, with its article already restored by the caller.
 	export let label: string = '';

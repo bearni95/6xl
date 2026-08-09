@@ -13,10 +13,10 @@
 	//
 	// It stood in the map's top-left corner, which is a corner of the map: a plate that
 	// is always up is a plate that is always in the way, and the one thing on it a
-	// player reaches for often is the pause — which is in the column beside the map now,
-	// where the row naming the open place letters the song and is itself the press (see
-	// MusicLine). What is left here is what is only wanted when it is wanted: which
-	// station, and what is on it. The menu is where everything that is not the map
+	// player reaches for often is the pause — which is on the band across the top of the
+	// page now, in the middle of it, lettered with the song and pressed anywhere on it
+	// (see MusicBanner). What is left here is what is only wanted when it is wanted:
+	// which station, and what is on it. The menu is where everything that is not the map
 	// already lives.
 	//
 	// It is also the only place left that offers the dial by hand. The map turns it by
@@ -83,9 +83,10 @@
 			<StationDial classes="text-xs font-medium text-base-content/70" />
 		</div>
 
-		<!-- The same button as the one on the bar over the map, and the same store behind
-			it: a ghost circle here because the plate is a quiet object among the menu's
-			outlined ones, and a filled button on it would read louder than any of them. -->
+		<!-- The same press as the plate on the band across the top of the page, and the same
+			store behind it: a ghost circle here because this plate is a quiet object among
+			the menu's outlined ones, and a filled button on it would read louder than any of
+			them. -->
 		<MusicToggle classes="btn btn-circle btn-ghost btn-sm flex-none" />
 	</div>
 {/if}
