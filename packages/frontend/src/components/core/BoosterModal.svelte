@@ -77,15 +77,16 @@
 	}
 </script>
 
-<!-- The one sheet in the app that paints no page: the map is behind the boxes rather than
-	behind a grade of base-100. A pack belongs to the town it was claimed on, and it is stood
-	up and sliced open over that town — a page under it, however faint, makes the opening
-	something that happens on a screen instead of on the map. Every other full view is content
-	to be read and keeps its page. -->
+<!-- The same page every other full view stands on: base-100 at full strength at the top,
+	graded to nine tenths at the foot, so the map is faintly there under the last of it. This
+	sheet painted nothing for a while — the reasoning being that a pack belongs to the town it
+	was claimed on and should be sliced open over it — but a window of boxes read off live
+	terrain is a window whose ground changes with wherever the map happens to be scrolled to,
+	and a grade that lets the town through at the foot says the same thing without asking the
+	boxes to stand on it. -->
 <FullScreenModal
 	title={$_('booster.title')}
 	closeLabel={$_('booster.close')}
-	transparent
 	bare={alone}
 	closeOnClick={revealed}
 	on:close={close}
@@ -140,10 +141,11 @@
 
 		<!-- The window itself, on the plate the grid used to share with it: the padding is the
 			plate's, so the canvas is handed a box holding boxes and draws no margin of its own. The
-			ground is not — a sheet that paints no page would be paying for it here, where the plate
-			takes everything under the calendar line, so the boxes stand on the map. What is left of
-			the plate is the ground under the two sentences that stand in for a window there is
-			nothing in: those are text to be read, not boxes, and text wants something behind it.
+			ground is not — the plate takes everything under the calendar line, and a second fill
+			over the sheet's own page would be a panel drawn round boxes that need no framing. What
+			is left of the plate is the ground under the two sentences that stand in for a window
+			there is nothing in: those are text to be read, not boxes, and text wants something
+			behind it.
 			A box is picked out of the window and stood up by tapping it, the button under the canvas
 			slices it open, and the cards it held stand up in its place. Those cards are documents even here:
 			the canvas is transparent and they are laid out behind it, so what comes apart is a

@@ -78,11 +78,10 @@
 	 * Paint no page at all: the sheet keeps its size, its bar and its way out, and the map
 	 * is simply behind the content rather than behind a grade of base-100.
 	 *
-	 * Two sheets ask for this, and for the same reason. The booster window, whose content is a
-	 * canvas of boxes with nothing between them — a pack is stood up and sliced open over the
-	 * town it came from, and a page under it, even a graded one, is a screen the opening happens
-	 * on instead of on the map. And the combat arena, which is a fight over a town the map is
-	 * still showing rather than a page laid over it.
+	 * One sheet asks for it: the combat arena, which is a fight over a town the map is still
+	 * showing rather than a page laid over it. The booster window asked too for a while, its
+	 * content being a canvas of boxes with nothing between them — and gave it back, a window of
+	 * boxes read off live terrain being a window whose ground moves with the map under it.
 	 *
 	 * Every other full view is content to read and keeps its page. What a sheet gives up with
 	 * it is the ground under its own words: a transparent sheet's content must carry its own
