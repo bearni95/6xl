@@ -3,11 +3,10 @@
 	import MusicGlyph, { musicPressLabel } from '$components/core/MusicGlyph.svelte';
 	import { musicService } from '$services/music.service';
 
-	// The radio's play/pause drawn as a bare button, which today is the plate in the burger menu.
-	// On the map the press is the plate on the band across the top of the page, whose whole
-	// surface is the control and which is lettered with the same mark and the song it is playing
-	// (see MusicBanner). A button of this kind standing there as well would be a second control
-	// for one radio.
+	// The radio's play/pause drawn as a bare button, which is both of the places it stands: the
+	// plate in the burger menu, and the far end of the last line of the pin the map stands on the
+	// open place (see TownRadio). The two are one control on one store — the shape is the
+	// caller's, the reading is not.
 	//
 	// It says what the element is really doing rather than what it was last told to do, and
 	// says it wherever the radio is pressable, because every one of those reads the one service
@@ -25,10 +24,10 @@
 	/** The glyph's size, which follows the row of marks it is standing in. */
 	export let iconClasses: string = 'size-5';
 
-	// The read that used to be the plate's, kept here because the button may yet stand
-	// somewhere that is up before anything else is — and the radio is a clock, so it wants to
-	// be running whether or not anyone has looked at it. Idempotent: every mount shares one
-	// fetch, and on the map it is the line in the column that makes it.
+	// The read that used to be the plate's, kept here because the button may stand somewhere
+	// that is up before anything else is — and the radio is a clock, so it wants to be running
+	// whether or not anyone has looked at it. Idempotent: every mount shares one fetch, and the
+	// map page makes it too, since neither of the two surfaces drawing this is always on screen.
 	onMount(() => void musicService.load().catch(() => undefined));
 
 	const music = musicService.state;
@@ -43,8 +42,8 @@
 		aria-label={musicPressLabel(state.playing)}
 		on:click={() => musicService.toggle()}
 	>
-		<!-- The one mark, which is also drawn inside a line of text that is its own press (see
-			MusicGlyph, MusicLine): a triangle stopped, two bars running. -->
+		<!-- The one mark the radio is read by wherever it stands (see MusicGlyph): a triangle
+			stopped, two bars running. -->
 		<MusicGlyph playing={state.playing} classes={iconClasses} />
 	</button>
 {/if}

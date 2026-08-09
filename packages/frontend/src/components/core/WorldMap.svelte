@@ -5,6 +5,7 @@
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
 	import TownHolder from '$components/core/TownHolder.svelte';
+	import TownRadio from '$components/core/TownRadio.svelte';
 	import { PLATE_CLASSES, TILE_CLASSES } from '$components/core/TownPlate.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import { levelIndexForView } from '$utils/geo/level-of-detail';
@@ -877,6 +878,14 @@
 		const wrap = document.createElement('div');
 		wrap.className = classNamesFor(marker);
 
+		// Whether this is the mark for the place the map is open on, which is the one thing on a
+		// pin that is not a fact about its region: the radio (see below). Read off the picked
+		// mark's id rather than taken as an argument, because the same region arrives here by two
+		// roads — as a member of the tier being drawn and as the mark that outlives the tier (see
+		// `pickedMarker` and addPin) — and a pin that carried the radio down one of them and not
+		// the other would gain and lose it on a zoom.
+		const carriesRadio = !!pickedMarker && pickedMarker.id === marker.id;
+
 		// The line back to the place is NOT in here. It stands on the point, in a pane of its
 		// own under every mark on the map (see addLeader), so that a line never crosses a
 		// neighbour's plate on top of it.
@@ -987,6 +996,28 @@
 				mount(TownChallenge, { target: bar, props: { ...marker.challenge } })
 			);
 			plate.appendChild(bar);
+		}
+
+		// And the radio, last line of the plate, on the one mark the map draws for the place it is
+		// open on and on no other (see `pickedMarker`). The station is already up there: the map
+		// tunes the radio to the show the open place flies (see musicService.follow) and the pin's
+		// second line is that show, on a tile in the place's own colour — so what is missing from
+		// this plate is only what is on and whether it is running, which is the whole of what the
+		// row adds (see TownRadio).
+		//
+		// It stood on the band across the top of the page before this, and on the row naming the
+		// open place before that. Both had to letter the station themselves to be read; a mark
+		// standing on the town does not.
+		//
+		// The same guard the challenge bar takes, for the same reason: the press belongs to the
+		// pin and not to the terrain under it, so a click on it must not go on up to the marker
+		// and re-open the region, and a drag begun on it must not pan the map.
+		if (carriesRadio) {
+			const radio = document.createElement('div');
+			Leaf!.DomEvent.disableClickPropagation(radio);
+			Leaf!.DomEvent.disableScrollPropagation(radio);
+			trackPinMount(marker.id, mount(TownRadio, { target: radio }));
+			plate.appendChild(radio);
 		}
 
 		// The side sitting on the region, where there is one: the very statues the roster

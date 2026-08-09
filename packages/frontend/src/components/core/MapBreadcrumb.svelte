@@ -20,8 +20,8 @@
 	// the station it plays on is the same object as a place over the show it flies. The second
 	// line is still the slot that made that possible — the station was a dial rather than a
 	// word — and the song stood in it again later, under the name of the open place. Neither is
-	// here now: the radio is a plate of its own on the band across the top of the page (see
-	// MusicBanner), so every crumb this game draws letters the show it flies. The slot stays
+	// here now: the radio is the last line of the pin standing on that place (see TownRadio), so
+	// every crumb this game draws letters the show it flies. The slot stays
 	// because a crumb's own line is the one thing about it that could be something other than a
 	// name to be read.
 
