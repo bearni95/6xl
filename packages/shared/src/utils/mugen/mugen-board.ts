@@ -43,6 +43,60 @@ interface LoadedFrame {
 	duration: number;
 }
 
+/**
+ * Which of a character's animations the board needs loaded, and the three bindings
+ * it drives an actor by.
+ *
+ * Every actor can be walked cell to cell by combat, so all of them take the
+ * directional animations bound in the character's JSON definition
+ * (move-left/move-right), the hurt flinch, and every move the definition declares, so
+ * combat can play whichever move gets picked. Nothing loads a move's projectile:
+ * nothing on this board flies any more — an attack is walked over to its target
+ * ({@link MugenBoard.closeIn}). Without a definition the directional anims fall back
+ * to run.
+ *
+ * Read twice per actor — once to warm the assets, once to place it — so it is a
+ * function of the definition and nothing else.
+ */
+function boundAnimations(
+	definition: CharacterDefinition | null,
+	startName: string
+): { moveRightAnim: string; moveLeftAnim: string; hurtAnim: string; names: string[] } {
+	let moveRightAnim = 'run';
+	let moveLeftAnim = 'run';
+	let hurtAnim = '';
+	const moveSources: string[] = [];
+	if (definition) {
+		moveRightAnim = definition.directions['move-right']?.source || moveRightAnim;
+		moveLeftAnim = definition.directions['move-left']?.source || moveLeftAnim;
+		// The hurt flinch is a movement animation every character defines, not a
+		// move — pull it from the animations record.
+		hurtAnim = definition.animations.hurt?.source || '';
+		for (const move of definition.moves ?? []) {
+			if (move.source) moveSources.push(move.source);
+		}
+	}
+	return {
+		moveRightAnim,
+		moveLeftAnim,
+		hurtAnim,
+		names: [
+			...new Set([startName, moveRightAnim, moveLeftAnim, hurtAnim, ...moveSources].filter(Boolean))
+		]
+	};
+}
+
+/** Every distinct frame file the named animations of a manifest draw. */
+function frameFiles(manifest: Manifest, names: string[]): string[] {
+	const files = new Set<string>();
+	for (const name of names) {
+		const animation = manifest.animations[name];
+		if (!animation) continue; // e.g. a character without a run cycle
+		for (const frame of animation.frames) files.add(frame.file);
+	}
+	return [...files];
+}
+
 /** A character to place on the board, in the centre of its grid. */
 export interface BoardCharacter {
 	/** Folder (relative to the static root) holding manifest.json + frame PNGs. */
@@ -758,6 +812,14 @@ export class MugenBoard {
 	/** Loaded aura frame textures, keyed by aura color name. */
 	private auraTextures = new Map<string, Texture[]>();
 	private iconTextures = new Map<string, Texture>();
+	/**
+	 * In-flight (or settled) definition and manifest fetches, keyed by character id and
+	 * frames folder. The board asks for each twice — {@link preload} warms it, then the
+	 * placement reads it — and a mirror match fields the same character on both sides, so
+	 * memoising the *promise* is what makes those one request rather than four.
+	 */
+	private definitionRequests = new Map<string, Promise<CharacterDefinition | null>>();
+	private manifestRequests = new Map<string, Promise<Manifest>>();
 	/** What to call when an order button is tapped; set by {@link onOrder}. */
 	private orderHandler: ((actorId: string, orderId: string) => void) | null = null;
 
@@ -850,6 +912,19 @@ export class MugenBoard {
 		// column.
 		const redLead = leadCell(this.options.grids[0], LEAD_CELLS[0]);
 		const blueLead = leadCell(this.options.grids[1], LEAD_CELLS[1]);
+
+		// Everything every actor needs, fetched at once, before anybody is placed. The
+		// placements below stay in order — the two lines are drawn top to bottom and the
+		// actor list is read by position — and each of them still asks for its own
+		// definition, manifest and textures; this is only what makes those asks free.
+		await this.preload([
+			this.options.grids[0].character,
+			this.options.grids[1].character,
+			...(this.options.grids[0].extras ?? []),
+			...(this.options.grids[1].extras ?? [])
+		]);
+		if (this.destroyed) return;
+
 		await this.addActor(this.options.grids[0].character, redLead.q, redLead.r, false);
 		await this.addActor(this.options.grids[1].character, blueLead.q, blueLead.r, true);
 
@@ -1085,33 +1160,15 @@ export class MugenBoard {
 		const characterId = characterIdFromFramesPath(character.basePath) ?? '';
 		const id = character.id ?? characterId ?? character.basePath;
 
-		// Every actor can be walked cell to cell by combat, so all of them load the
-		// directional animations bound in the character's JSON definition
-		// (move-left/move-right), the hurt flinch, and every move the definition
-		// declares, so combat can play whichever move gets picked. Nothing loads a
-		// move's projectile: nothing on this board flies any more — an attack is walked
-		// over to its target ({@link MugenBoard.closeIn}). Without a definition the
-		// directional anims fall back to run.
-		let moveRightAnim = 'run';
-		let moveLeftAnim = 'run';
-		let hurtAnim = '';
-		const moveSources: string[] = [];
+		// What this actor plays and what has to be loaded for it: see
+		// {@link boundAnimations}. Both asks below are already warm — {@link start}
+		// preloads the whole board before placing anybody — so this reads as a fetch and
+		// costs a microtask.
 		const definition = await this.loadDefinition(characterId);
-		if (definition) {
-			moveRightAnim = definition.directions['move-right']?.source || moveRightAnim;
-			moveLeftAnim = definition.directions['move-left']?.source || moveLeftAnim;
-			// The hurt flinch is a movement animation every character defines, not a
-			// move — pull it from the animations record.
-			hurtAnim = definition.animations.hurt?.source || '';
-			for (const move of definition.moves ?? []) {
-				if (move.source) moveSources.push(move.source);
-			}
-		}
-		const names = [
-			...new Set(
-				[startName, moveRightAnim, moveLeftAnim, hurtAnim, ...moveSources].filter(Boolean)
-			)
-		];
+		const { moveRightAnim, moveLeftAnim, hurtAnim, names } = boundAnimations(
+			definition,
+			startName
+		);
 		const animations = await this.loadAnimations(character.basePath, names);
 		const baseFrames = animations[startName];
 		if (!baseFrames || baseFrames.length === 0) return;
@@ -1213,14 +1270,42 @@ export class MugenBoard {
 	 * `/data/characters/<id>/definition.json`). Returns null if it can't be loaded so movement
 	 * falls back to sensible defaults rather than failing the board.
 	 */
-	private async loadDefinition(id: string): Promise<CharacterDefinition | null> {
-		try {
-			const response = await fetch(`/data/characters/${id}/definition.json`);
-			if (!response.ok) return null;
-			return (await response.json()) as CharacterDefinition;
-		} catch {
-			return null;
+	private loadDefinition(id: string): Promise<CharacterDefinition | null> {
+		let request = this.definitionRequests.get(id);
+		if (!request) {
+			request = (async () => {
+				try {
+					const response = await fetch(`/data/characters/${id}/definition.json`);
+					if (!response.ok) return null;
+					return (await response.json()) as CharacterDefinition;
+				} catch {
+					return null;
+				}
+			})();
+			this.definitionRequests.set(id, request);
 		}
+		return request;
+	}
+
+	/**
+	 * Fetch a frames folder's manifest. Memoised on the promise rather than on the
+	 * result, so the two sides fielding the same character ask for it once even when
+	 * both asks are in flight at the same time — which, since {@link preload} starts
+	 * every actor's at once, is the normal case rather than a race.
+	 */
+	private loadManifest(basePath: string): Promise<Manifest> {
+		let request = this.manifestRequests.get(basePath);
+		if (!request) {
+			request = (async () => {
+				const response = await fetch(`${basePath}/manifest.json`);
+				if (!response.ok) {
+					throw new Error(`Failed to load manifest: ${response.status}`);
+				}
+				return (await response.json()) as Manifest;
+			})();
+			this.manifestRequests.set(basePath, request);
+		}
+		return request;
 	}
 
 	/** Fetch a manifest and load the textures for the named animations. */
@@ -1228,33 +1313,89 @@ export class MugenBoard {
 		basePath: string,
 		names: string[]
 	): Promise<Record<string, LoadedFrame[]>> {
-		const response = await fetch(`${basePath}/manifest.json`);
-		if (!response.ok) {
-			throw new Error(`Failed to load manifest: ${response.status}`);
-		}
-		const manifest: Manifest = await response.json();
+		const manifest = await this.loadManifest(basePath);
+		const textures = await this.loadFrames(basePath, frameFiles(manifest, names));
 
 		const result: Record<string, LoadedFrame[]> = {};
 		for (const name of names) {
 			const animation = manifest.animations[name];
 			if (!animation) continue; // e.g. a character without a run cycle
-			const frames: LoadedFrame[] = [];
-			for (const frame of animation.frames) {
-				const texture = await Assets.load<Texture>(`${basePath}/${frame.file}`);
-				// Keep the pixel art crisp when scaled.
-				texture.source.scaleMode = 'nearest';
-				frames.push({
-					texture,
-					width: frame.width,
-					height: frame.height,
-					anchorX: frame.anchorX / frame.width,
-					anchorY: frame.anchorY / frame.height,
-					duration: frame.duration
-				});
-			}
-			result[name] = frames;
+			result[name] = animation.frames.map((frame) => ({
+				texture: textures.get(frame.file) ?? Texture.EMPTY,
+				width: frame.width,
+				height: frame.height,
+				anchorX: frame.anchorX / frame.width,
+				anchorY: frame.anchorY / frame.height,
+				duration: frame.duration
+			}));
 		}
 		return result;
+	}
+
+	/**
+	 * Load a frames folder's PNGs — every one of them at once, keyed back by bare
+	 * filename. One `Assets.load` over the whole list rather than one per frame, which
+	 * is the difference between the browser running its several connections flat out
+	 * and it doing one round trip at a time: a full moveset is 30–80 frames per
+	 * fighter and a board carries six of them, so serialising the wait was seconds of
+	 * a blank arena over files that were mostly in the cache already.
+	 */
+	private async loadFrames(basePath: string, files: string[]): Promise<Map<string, Texture>> {
+		const loaded = new Map<string, Texture>();
+		if (files.length === 0) return loaded;
+
+		const urls = files.map((file) => `${basePath}/${file}`);
+		const byUrl = await Assets.load<Texture>(urls);
+		files.forEach((file, index) => {
+			const texture = byUrl[urls[index]];
+			if (!texture) return;
+			// Keep the pixel art crisp when scaled.
+			texture.source.scaleMode = 'nearest';
+			loaded.set(file, texture);
+		});
+		return loaded;
+	}
+
+	/**
+	 * Warm everything the board is about to place: every actor's definition, its
+	 * manifest and every texture the two of them name, all in flight together.
+	 *
+	 * Placement itself stays ordered — {@link start} stands the fighters up one after
+	 * the next so the actor list reads top to bottom — and each `addActor` asks for its
+	 * own assets exactly as before. What it asks for is by then already loaded (the
+	 * fetches are memoised, the textures are in Pixi's own cache), so the ordering costs
+	 * a microtask instead of a network round trip per frame.
+	 *
+	 * Best-effort: a character that fails here fails again in `addActor`, which is where
+	 * it is handled. Nothing is reported from a warm-up.
+	 */
+	private async preload(characters: BoardCharacter[]): Promise<void> {
+		const folders = new Map<string, Set<string>>();
+
+		await Promise.all(
+			characters.map(async (character) => {
+				try {
+					// Keyed exactly as the placement keys it, or the memo is missed and the
+					// warm-up bought nothing.
+					const [definition, manifest] = await Promise.all([
+						this.loadDefinition(characterIdFromFramesPath(character.basePath) ?? ''),
+						this.loadManifest(character.basePath)
+					]);
+					const { names } = boundAnimations(definition, character.animation ?? 'idle');
+					const files = folders.get(character.basePath) ?? new Set<string>();
+					for (const file of frameFiles(manifest, names)) files.add(file);
+					folders.set(character.basePath, files);
+				} catch {
+					// Left to addActor to run into and handle.
+				}
+			})
+		);
+
+		await Promise.all(
+			[...folders].map(([basePath, files]) =>
+				this.loadFrames(basePath, [...files]).catch(() => new Map<string, Texture>())
+			)
+		);
 	}
 
 	/** Push the actor's current frame texture and anchor to its sprite. */
