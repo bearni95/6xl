@@ -3469,6 +3469,132 @@
 								<img src="/assets/icons/lorc/radar-sweep.svg" class="size-6" alt="" />
 							</button>
 						</div>
+
+						<!-- The other edge of the terrain: where the map is standing, and the three things
+							there are to say about it. It is the head of the block under the map — see that
+							block, which is the panel those tabs turn over and nothing else now — and it is
+							laid over the terrain rather than at the top of that block because both halves of
+							it are about the place the map is open on: the badge names the place the terrain
+							is showing, and the tabs pick which reading of that place the panel holds. A row
+							that says WHERE YOU ARE reads best on the thing you are looking at, and the
+							bottom edge is the one a map has to spare — the top strip belongs to the two
+							presses that act on the level (the tally and the radar), and the pins and the
+							polygons a reader is working over sit in the middle of the box.
+							The strip spans the map (`inset-x-3`) with `justify-center` putting one
+							shrink-to-fit row in the middle of it, so the row is as wide as what is in it and
+							centred on the map's own axis. `max-w-full` is the only cap, and it bites where a
+							long town name would otherwise outrun the terrain — at which point the grid's two
+							tracks give and the badge's `min-w-0` truncates the name inside its half.
+							`pointer-events-none` on the strip with the row turning them back on, since the
+							room either side of it is terrain and terrain has to stay draggable; `z-[900]`
+							clears Leaflet's own panes as the strip above it does.
+							`bg-base-100/80`, which is the surface every plate on every pin standing on this
+							map is drawn on (see TownPlate's PLATE_SURFACE) — same colour, same alpha. The
+							badge is white ink with no surface of its own and the terrain under it is any
+							colour at all, so it wants a plate; the plate it wants is the one this map
+							already uses for white ink laid over terrain, rather than the thinner wash the
+							tally at the top is drawn on, which is a wash BECAUSE the tally is about what is
+							under it. This row is not — it names where the map is standing. -->
+						<div
+							class="pointer-events-none absolute inset-x-3 bottom-3 z-[900] flex justify-center"
+						>
+							<!-- Two cells of one grid, where the map is standing at the near one and the three
+								tabs at the far one. What they are is one statement in two halves — this is where
+								the map is standing, and these are the three things to say about it — so they are
+								a grid of two rather than a row that happens to hold both: each gets half the
+								row's width whatever is in the other, and a long town name cannot walk the tabs
+								off the edge nor a short one leave them adrift in the middle.
+								The place stood on the band across the top of the page before either, a whole
+								column away from the answers about it (see the band, where the middle of the row
+								used to be), and then at the head of the block under the map. -->
+							<div
+								class="pointer-events-auto grid max-w-full grid-cols-2 items-center gap-2 rounded-lg bg-base-100/80 p-2 shadow-xl"
+							>
+								<!-- The near cell is where the map is standing, said once and by one thing: the
+									badge that names the place. Lettered exactly as a crumb and as a row of the
+									list under it are, and pressed for what every row that names a place is
+									pressed for (see RegionCurrentBadge). It carried the radio's play/pause on its
+									second line for a while; the radio is the last line of the pin standing on the
+									open place now, where the station is already said by the plate carrying it.
+									`min-w-0` so a long name truncates inside its half rather than widening the
+									cell.
+									The dots stood before it for a while — the way back up out of the place, which
+									came down here from a strip over the map on the ground that a cut belongs
+									beside its place. It is back on that strip (see the map), at the near end of
+									the row the radar holds the far end of: what the path moves when it is pressed
+									is the terrain, and this cell is the one place on the page where a second way
+									of naming the open place could only ever be the same tile and name twice. -->
+								<RegionCurrentBadge
+									classes="min-w-0"
+									row={subdivisionCurrent}
+									on:select={(event) => openFromColumn(event.detail.key)}
+								/>
+
+								<!-- The tabs, said the way the map's own two were said over the terrain:
+									DaisyUI's boxed tabs, `role="tablist"`, and which is up held on the page
+									rather than pointed at with `aria-controls` — the panel they turn over is a
+									box away, in the column beside the map, which is exactly why the state is the
+									page's and not either box's.
+									Two of them are one tab that changes with the kind of place open, and never
+									both (see `placesOffered`): the town for a municipality, the list of places for
+									every coarser cut. A municipality is read as the town it is — the side on it,
+									the plate naming it, the fight to be had — and a province is read as the places
+									it divides into; neither has anything to say in the other's shape, and offering
+									it dark said that one press later. They were three tabs at every tier for as
+									long as the list was about the level rather than about the place.
+									The box is the one that is offered dark, because it is the only one that is
+									about the same place as the tab beside it: most towns on most days are outside
+									the booster window and have no box, and a town whose box this reader has
+									already opened has none left either — which is a fact about the town worth
+									printing on the town's own row of tabs.
+									The far cell of the row, and held to the far edge of it (`justify-end`), so the
+									tabs stand against the row's own edge rather than adrift in the middle of
+									their half. None of them gives — each tab is `whitespace-nowrap` — so what a
+									half too narrow for them does is scroll (`overflow-x-auto`): a word
+									broken across two lines in a tab is worse than a row that slides. -->
+								<div role="tablist" class="tabs-boxed tabs min-w-0 justify-end overflow-x-auto">
+									{#if townOffered}
+										<button
+											type="button"
+											role="tab"
+											aria-selected={townTab === 'town'}
+											class={classNames('tab whitespace-nowrap', {
+												'tab-active': townTab === 'town'
+											})}
+											on:click={() => (townTab = 'town')}
+										>
+											{$_('map.town.tabs.town')}
+										</button>
+									{/if}
+									<button
+										type="button"
+										role="tab"
+										aria-selected={townTab === 'box'}
+										disabled={!townBoxOffered}
+										class={classNames('tab whitespace-nowrap', {
+											'tab-active': townTab === 'box',
+											'tab-disabled cursor-default opacity-40': !townBoxOffered
+										})}
+										on:click={() => (townTab = 'box')}
+									>
+										{$_('map.town.tabs.box')}
+									</button>
+									{#if placesOffered}
+										<button
+											type="button"
+											role="tab"
+											aria-selected={townTab === 'places'}
+											class={classNames('tab whitespace-nowrap', {
+												'tab-active': townTab === 'places'
+											})}
+											on:click={() => (townTab = 'places')}
+										>
+											{$_('map.town.tabs.places')}
+										</button>
+									{/if}
+								</div>
+							</div>
+						</div>
 					</div>
 
 					<!-- (The level the map is open on, listed, was painted over this same box, as the
@@ -3560,12 +3686,19 @@
 			they are on a mark.
 
 			Three things stand here and one of them at a time, which is what the row of tabs
-			above them picks between: the town, the box that town has waiting, and the places the
+			picks between: the town, the box that town has waiting, and the places the
 			open region divides into. They are three answers to one question — what is there, at
 			this place — and a column with all of them in it would be a picture of who holds the
 			town with an unopened wrapper and a list of forty names hanging off the bottom of it,
 			at a width where what is under the map is what a phone has left. Tabs and not a fold,
 			because none of the three is another's detail.
+			That row is not the head of this block any more — it is laid across the foot of the
+			terrain (see the map column), with the badge naming the open place beside it. Both
+			halves of it are about the place the map is drawing, so they read on the map; what is
+			left here is the panel, which is the one thing in this box that is about the place
+			rather than about which reading of it is up. So the block holds one child now, and
+			`items-center gap-2` is what it takes to centre it, there being nothing left to space
+			it from.
 			The list is the newcomer, and it came off the row of tabs over the terrain, where it
 			was drawn as a third way of reading the map. It never was one: the terrain and the
 			shares are pictures of the level and the list is its names, which is the same kind of
@@ -3576,99 +3709,7 @@
 				transition:blur={CHROME_BLUR}
 				class="row-start-2 flex aspect-square w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:aspect-auto md:border-b-2 md:border-t-0"
 			>
-				<!-- The head of the block: two cells of one grid, where the map is standing at the near
-					one and the three tabs at the far one. What they are is one statement in two
-					halves — this is where the map is standing, and these are the three things to say about
-					it — so they are a grid of two rather than a row that happens to hold both: each
-					gets half the block's width whatever is in the other, and a long town name cannot
-					walk the tabs off the edge nor a short one leave them adrift in the middle.
-					The place stood on the band across the top of the page, a whole column away from
-					the answers about it (see the band, where the middle of the row used to be). -->
-				<div class="grid w-full flex-none grid-cols-2 items-center gap-2">
-					<!-- The near cell is where the map is standing, said once and by one thing: the badge
-						that names the place. Lettered exactly as a crumb and as a row of the list under
-						it are, and pressed for what every row that names a place is pressed for (see
-						RegionCurrentBadge). It carried the radio's play/pause on its second line for a
-						while; the radio is the last line of the pin standing on the open place now,
-						where the station is already said by the plate carrying it. `min-w-0` so a
-						long name truncates inside its half rather than widening the cell.
-						The dots stood before it for a while — the way back up out of the place, which
-						came down here from a strip over the map on the ground that a cut belongs beside
-						its place. It is back on that strip (see the map), at the near end of the row the
-						radar holds the far end of: what the path moves when it is pressed is the terrain,
-						and this cell is the one place on the page where a second way of naming the open
-						place could only ever be the same tile and name twice. -->
-					<RegionCurrentBadge
-						classes="min-w-0"
-						row={subdivisionCurrent}
-						on:select={(event) => openFromColumn(event.detail.key)}
-					/>
-
-					<!-- The tabs, said the way the map's own two are said over the terrain: DaisyUI's
-						boxed tabs, `role="tablist"`, and which is up held on the page rather than
-						pointed at with `aria-controls` (see the tab row over the map, which this is a
-						second of).
-						Two of them are one tab that changes with the kind of place open, and never
-						both (see `placesOffered`): the town for a municipality, the list of places for
-						every coarser cut. A municipality is read as the town it is — the side on it,
-						the plate naming it, the fight to be had — and a province is read as the places
-						it divides into; neither has anything to say in the other's shape, and offering
-						it dark said that one press later. They were three tabs at every tier for as
-						long as the list was about the level rather than about the place.
-						The box is the one that is offered dark, because it is the only one that is
-						about the same place as the tab beside it: most towns on most days are outside
-						the booster window and have no box, and a town whose box this reader has
-						already opened has none left either — which is a fact about the town worth
-						printing on the town's own row of tabs.
-						The far cell of the head, and held to the far edge of it (`justify-end`), so the
-						tabs stand against the block's own edge rather than adrift in the middle of
-						their half. None of them gives — each tab is `whitespace-nowrap` — so what a
-						half too narrow for them does is scroll (`overflow-x-auto`): a word
-						broken across two lines in a tab is worse than a row that slides. -->
-					<div role="tablist" class="tabs-boxed tabs min-w-0 justify-end overflow-x-auto">
-						{#if townOffered}
-							<button
-								type="button"
-								role="tab"
-								aria-selected={townTab === 'town'}
-								class={classNames('tab whitespace-nowrap', {
-									'tab-active': townTab === 'town'
-								})}
-								on:click={() => (townTab = 'town')}
-							>
-								{$_('map.town.tabs.town')}
-							</button>
-						{/if}
-						<button
-							type="button"
-							role="tab"
-							aria-selected={townTab === 'box'}
-							disabled={!townBoxOffered}
-							class={classNames('tab whitespace-nowrap', {
-								'tab-active': townTab === 'box',
-								'tab-disabled cursor-default opacity-40': !townBoxOffered
-							})}
-							on:click={() => (townTab = 'box')}
-						>
-							{$_('map.town.tabs.box')}
-						</button>
-						{#if placesOffered}
-							<button
-								type="button"
-								role="tab"
-								aria-selected={townTab === 'places'}
-								class={classNames('tab whitespace-nowrap', {
-									'tab-active': townTab === 'places'
-								})}
-								on:click={() => (townTab = 'places')}
-							>
-								{$_('map.town.tabs.places')}
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<!-- The panel those three tabs share, and the box in here that scrolls for two of
+				<!-- The panel those three tabs turn over, and the box in here that scrolls for two of
 					them: what the block is given is a share of a track — a 1:1 of a phone's width,
 					half a column from `md` up — and what stands in it is as tall as three statues and
 					a plate, so there is regularly a little more of this than there is room for. It
@@ -3682,9 +3723,12 @@
 					scroller is two bars for one list and a box that can be pushed out of its own
 					parent. So the overflow is switched off for that tab and the list is handed the
 					panel's height (`min-h-0 flex-1`) to do what it already does with it.
-					The tabs are not in it either way — a strip that scrolls away is a strip that has
-					to be scrolled back to before it can be pressed, and these three are the way out
-					of whichever of them is too tall. -->
+					The tabs are not in it either way, and are not in this block at all any more —
+					they and the badge naming the open place are the row across the foot of the
+					terrain now (see the map column). The reason they were never inside this box is
+					the reason they can be a box away from it: a strip that scrolls away is a strip
+					that has to be scrolled back to before it can be pressed, and these three are the
+					way out of whichever of them is too tall. -->
 				<div
 					class={classNames('flex min-h-0 w-full flex-1 flex-col items-center', {
 						'overflow-y-auto': townTab !== 'places'
