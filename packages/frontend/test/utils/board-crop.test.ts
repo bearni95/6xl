@@ -4,7 +4,7 @@ import { contentCrop, type GridSpan } from '$utils/mugen/mugen-board';
 /**
  * Where the canvas is cut around the board.
  *
- * It is cut to the grid, both ways: the hexagons' own four edges and nothing else, so the
+ * It is cut to the grid, both ways: the field's own four edges and nothing else, so the
  * board runs corner to corner of the canvas. The canvas is scaled to fit its box, so canvas
  * that is not board is scale the board does not get — a strip beside the grid or a band
  * above it is the whole board drawn smaller for it. Room a fighter needs over its head is
@@ -26,7 +26,7 @@ describe('the crop the board is drawn inside', () => {
 	});
 
 	it('keeps nothing back above the top row or below the bottom one', () => {
-		// The board's own head room is a row of hexagons, which is inside this rectangle
+		// The board's own head room is a row of cells, which is inside this rectangle
 		// already. Anything reserved on top of it would be spent twice.
 		const crop = contentCrop(span);
 

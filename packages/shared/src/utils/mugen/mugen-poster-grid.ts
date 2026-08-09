@@ -11,16 +11,19 @@
  * "Exactly as the board" is not a resemblance, it is the same calls. The size is
  * {@link characterFitScale} over a box of {@link CHAR_HEIGHT_RATIO} cell widths, with
  * the character's own {@link readRenderScale}, shifted by {@link crownCorrection} where
- * its definition asks for it. The **ground** is the board's too: a field of pointy-topped
- * hexagons off `grid.ts`'s lattice, rows nested half a cell into each other's slants, each
- * character stood on its cell's foot line rather than on the hexagon's bottom point.
- * Nothing here decides a size or a place; if a poster and a fighter ever disagree it is
- * because one of them stopped calling these.
+ * its definition asks for it. Nothing here decides a size or a place; if a poster and a
+ * fighter ever disagree it is because one of them stopped calling these.
  *
- * What the wall does not take from the board is the board's own *field* — five signed
- * columns, four rows, lanes and halves and a white column between them. Those are the
- * rules of a duel and there is no duel here, which is why the lattice is asked for apart
- * from the board that is usually drawn on it.
+ * The **ground** is the wall's own: a field of pointy-topped hexagons off
+ * `hex-lattice.ts`, rows nested half a cell into each other's slants, each character stood
+ * on its cell's foot line rather than on the hexagon's bottom point. It was the board's
+ * ground as well for a while, and is not any more — the board is a field of squares now
+ * ({@link file://./grid.ts}) — which changes nothing here: what the two ever shared was the
+ * lattice's arithmetic, never the rules on top of it, and a wall wants a field that nests
+ * because a nested row puts a character between the two above it rather than squarely
+ * behind one. What the wall never took from the board is that set of rules — signed
+ * columns, lanes and halves and a white column between them. Those are the rules of a duel
+ * and there is no duel here.
  *
  * **The field grows into the squarest shape it can.** The roster is laid in rows around
  * the three cells at the middle that are kept clear ({@link KEPT_CELLS}): the rows are
@@ -46,7 +49,8 @@
  * which made the cell — the box every character is fitted into — visible to read a size
  * against; but the wall's whole output is a picture of the roster to put on something else,
  * and a ground that had to be cut back out of it afterwards is worse than no ground. So the
- * ground went the way the board's own has always been: real, and unmarked. The cell is still
+ * ground went the way the board's own ground has: real, and unpainted — which is the board's
+ * fill and not its lines, those being ruled in red across the canvas. The cell is still
  * what every size is worked out from, which is a fact about the arithmetic below rather than
  * about anything on screen.
  *
@@ -84,13 +88,8 @@ import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.
 import { CHAR_HEIGHT_RATIO, characterFitScale } from '../card/character-fit';
 import { crownCorrection, readCrownAlign } from './character-crown';
 import { readRenderScale } from './character-render-scale';
-import {
-	type GridPoint,
-	HEX_HEIGHT,
-	HEX_ROW_STEP,
-	latticeCenter,
-	latticeFoot
-} from './grid';
+import type { GridPoint } from './grid';
+import { HEX_HEIGHT, HEX_ROW_STEP, latticeCenter, latticeFoot } from './hex-lattice';
 import type { CharacterDefinition } from '../../types/character-definition.type';
 import type { Manifest } from './mugen-player';
 import { destroyPixiApp } from '../pixi/release-context';
@@ -333,7 +332,7 @@ const isKept = (place: WallPlace): boolean =>
  * the rows are only {@link HEX_ROW_STEP} apart — which is the whole look of the board,
  * every fighter standing up over the row behind it. Every row but the first has the row
  * above to rise into; the first has the canvas edge, and would be cropped at the neck.
- * The board keeps a spare row of hexagons over the lanes for this; the wall, whose top
+ * The board keeps a spare row of cells over the lanes for this; the wall, whose top
  * row is a character like any other, keeps the difference as blank canvas.
  */
 const HEADROOM = Math.max(0, CHAR_HEIGHT_RATIO - HEX_ROW_STEP);
@@ -365,9 +364,9 @@ const rowAt = (step: number): number => (parity(step) === 0 ? -step / 2 : (step 
  * Every row is hung on x = 0.5 — the middle of the kept trio — so it spans half a `width`
  * either side of that and holds every place of its own parity whose whole hexagon fits
  * inside. Which comes out as `width` places on the rows whose parity matches the width's,
- * and one fewer on the others, inset half a cell at both ends: the same alternation the
- * board's own sixth cell exists to produce, arrived at by asking the same question of the
- * same lattice.
+ * and one fewer on the others, inset half a cell at both ends — which is what a nested
+ * field costs at its edges, and the reason the combat board carried an odd sixth column
+ * for as long as it was laid on hexagons too.
  *
  * The order is what decides where a row that runs out of roster stops, which is why it is
  * from the middle out: a short row is then centred on the field with nothing afterwards

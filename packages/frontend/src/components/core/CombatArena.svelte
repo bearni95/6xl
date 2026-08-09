@@ -237,7 +237,7 @@
 	// decides who faces whom, and it is what walks the winner of a lane on or off the
 	// white cell it was fought over — so the cells are taken from there rather than
 	// restated here: the rivals at the front of their own half, the player's team on
-	// column e at the front of theirs, level with them row for row and the white column
+	// column d at the front of theirs, level with them row for row and the white column
 	// standing empty between the two.
 	//
 	// Both lines are filled the same way round: the party's lead on the top row, the rest
@@ -293,7 +293,7 @@
 	}
 
 	// Left: the rival line at the front of its own half; right: the player's
-	// team on column e, the front of its own — the white column between them starts
+	// team on column d, the front of its own — the white column between them starts
 	// empty, being the ground the lanes are played for. Each side's first slot leads (it is the grid's own
 	// character, the rest are extras) and stands on the topmost cell, so team order and
 	// the board's top→bottom order are one and the same. Rebuilt whenever a slot or a

@@ -7,6 +7,7 @@ import {
 	boardCells,
 	type Cell,
 	cellCenter,
+	cellCorners,
 	cellDistance,
 	cellFoot,
 	cellSide,
@@ -16,9 +17,6 @@ import {
 	FIRST_ROW,
 	findMeleeMeeting,
 	findPath,
-	HEX_HEIGHT,
-	HEX_ROW_STEP,
-	hexCorners,
 	isBoardCell,
 	LAST_COLUMN,
 	LAST_ROW,
@@ -28,35 +26,24 @@ import {
 } from '$utils/mugen/grid';
 
 describe('board cells', () => {
-	it('is four rows of five, with a sixth cell on the offset ones', () => {
+	it('is four rows of five, every column running every row', () => {
 		// Three lanes and the row of ground above them, which is board like any other.
 		expect(BOARD_ROWS).toBe(4);
 		expect(FIRST_ROW).toBe(FIRST_LANE_ROW - 1);
 		// The middle lane is the middle of what is fought over, not of the board.
 		expect(MIDDLE_ROW).toBe(1);
-		// The widest rows span every column; the level rows are a column shorter.
-		expect(BOARD_COLUMNS).toBe(6);
-		expect(boardCells()).toHaveLength(6 + 5 + 6 + 5);
+		// Two red columns, the white one, two blue: a rectangle, and even either side of
+		// its middle — which the hex field's odd sixth column could never be.
+		expect(BOARD_COLUMNS).toBe(5);
+		expect(boardCells()).toHaveLength(BOARD_COLUMNS * BOARD_ROWS);
 		for (let r = FIRST_ROW; r <= LAST_ROW; r++) {
-			// The rows alternate, so they alternate upward from the first lane too: a row
-			// laid the same way round as the one under it would stack instead of nesting.
-			const offset = Math.abs(r - FIRST_LANE_ROW) % 2 === 1;
-			expect(boardCells().filter((cell) => cell.r === r)).toHaveLength(offset ? 6 : 5);
+			expect(boardCells().filter((cell) => cell.r === r)).toHaveLength(BOARD_COLUMNS);
 		}
-	});
-
-	it('gives the outermost column to the offset rows alone', () => {
-		// The cell that makes the field's outline symmetric, on every row staggered that
-		// way — the middle lane, and the row of ground above the lanes.
-		expect(isBoardCell(FIRST_COLUMN, MIDDLE_ROW)).toBe(true);
-		expect(isBoardCell(FIRST_COLUMN, FIRST_ROW)).toBe(true);
-		expect(isBoardCell(FIRST_COLUMN, FIRST_LANE_ROW)).toBe(false);
-		expect(isBoardCell(FIRST_COLUMN, LAST_ROW)).toBe(false);
 	});
 
 	it('excludes everything off the field', () => {
 		expect(isBoardCell(3, 0)).toBe(false); // no such column
-		expect(isBoardCell(-4, 1)).toBe(false); // nor here — nothing is deeper than a3
+		expect(isBoardCell(-3, 1)).toBe(false); // nor here — nothing is deeper than a
 		expect(isBoardCell(0, 3)).toBe(false); // below the bottom row
 		expect(isBoardCell(0, FIRST_ROW - 1)).toBe(false); // above the top row
 	});
@@ -65,26 +52,21 @@ describe('board cells', () => {
 		expect(isBoardCell(0, 0)).toBe(true);
 		expect(isBoardCell(-2, 2)).toBe(true);
 		expect(isBoardCell(1, 1)).toBe(true);
+		// The corners, which on a rectangle are cells like any other.
+		expect(isBoardCell(FIRST_COLUMN, FIRST_ROW)).toBe(true);
+		expect(isBoardCell(LAST_COLUMN, LAST_ROW)).toBe(true);
 	});
 
-	it('assigns colour side by column sign', () => {
-		expect(cellSide(-3)).toBe('red');
+	it('assigns colour side by column sign, evenly either way', () => {
 		expect(cellSide(-2)).toBe('red');
 		expect(cellSide(-1)).toBe('red');
 		expect(cellSide(0)).toBe('purple');
 		expect(cellSide(1)).toBe('blue');
 		expect(cellSide(2)).toBe('blue');
-	});
-
-	it('runs every row the full width, the extra cell aside', () => {
-		const cells = boardCells();
-		for (const cell of cells) expect(isBoardCell(cell.q, cell.r)).toBe(true);
-		// No column that runs the board's depth may be missing a row: leaving out the odd
-		// column, every row holds the same five cells.
-		for (let r = FIRST_ROW; r <= LAST_ROW; r++) {
-			const lane = cells.filter((cell) => cell.r === r && cell.q > FIRST_COLUMN);
-			expect(lane).toHaveLength(BOARD_COLUMNS - 1);
-		}
+		// Neither half holds ground the other has no answer to.
+		const red = boardCells().filter((cell) => cellSide(cell.q) === 'red');
+		const blue = boardCells().filter((cell) => cellSide(cell.q) === 'blue');
+		expect(red).toHaveLength(blue.length);
 	});
 });
 
@@ -93,15 +75,13 @@ describe('cell names', () => {
 		// A column's coordinate is signed and centred on the white one; its name is its
 		// place across the board, so the left-hand column is `a` whatever q calls it.
 		expect(columnLabel(FIRST_COLUMN)).toBe('a');
-		expect(columnLabel(0)).toBe('d');
-		expect(columnLabel(LAST_COLUMN)).toBe('f');
+		expect(columnLabel(0)).toBe('c');
+		expect(columnLabel(LAST_COLUMN)).toBe('e');
 		// Rows read downward, so the top one is 1 and the numbering follows the rows —
 		// the row above the lanes included, which is what makes the first lane row 2.
 		expect(rowLabel(FIRST_ROW)).toBe('1');
 		expect(rowLabel(FIRST_LANE_ROW)).toBe('2');
 		expect(rowLabel(LAST_ROW)).toBe(String(BOARD_ROWS));
-		// `a` names the cells of the offset rows: the middle lane's is a3.
-		expect(`${columnLabel(FIRST_COLUMN)}${rowLabel(MIDDLE_ROW)}`).toBe('a3');
 	});
 
 	it('names every cell, and no two the same', () => {
@@ -113,45 +93,33 @@ describe('cell names', () => {
 });
 
 describe('adjacency and pathfinding', () => {
-	it('neighbours are the six sides, all valid board cells at distance 1', () => {
-		// The middle cell of the middle row: an offset row, and far enough inside the
-		// board that all six of its sides land on real cells.
+	it('neighbours are the four sides, all valid board cells at distance 1', () => {
+		// Well inside the board, so all four of its sides land on real cells.
 		const from: Cell = { q: 0, r: 1 };
 		const around = neighbors(from.q, from.r);
-		expect(around).toHaveLength(6);
+		expect(around).toHaveLength(4);
 		for (const nb of around) {
 			expect(isBoardCell(nb.q, nb.r)).toBe(true);
 			expect(cellDistance(from, nb)).toBe(1);
 		}
-		// A hexagon's six neighbours are six different cells.
-		expect(new Set(around.map((c) => `${c.q},${c.r}`)).size).toBe(6);
+		expect(new Set(around.map((c) => `${c.q},${c.r}`)).size).toBe(4);
 	});
 
-	it('reaches the next row by stepping half a cell across, either way', () => {
-		// A level row overhangs the columns to its left, so from a cell on one the row
-		// below is reached at its own column or the one before it — and never the one
-		// after, which is a corner away rather than a side.
+	it('reaches the next row straight down, never across a corner', () => {
+		// A square's rows stack, so the cell below is the same column — and the cells it
+		// meets at a corner alone are not steps at all, they are two moves around it.
 		expect(neighbors(0, 0)).toContainEqual({ q: 0, r: 1 });
-		expect(neighbors(0, 0)).toContainEqual({ q: -1, r: 1 });
+		expect(neighbors(0, 0)).not.toContainEqual({ q: -1, r: 1 });
 		expect(neighbors(0, 0)).not.toContainEqual({ q: 1, r: 1 });
 		expect(cellDistance({ q: 0, r: 0 }, { q: 1, r: 1 })).toBe(2);
-
-		// An offset row is shoved right, so its cells overhang the columns to their
-		// right instead — the mirror of the above, and what makes the two rows nest.
+		// The same both ways, which is what having no stagger means: the row above is
+		// reached exactly as the row below is.
+		expect(neighbors(0, 1)).toContainEqual({ q: 0, r: 0 });
 		expect(neighbors(0, 1)).toContainEqual({ q: 0, r: 2 });
-		expect(neighbors(0, 1)).toContainEqual({ q: 1, r: 2 });
-		expect(neighbors(0, 1)).not.toContainEqual({ q: -1, r: 2 });
 	});
 
-	it('nests the row above the lanes into the first one, and measures it like any other', () => {
-		// The top row is offset, so it overhangs the columns to its right: the two cells it
-		// meets on the lane below are its own column and the next one along.
+	it('measures the row above the lanes like any other', () => {
 		expect(neighbors(0, FIRST_ROW)).toContainEqual({ q: 0, r: FIRST_LANE_ROW });
-		expect(neighbors(0, FIRST_ROW)).toContainEqual({ q: 1, r: FIRST_LANE_ROW });
-		expect(neighbors(0, FIRST_ROW)).not.toContainEqual({ q: -1, r: FIRST_LANE_ROW });
-		// And the arithmetic that undoes the stagger holds above the lanes as well as below
-		// them: every neighbour of a cell up there is one side away, counted negative rows
-		// and all.
 		for (const nb of neighbors(0, FIRST_ROW)) {
 			expect(cellDistance({ q: 0, r: FIRST_ROW }, nb)).toBe(1);
 		}
@@ -160,11 +128,8 @@ describe('adjacency and pathfinding', () => {
 		expect(cellDistance({ q: 0, r: FIRST_ROW }, { q: 0, r: FIRST_LANE_ROW + 1 })).toBe(2);
 	});
 
-	it('measures a walk in sides crossed, not in rows plus columns', () => {
-		// Two rows straight down from a level row: one step onto the offset row below
-		// and one back, landing a column to the left of where it started. Counted as
-		// two offset axes summed it would come to three.
-		expect(cellDistance({ q: 0, r: 0 }, { q: -1, r: 2 })).toBe(2);
+	it('measures a walk as the columns between plus the rows', () => {
+		expect(cellDistance({ q: 0, r: 0 }, { q: -1, r: 2 })).toBe(3);
 		// Across a whole row is the columns between, as it always was.
 		expect(cellDistance({ q: -2, r: 1 }, { q: 2, r: 1 })).toBe(4);
 	});
@@ -198,52 +163,50 @@ describe('adjacency and pathfinding', () => {
 });
 
 describe('the shape of a cell', () => {
-	it('is a hexagon standing on end: taller than it is wide, points top and bottom', () => {
-		// Pointy-topped, so the long axis is the vertical one.
-		expect(HEX_HEIGHT).toBeGreaterThan(1);
-		const corners = hexCorners(0, 0);
-		expect(corners).toHaveLength(6);
+	it('is a square: four corners, one wide and one tall', () => {
+		const corners = cellCorners(0, 0);
+		expect(corners).toHaveLength(4);
 		const centre = cellCenter(0, 0);
-		// Exactly two corners sit on the cell's own vertical centre line — its top and
-		// bottom points — and they are a full height apart.
-		const points = corners.filter((corner) => Math.abs(corner.x - centre.x) < 1e-9);
-		expect(points).toHaveLength(2);
-		expect(Math.abs(points[0].y - points[1].y)).toBeCloseTo(HEX_HEIGHT);
-		// The four others are the ends of the two vertical sides, half a width out.
-		for (const corner of corners.filter((c) => !points.includes(c))) {
+		// Every corner is half a cell from the centre on both axes, which is the whole of
+		// what makes it a square.
+		for (const corner of corners) {
 			expect(Math.abs(corner.x - centre.x)).toBeCloseTo(0.5);
+			expect(Math.abs(corner.y - centre.y)).toBeCloseTo(0.5);
 		}
+		// Two to a side, so the outline is a rectangle and not a bow tie.
+		expect(new Set(corners.map((c) => c.x.toFixed(4))).size).toBe(2);
+		expect(new Set(corners.map((c) => c.y.toFixed(4))).size).toBe(2);
 	});
 
-	it('meets its neighbours on a row side by side, a full width apart', () => {
+	it('meets its neighbours a full cell away, whichever way they are neighbours', () => {
 		expect(cellCenter(1, 0).x - cellCenter(0, 0).x).toBeCloseTo(1);
+		expect(cellCenter(0, 1).y - cellCenter(0, 0).y).toBeCloseTo(1);
 		expect(cellCenter(0, 0).y).toBeCloseTo(cellCenter(2, 0).y);
 	});
 
-	it('nests the rows: three quarters of a height down, half a width across', () => {
-		expect(HEX_ROW_STEP).toBeCloseTo(HEX_HEIGHT * 0.75);
-		expect(cellCenter(0, 1).y - cellCenter(0, 0).y).toBeCloseTo(HEX_ROW_STEP);
-		// The middle row is the offset one, so the top and bottom rows stay level with
-		// each other and it is the one that steps out.
-		expect(cellCenter(0, 1).x - cellCenter(0, 0).x).toBeCloseTo(0.5);
-		expect(cellCenter(0, 2).x).toBeCloseTo(cellCenter(0, 0).x);
+	it('stacks the rows squarely: no row is offset from any other', () => {
+		// What the hex field could not do, and what every lane on this board is level for.
+		for (let r = FIRST_ROW; r <= LAST_ROW; r++) {
+			expect(cellCenter(0, r).x).toBeCloseTo(cellCenter(0, FIRST_ROW).x);
+		}
 	});
 
 	it('is exactly as big as the board says it is', () => {
 		// Every cell of the board lies inside the extent the renderer sizes its canvas
 		// from, and the extent is no bigger than it needs to be.
-		const corners = boardCells().flatMap((cell) => hexCorners(cell.q, cell.r));
+		const corners = boardCells().flatMap((cell) => cellCorners(cell.q, cell.r));
 		expect(Math.min(...corners.map((c) => c.x))).toBeCloseTo(0);
 		expect(Math.min(...corners.map((c) => c.y))).toBeCloseTo(0);
 		expect(Math.max(...corners.map((c) => c.x))).toBeCloseTo(BOARD_WIDTH);
 		expect(Math.max(...corners.map((c) => c.y))).toBeCloseTo(BOARD_HEIGHT);
-		// Nothing hangs off either end: the middle row spans every column edge to edge.
+		// Counted rather than worked out: cells one wide and one tall, in a rectangle.
 		expect(BOARD_WIDTH).toBeCloseTo(BOARD_COLUMNS);
+		expect(BOARD_HEIGHT).toBeCloseTo(BOARD_ROWS);
 	});
 
-	it('is symmetric left to right, which is what the odd cell buys', () => {
-		// Mirroring the field about its own middle lands it back on itself: every cell's
-		// reflection is a cell, which is the whole point of the sixth one.
+	it('is symmetric left to right', () => {
+		// Mirroring the field about its own middle lands it back on itself, which is what
+		// a rectangle of squares is and what the white column being the middle depends on.
 		const middle = BOARD_WIDTH / 2;
 		const at = (cells: Cell[]) =>
 			new Set(cells.map((c) => `${cellCenter(c.q, c.r).x.toFixed(4)},${c.r}`));
@@ -252,16 +215,18 @@ describe('the shape of a cell', () => {
 			boardCells().map((c) => `${(2 * middle - cellCenter(c.q, c.r).x).toFixed(4)},${c.r}`)
 		);
 		expect(mirrored).toEqual(board);
+		// And the white column is that middle, which is what the two lines meet across.
+		expect(cellCenter(0, FIRST_LANE_ROW).x).toBeCloseTo(middle);
 	});
 
-	it('stands a fighter where its cell is still full width, not on its bottom point', () => {
+	it('stands a fighter inside its own cell, not on the line under it', () => {
 		const centre = cellCenter(0, FIRST_ROW);
 		const foot = cellFoot(0, FIRST_ROW);
 		expect(foot.x).toBeCloseTo(centre.x);
 		// Below the centre, so the fighter reads as inside its cell — but above the
-		// bottom point, which is the corner shared with the two cells underneath.
+		// bottom edge, which is the line it shares with the row below.
 		expect(foot.y).toBeGreaterThan(centre.y);
-		expect(foot.y).toBeLessThan(centre.y + HEX_HEIGHT / 2);
+		expect(foot.y).toBeLessThan(centre.y + 0.5);
 	});
 });
 

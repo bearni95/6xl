@@ -6,7 +6,7 @@ import { BOARD_HEIGHT, BOARD_WIDTH } from '$utils/mugen/grid';
  * The canvas the board is laid out on.
  *
  * It is the grid, plus the padding drawn inside during the layout — and the crop then takes
- * that padding back off, so the finished canvas is the hexagons and nothing else. Nothing
+ * that padding back off, so the finished canvas is the grid and nothing else. Nothing
  * is reserved beside the board or over it: the canvas is scaled to fit its box, so room
  * held back is board drawn smaller, and the room a fighter needs above its head is a row of
  * the board itself (see `grid.ts`'s FIRST_LANE_ROW).
@@ -35,7 +35,7 @@ describe('the canvas the board is laid out on', () => {
 		expect(width).toBeCloseTo(padding * 2 + cellSize * BOARD_WIDTH);
 
 		// And down, the same: the board's own height and that same padding. The empty cell
-		// that used to be reserved over the top row is a row of hexagons instead.
+		// that used to be reserved over the top row is a row of the board instead.
 		expect(height).toBeCloseTo(padding * 2 + cellSize * BOARD_HEIGHT);
 	});
 

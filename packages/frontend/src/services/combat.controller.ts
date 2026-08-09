@@ -45,8 +45,8 @@
  * they are carried out by the same resolution, gifts and ordering included.
  *
  * The two lines open **face to face across the central white column** — the rivals on
- * column c (b on the middle lane, see {@link RIVAL_CELLS}), the player's fighters on
- * column e, one pair to a row — so that column, which nobody starts on, is the ground
+ * column b ({@link RIVAL_CELLS}), the player's fighters on column d, one pair to a row —
+ * so that column, which nobody starts on, is the ground
  * being fought over, lane by lane. A lane is settled on
  * the board the turn it is decided: the winner either takes that white cell (the player's
  * fighter walks up onto it) or falls back a column deeper into its own half (the rival).
@@ -124,10 +124,10 @@ export const MAX_TURNS = 20;
 export const ENCOUNTERS_TO_WIN = 2;
 
 /**
- * The ground the player's line opens on, listed top→bottom on screen — column e, the
+ * The ground the player's line opens on, listed top→bottom on screen — column d, the
  * front of its own half, one fighter to a row, each facing the rival across the white
  * column on the same row. A fighter holds its own cell until the lane in front of it is
- * decided, and then it either takes that lane's white cell or retracts to column f behind
+ * decided, and then it either takes that lane's white cell or retracts to column e behind
  * it (see {@link CombatController.settleLane}).
  *
  * Three a side on a three-row board, so a line is one fighter to every row of it: every
@@ -141,28 +141,23 @@ export const PLAYER_CELLS: Cell[] = [
 ];
 
 /**
- * The ground the rival line opens on, listed top→bottom on screen: the front of its own
- * half, one fighter to a row, each facing the player across the white column between
- * them. Neither line opens on that white column: it is the ground the lanes are played
- * for, so it starts empty and is only ever stood on by whoever wins a lane (see
+ * The ground the rival line opens on, listed top→bottom on screen — column b, the front
+ * of its own half, one fighter to a row, each facing the player across the white column
+ * between them. Neither line opens on that white column: it is the ground the lanes are
+ * played for, so it starts empty and is only ever stood on by whoever wins a lane (see
  * {@link CombatController.settleLane}) — either line's winner walks up onto it, while
  * the fighter that lost the lane retracts to the column behind it.
  *
- * Column c on the top and bottom lanes, and **b on the middle one**, which is the lane
- * whose row is staggered half a cell right of the other two. Openings are ground, and
- * ground is where it is drawn, so a line that is level in columns is not level on screen:
- * on the middle lane both fighters sat half a cell right, which put the pair's own middle
- * — the place they walk out to and meet when they both attack — half a cell right of the
- * board's, while the other two lanes met dead centre. Standing the rival a column further
- * back cancels the stagger: it is one and a half cells from the board's middle and so is
- * the player, the two walk out the same distance, and all three lanes clash on the same
- * line (see `MugenBoard.meleeApproach`). It costs the rival nothing but the ground it
- * opens on — the column it retracts to moves back with it, onto the odd cell the middle
- * row has and the others do not, which is the one thing that cell was ever for.
+ * One column for all three lanes, mirroring the player's own line. It was not always:
+ * the board was a field of hexagons, whose middle row was drawn half a cell right of the
+ * two around it, so a line level in columns was not level on screen — the middle lane's
+ * pair met half a cell right of where the other two met — and the rival's middle fighter
+ * opened a column further back to cancel it. A field of squares has no stagger to answer,
+ * so the answer went with it and the line stands level in both senses at once.
  */
 export const RIVAL_CELLS: Cell[] = [
 	{ q: -1, r: 0 },
-	{ q: -2, r: 1 },
+	{ q: -1, r: 1 },
 	{ q: -1, r: 2 }
 ];
 
@@ -184,11 +179,11 @@ export const WON_COLUMN = 0;
  * Read off the opening ground rather than written down, so a line that opens somewhere
  * else falls back from wherever that is: it is the column one further out from the white
  * one, which is what "behind" means for a side whose own half is out from the centre.
- * Asked of a lane and not of a side, because the rival's line is not level — its middle
- * fighter opens a column further back than the other two ({@link RIVAL_CELLS}) — and a
- * retreat has to be a step backwards from wherever the fighter making it stood. Read off
- * the line, one column per lane, it would have told that fighter to withdraw to the cell
- * it was already standing on, which is a fighter falling and not moving.
+ * Asked of a lane and not of a side, so that it stays a step backwards from wherever the
+ * fighter making it actually stood. Both lines happen to open level today, so every lane
+ * of a side answers the same column — but they have not always ({@link RIVAL_CELLS}), and
+ * asked of the side, a line that opened unevenly would send one of its fighters back to
+ * the cell it was already standing on, which is a fighter falling and not moving.
  */
 export function fallenColumn(side: FighterSide, row: number): number {
 	const cells = side === 'info' ? PLAYER_CELLS : RIVAL_CELLS;

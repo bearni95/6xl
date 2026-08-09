@@ -126,7 +126,7 @@
 				Every imported character's idle animation on one canvas, sized exactly as the game's
 				combat board sizes it — the shared fit, the character's own
 				<code class="font-mono">renderScale</code>, and the crown alignment that stands it by its
-				head. They stand on the board's own hex field, filled outward from the middle in
+				head. They stand on a field of hexagons, filled outward from the middle in
 				registry order and laid at whichever width comes out nearest a square, each on its
 				cell's foot line, so heights compare across the wall. The field itself is never
 				painted — not the cells, not the line that halves it — but the country is: they

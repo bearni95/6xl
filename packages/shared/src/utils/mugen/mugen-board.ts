@@ -20,6 +20,7 @@ import {
 	boardCells,
 	type Cell,
 	cellCenter,
+	cellCorners,
 	cellFoot,
 	cellSide,
 	type CellSide,
@@ -27,7 +28,6 @@ import {
 	findClosestApproach,
 	findMeleeMeeting,
 	findPath,
-	hexCorners,
 	isBoardCell,
 	LAST_COLUMN,
 	MIDDLE_ROW
@@ -137,8 +137,8 @@ export interface BoardGrid {
 
 export interface MugenBoardOptions {
 	grids: [BoardGrid, BoardGrid];
-	/** Width of a single grid cell, in pixels — the hexagon's short way across, which is
-	 * also how far apart two neighbours on a row stand. Every cell is this wide. */
+	/** Width of a single grid cell, in pixels — which on a square field is its height too,
+	 * and how far apart two neighbours' centres stand. Every cell is this size. */
 	cellSize?: number;
 	/** Outer padding around the grid, in pixels. */
 	padding?: number;
@@ -156,22 +156,27 @@ const DEFAULTS = {
 	centerColor: 0xffffff // white
 };
 
-// --- Board layout (a field of pointy-topped hexagons) -----------------------
+// --- Board layout (a field of squares) --------------------------------------
 // The grid is drawn face-on: no tilt, no vanishing point, no per-row scaling.
-// A cell is the same hexagon of `cellSize` px across wherever it sits, so a
+// A cell is the same square of `cellSize` px wherever it sits, so a
 // character keeps its size wherever it walks, because there is no depth for it to
 // walk into. Where a cell *is* comes from the grid module — `cellCenter`,
-// `cellFoot` and `hexCorners`, all in cell widths off the grid's top-left corner —
+// `cellFoot` and `cellCorners`, all in cell widths off the grid's top-left corner —
 // so the only arithmetic here is the scale by `cellSize` and the translation into
 // the canvas ({@link MugenBoard.project}). Cells left of centre are the first
 // grid's colour, cells to the right the second's.
 
 /**
  * The colour every line of the grid is drawn in. The lattice is not a side's marking —
- * it is the board itself — so it is one colour all the way across, and black is the one
- * that says "ruled line" over the pale fills the halves are tinted with.
+ * it is the board itself — so it is one colour all the way across, red end to end
+ * rather than each half ruled in its own.
+ *
+ * The same red the canvas's callouts, guards and sparks are tinted with
+ * ({@link COMBAT_COLOR_HEX}), written out here because that table is declared further
+ * down the file; keep the two in step. Stated as a literal and not read from the table
+ * for that reason alone.
  */
-const GRID_LINE = 0x000000;
+const GRID_LINE = 0xef4444;
 
 /**
  * The viewport the canvas is sized against, across and down.
@@ -204,11 +209,12 @@ const VIEWPORT_HEIGHT = '100dvh';
  * It buys scale with room that is going spare. A board sized to a *narrow* view is limited
  * by the width, so it comes out shallow with a deep band of empty view above and below it
  * and the fighters drawn small in the middle — while the two outermost columns are the only
- * ground on the board no lane is ever played across (the level rows have no cell in them at
- * all, so the far red column holds two hexagons and the far blue one none). Pushing exactly
- * one column's width off the view, half at either edge, is therefore a fifth more board
- * everywhere it counts at the cost of the ground that counts least, and it stays symmetric —
- * the white column is still the middle of the screen.
+ * ground on the board no lane is ever played across: nobody opens on them and nothing is
+ * won on them, they are where a fallen fighter withdraws to and stands out the fight.
+ * Pushing exactly one column's width off the view, half at either edge, is therefore a
+ * quarter more board everywhere it counts at the cost of the ground that counts least, and
+ * it stays symmetric — the white column is still the middle of the screen, and each half
+ * gives up the same sliver of its own back column.
  *
  * A property rather than a prop because *when* to spend it is a question about the screen and
  * not about the board: the host says it in a media query like any other piece of layout (the
@@ -233,7 +239,7 @@ const BLEED_SCALE = BOARD_WIDTH / (BOARD_WIDTH - 1);
 // sprite, and a character's own `renderScale` rides along on the fit.
 //
 // The board keeps a row above the lanes for exactly that (`grid.ts`'s FIRST_LANE_ROW),
-// so the room is hexagons rather than empty canvas: a fighter on the top lane rises into
+// so the room is board rather than empty canvas: a fighter on the top lane rises into
 // ground that is part of the board and is drawn like the rest of it. A strip of blank
 // canvas reserved over the grid did the same job invisibly, and cost the same height —
 // but the canvas is scaled to fit its box, so that strip was board the fight did not get,
@@ -726,8 +732,8 @@ interface Actor {
 	stepDir: number;
 }
 
-/** The hexagons' own four edges in stage coordinates — the rectangle the drawn grid
- * occupies, which is the whole of what {@link contentCrop} is given. */
+/** The grid's own four edges in stage coordinates — the rectangle it occupies, which is
+ * the whole of what {@link contentCrop} is given. */
 export interface GridSpan {
 	left: number;
 	right: number;
@@ -737,14 +743,14 @@ export interface GridSpan {
 
 /**
  * The canvas the board is drawn on: where to put the stage's origin, and how big to make
- * the framebuffer. **It is the grid and nothing else, on both axes** — the hexagons' own
+ * the framebuffer. **It is the grid and nothing else, on both axes** — the field's own
  * edges, no margin, nothing reserved beside them or over them. The board runs corner to
  * corner of its canvas.
  *
  * The canvas is scaled to fit its box, so every pixel of canvas that is not board is scale
  * the board does not get: a strip kept clear down one side, or a band left empty above the
  * top row, is the whole grid drawn smaller for it. Anything a fighter needs room for is
- * therefore given as *board* — the row above the lanes, which is hexagons and is drawn —
+ * therefore given as *board* — the row above the lanes, which is cells and is drawn —
  * rather than as canvas held back for it.
  *
  * Cutting to what is *drawn* instead would hand that room to whichever fighter happens to
@@ -773,17 +779,17 @@ export function contentCrop(span: GridSpan): {
 }
 
 /**
- * Renders the board — a field of pointy-topped hexagons, drawn face-on — on a PixiJS
+ * Renders the board — a field of squares, drawn face-on — on a PixiJS
  * canvas. Cells left of centre take the first grid colour, cells to the right the
  * second, and the shared central column the centre colour. Two MUGEN characters loop
  * (idle by default) standing upright, one on each half.
  *
- * Nothing is tilted: a cell is the same hexagon wherever it is on the board, so a
+ * Nothing is tilted: a cell is the same square wherever it is on the board, so a
  * character's size says something about the character and nothing about where it
  * stands, and walking it forward neither resizes it nor moves it toward a vanishing
  * point. The only thing depth still decides is paint order — a row further down the
- * screen draws over the row above it, and hexagonal rows interlock, so it decides it
- * rather more than a rectangle's did.
+ * screen draws over the row above it, which on a field of squares is a fighter standing
+ * in front of the one squarely behind it rather than between two of them.
  *
  * Frame decoding happens at build time (scripts/generate-sprites.js); this
  * class only lays out the grid and plays the loaded frames. All rendering
@@ -829,9 +835,8 @@ export class MugenBoard {
 
 	/**
 	 * Total canvas size: the grid's own extent at `cellSize` px to the cell width
-	 * ({@link BOARD_WIDTH}, {@link BOARD_HEIGHT} — which is why neither figure is simply
-	 * the count of columns or rows: the offset rows hang half a cell out to the right,
-	 * and the rows interlock rather than stack), plus the padding around it.
+	 * ({@link BOARD_WIDTH}, {@link BOARD_HEIGHT}, which on a field of squares is the count
+	 * of columns and the count of rows), plus the padding around it.
 	 *
 	 * This is the size the board is *laid out* at, not the size it is seen at: the canvas
 	 * is cropped to the grid once everything is on it ({@link MugenBoard.fitToContent}) and
@@ -941,7 +946,7 @@ export class MugenBoard {
 		// down in the meantime, and destroy() has already freed the app.
 		if (this.destroyed) return;
 
-		// Crop the view to the grid: the canvas becomes the hexagons' own rectangle, so the
+		// Crop the view to the grid: the canvas becomes the field's own rectangle, so the
 		// board fills it corner to corner and there is no canvas outside the board. Cell
 		// positions are absolute px off the grid's origin, so this only translates the stage
 		// and resizes the framebuffer; nothing moves.
@@ -968,15 +973,15 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Cut the canvas to the board: the hexagons' own rectangle, corner to corner. The stage
+	 * Cut the canvas to the board: the field's own rectangle, corner to corner. The stage
 	 * is offset so the grid's top-left lands on the canvas's; the grid's own coordinates are
 	 * untouched, so no cell shifts.
 	 *
 	 * All four edges are geometry rather than a measurement — the outer sides of the first
-	 * and last columns, and the top and bottom points of the first and last rows, at the size
+	 * and last columns, and the top and bottom edges of the first and last rows, at the size
 	 * a cell is drawn — so the crop does not depend on the frame it happens to be taken in,
 	 * and is the same board however the fighters standing on it are posed. Nothing is read
-	 * off what is drawn. What running the hexagons to every canvas edge costs is on
+	 * off what is drawn. What running the board out to every canvas edge costs is on
 	 * {@link contentCrop}.
 	 */
 	private fitToContent(): void {
@@ -1002,7 +1007,7 @@ export class MugenBoard {
 	 * The width is the one figure stated, in CSS rather than in pixels, so it is re-measured
 	 * by the browser as the window is resized or a phone is turned: `min(viewport width,
 	 * viewport height × the board's aspect)`. The height is left to follow from the canvas's
-	 * intrinsic ratio, which keeps the picture square with its framebuffer — the hexagons are
+	 * intrinsic ratio, which keeps the picture square with its framebuffer — the cells are
 	 * never stretched, only scaled.
 	 *
 	 * The width term carries the host's bleed ({@link BLEED_PROPERTY}), which is the one thing
@@ -1048,7 +1053,7 @@ export class MugenBoard {
 	 * Screen point of a place on the grid, given in **cell widths** off its top-left
 	 * corner. One cell width is `cellSize` px on both axes, so this is a scale and a
 	 * translation and nothing else — which is the whole of what "not tilted" means here.
-	 * The hexagons' own proportions are already inside the figures handed to it, so
+	 * The cells' own proportions are already inside the figures handed to it, so
 	 * anything measured in cell widths projects through it unchanged: a cell's corners,
 	 * its foot line, and the height a character is drawn at alike.
 	 */
@@ -1059,7 +1064,7 @@ export class MugenBoard {
 
 	/** Screen-space point at the middle of the cell at [q, r]'s foot line
 	 * ({@link cellFoot}), so a fighter reads as inside the cell rather than floating at
-	 * its centre or balancing on its bottom point. */
+	 * its centre or standing on the line it shares with the row below. */
 	private cellMark(q: number, r: number): Point {
 		const foot = cellFoot(q, r);
 		return this.project(foot.x, foot.y);
@@ -1084,7 +1089,7 @@ export class MugenBoard {
 
 	/**
 	 * The width of a cell in screen px — one figure for the whole board, since every
-	 * cell is the same hexagon. It is the box every character is fitted into, so how big
+	 * cell is the same square. It is the box every character is fitted into, so how big
 	 * a fighter is drawn says something about the fighter and nothing about where on the
 	 * board it happens to be, and walking a fighter forward never resizes it.
 	 */
@@ -1093,22 +1098,21 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Draw the board: one hexagon per cell, standing on end, laid out face-on. Cells left
+	 * Draw the board: one square per cell, laid out face-on. Cells left
 	 * of the central column take `leftColor`, cells to the right `rightColor`, and the
 	 * central column (q = 0) — the shared ground both sides can enter — is painted
 	 * `centerColor`. Iterates the exact cell list from the shared grid utility, so every
 	 * occupiable cell is drawn and nothing else is.
 	 *
-	 * Only the fills are coloured: every line of the grid is drawn in {@link GRID_LINE},
-	 * so the lattice reads as one board rather than as two colours meeting, and a cell's
-	 * side is said by the ground inside it alone.
+	 * Only the fills are the halves' own: every line of the grid is drawn in
+	 * {@link GRID_LINE}, so the lattice reads as one board rather than as two colours
+	 * meeting, and a cell's side is said by the ground inside it alone.
 	 *
-	 * Both are drawn in nothing at present — the ground at alpha 0 and the line with it — so
-	 * the field is unmarked and what stands on the canvas is the fighters and the marks made
-	 * about them (a claimed cell's overlay, the guard rings, the orders) on whatever is
-	 * behind it. The pass itself stays, laying the same hexagons off the same outline: which
-	 * cell is whose is still the thing being drawn, and the board comes back by way of those
-	 * two alphas rather than by writing this again.
+	 * The ground is drawn in nothing — alpha 0, so a half's colour is carried by what stands
+	 * on it rather than by a wash under it — and the lines are drawn: the cells are ruled
+	 * across the canvas and the fighters, the claimed cells' overlays, the guard rings and
+	 * the orders stand on a field that is there to be seen. The fill's alpha stays where the
+	 * line's was, which is how the ground comes back if it is ever wanted.
 	 */
 	private drawBoard(leftColor: number, rightColor: number, centerColor: number): void {
 		if (!this.app) return;
@@ -1121,7 +1125,7 @@ export class MugenBoard {
 
 			graphics.poly(this.cellOutline(q, r));
 			graphics.fill({ color, alpha: 0 });
-			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 0 });
+			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 1 });
 		}
 		this.app.stage.addChild(graphics);
 	}
@@ -1129,11 +1133,11 @@ export class MugenBoard {
 	/**
 	 * The cell at [q, r] as a closed screen-space outline: its six corners projected in
 	 * order, flattened to the `[x, y, x, y, …]` list Pixi draws a polygon from. Every
-	 * hexagon on this board — the ruled grid, a claimed cell's overlay — is drawn from
+	 * square on this board — the ruled grid, a claimed cell's overlay — is drawn from
 	 * this one path, so the paint can never sit a hair off the line under it.
 	 */
 	private cellOutline(q: number, r: number): number[] {
-		return hexCorners(q, r).flatMap((corner) => {
+		return cellCorners(q, r).flatMap((corner) => {
 			const at = this.project(corner.x, corner.y);
 			return [at.x, at.y];
 		});
@@ -1196,7 +1200,7 @@ export class MugenBoard {
 		// was eating the InuYasha cast's correction too, Kagome's 1.4 among them. The
 		// crossing is the smaller thing: every fighter here already stands a third taller
 		// than its cell and over the row behind it ({@link CHAR_HEIGHT_RATIO}), so a limb
-		// reaching past the hexagon is the overlap this board is drawn with throughout.
+		// reaching past the cell is the overlap this board is drawn with throughout.
 		const box = this.cellWidth();
 		const fitScale = characterFitScale(
 			baseFrames,
@@ -1510,8 +1514,8 @@ export class MugenBoard {
 
 		if (actor.moving) {
 			// Advance along the straight line to the target cell. A step crosses one side of
-			// the hexagon, so it is purely horizontal along a row and a diagonal — half a
-			// cell across, three quarters of one down — onto the row above or below.
+			// the square, so it is a whole cell either along the row or up and down the
+			// column, and never both: there are no diagonals to walk on this field.
 			const step = MOVE_SPEED * dt;
 			const dx = actor.targetX - actor.x;
 			const dy = actor.targetY - actor.y;
@@ -1628,14 +1632,15 @@ export class MugenBoard {
 	 * otherwise the cheapest meeting pair is searched. Resolves once both have settled.
 	 * Ids may be given in any order (sides are inferred).
 	 *
-	 * The line they meet on is the board's, not the meeting cell's. The two are the same
-	 * line on a level row, whose white cell sits dead centre — but the middle row is
-	 * staggered half a cell across, so its white cell is not centred and a pair that met
-	 * in the middle of it met half a cell right of where the lanes above and below them
-	 * did. Three lanes clashing on three different lines is not a board being fought
-	 * across. Both lines open the same distance out from this one (see the controller's
-	 * opening cells, which is where the stagger is answered), so meeting on it is also
-	 * the two of them walking out the same distance and arriving together.
+	 * The line they meet on is the board's, not the meeting cell's. On a field of squares
+	 * the two are the same line — every row is level with every other, so the white cell
+	 * of every lane is dead centre — and stating it as the board's is what keeps it true
+	 * of a lane that meets somewhere other than on the white column. It was load-bearing
+	 * on the hex field this replaced, where the middle row was drawn half a cell across
+	 * from the other two and its pair therefore clashed half a cell right of theirs.
+	 * Both lines open the same distance out from this line (see the controller's opening
+	 * cells), so meeting on it is also the two of them walking out the same distance and
+	 * arriving together.
 	 */
 	async meleeApproach(aId: string, bId: string, meetingCell?: Cell): Promise<void> {
 		const a = this.findActor(aId);

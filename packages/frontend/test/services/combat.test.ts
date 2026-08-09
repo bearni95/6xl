@@ -915,16 +915,15 @@ describe('the stand-off', () => {
 			expect(RIVAL_CELLS).toHaveLength(PLAYER_CELLS.length);
 			for (const cell of RIVAL_CELLS) {
 				expect(isBoardCell(cell.q, cell.r)).toBe(true);
-				// The front of the rival's own half, never the shared ground: column c on
-				// the level lanes, and b on the staggered middle one, which is a column
-				// further back so that lane's pair meets where the other two meet.
-				expect(columnLabel(cell.q)).toBe(cell.r === MIDDLE_ROW ? 'b' : 'c');
+				// The front of the rival's own half, never the shared ground: column b on
+				// every lane, the rows being level with one another.
+				expect(columnLabel(cell.q)).toBe('b');
 				expect(cellSide(cell.q)).toBe('red');
 			}
 			for (const cell of PLAYER_CELLS) {
 				expect(isBoardCell(cell.q, cell.r)).toBe(true);
-				// Column e: the front of the player's own half, across the white one.
-				expect(columnLabel(cell.q)).toBe('e');
+				// Column d: the front of the player's own half, across the white one.
+				expect(columnLabel(cell.q)).toBe('d');
 				expect(cellSide(cell.q)).toBe('blue');
 			}
 			// Nobody opens on the white column: it is what the lanes are played for, so it
@@ -943,13 +942,13 @@ describe('the stand-off', () => {
 		});
 
 		it('opens both lines the same distance out from the board’s middle, on every lane', () => {
-			// What the rival's staggered middle cell is for. A lane that attacks both ways
-			// walks its pair out to the board's own middle line (`MugenBoard.meleeApproach`),
-			// so the two have to *start* the same distance from it or one of them arrives
-			// while the other is still walking, and the clash reads as one fighter waiting
-			// for the other. Level in columns is not level on screen: the middle row is
-			// drawn half a cell across from the two around it, which is exactly the half
-			// cell the rival's opening column gives back.
+			// A lane that attacks both ways walks its pair out to the board's own middle
+			// line (`MugenBoard.meleeApproach`), so the two have to *start* the same
+			// distance from it or one of them arrives while the other is still walking, and
+			// the clash reads as one fighter waiting for the other. On a field of squares
+			// level in columns is level on screen, so each line standing one column off the
+			// white one is the whole of it — the hex field's middle row was drawn half a
+			// cell across from the other two, and the rival's opening had to answer it.
 			const middle = BOARD_WIDTH / 2;
 			RIVAL_CELLS.forEach((rival, lane) => {
 				const player = PLAYER_CELLS[lane];
@@ -959,17 +958,16 @@ describe('the stand-off', () => {
 				expect(cellCenter(rival.q, rival.r).x).toBeLessThan(middle);
 				expect(cellCenter(player.q, player.r).x).toBeGreaterThan(middle);
 			});
-			// The middle lane is the one that had to give ground for it, and only it.
-			expect(RIVAL_CELLS[MIDDLE_ROW].q).toBe(RIVAL_CELLS[0].q - 1);
-			expect(RIVAL_CELLS[2].q).toBe(RIVAL_CELLS[0].q);
+			// One column for the whole line, on both sides: no lane gives ground for the
+			// sake of where it is drawn.
+			for (const cell of RIVAL_CELLS) expect(cell.q).toBe(RIVAL_CELLS[0].q);
+			for (const cell of PLAYER_CELLS) expect(cell.q).toBe(PLAYER_CELLS[0].q);
 		});
 
 		it('leaves the fallen a step back from wherever their own lane opened', () => {
 			// A retreat is a step backwards, so it is read off the lane rather than off the
-			// line: the rival's middle fighter opens a column deeper than its castmates and
-			// so falls back a column deeper too — onto the odd cell the middle row has and
-			// the level rows do not. Asked of the side alone it would have been told to
-			// withdraw to the cell it was already standing on.
+			// line — which today gives every lane of a side the same column, both lines
+			// being level, and would go on being a step backwards for one that was not.
 			for (const side of ['info', 'error'] as const) {
 				const cells = side === 'info' ? PLAYER_CELLS : RIVAL_CELLS;
 				for (const opening of cells) {
@@ -1019,10 +1017,9 @@ describe('the stand-off', () => {
 				{ id: 'r0', cell: fallenGround('error', 0) },
 				{ id: 'p0', cell: wonGround(0) }
 			]);
-			// Column b, the back of red's half: the outermost column running the board's
-			// whole depth. The odd cell of column a is behind it on this one lane only, and
-			// nothing in a fight ever puts a fighter there.
-			expect(columnLabel(log.moved[0].cell.q)).toBe('b');
+			// Column a, the back of red's half: the board's own left-hand edge, which is
+			// where a beaten rival stands out the rest of the fight.
+			expect(columnLabel(log.moved[0].cell.q)).toBe('a');
 			expect(cellSide(log.moved[1].cell.q)).toBe('purple');
 		});
 
@@ -1075,13 +1072,13 @@ describe('the stand-off', () => {
 			await playTurn(controller);
 			expect(fighterOf(get(controller), 'p0').down).toBe(true);
 			// A lane is won on the same ground whoever wins it: the rival takes the white
-			// cell, and the player's beaten fighter retracts to column f, the back of its own
+			// cell, and the player's beaten fighter retracts to column e, the back of its own
 			// half. The ground is not a side's until somebody is standing on it.
 			expect(log.moved).toEqual([
 				{ id: 'p0', cell: fallenGround('info', 0) },
 				{ id: 'r0', cell: wonGround(0) }
 			]);
-			expect(columnLabel(log.moved[0].cell.q)).toBe('f');
+			expect(columnLabel(log.moved[0].cell.q)).toBe('e');
 			expect(cellSide(log.moved[1].cell.q)).toBe('purple');
 		});
 

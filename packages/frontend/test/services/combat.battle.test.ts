@@ -218,13 +218,14 @@ describe('CombatController — leaving a fight and coming back to it', () => {
 				LAST_COLUMN,
 				LAST_COLUMN
 			]);
-			// The rival's is not: its middle fighter opens a column deeper, so it falls back
-			// a column deeper too — onto the field's outermost column, which holds a cell on
-			// that lane and on no other. The level lanes fall back a column in from it.
+			// And so is the rival's, on a board whose rows are level: it opens one column,
+			// falls back to one column, and that column is the board's other edge. Its
+			// middle fighter used to open a column deeper than its castmates, to answer a
+			// half-cell stagger the square field does not have.
 			expect(RIVAL_CELLS.map((cell) => fallenColumn('error', cell.r))).toEqual([
-				FIRST_COLUMN + 1,
 				FIRST_COLUMN,
-				FIRST_COLUMN + 1
+				FIRST_COLUMN,
+				FIRST_COLUMN
 			]);
 		});
 	});
