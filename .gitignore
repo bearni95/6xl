@@ -11,6 +11,13 @@ ref-lau-*
 # packages/assets/public/music/
 *-mp3/
 
+# Internet Archive album downloads, one folder per item, dropped here by hand for the
+# songs a show has no Catalan broadcast recording of. Same arrangement as the pulls
+# above: the mp3s the game plays are curated into packages/assets/public/music/ and the
+# rest of the item — the FLACs it was ripped from, the spectrograms, the item metadata —
+# stays here as the source it came out of.
+evangelion-angel-thesis/
+
 # Build output
 dist/
 .svelte-kit/

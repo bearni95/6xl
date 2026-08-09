@@ -574,6 +574,26 @@
 			"file": "keroro-sumomo-no-uta-tvc.mp3",
 			"title": "Sumomo no uta",
 			"showId": 63164
+		},
+		{
+			"file": "evangelion-zankoku-na-tenshi-no-teeze.mp3",
+			"title": "Zankoku na tenshi no teeze",
+			"showId": 890
+		},
+		{
+			"file": "evangelion-tsuki-no-meikyu.mp3",
+			"title": "Tsuki no meikyû",
+			"showId": 890
+		},
+		{
+			"file": "evangelion-zankoku-na-tenshi-no-teeze-instrumental.mp3",
+			"title": "Zankoku na tenshi no teeze (instrumental)",
+			"showId": 890
+		},
+		{
+			"file": "evangelion-tsuki-no-meikyu-instrumental.mp3",
+			"title": "Tsuki no meikyû (instrumental)",
+			"showId": 890
 		}
 	]
 }
