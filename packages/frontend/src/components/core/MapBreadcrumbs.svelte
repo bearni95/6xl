@@ -8,9 +8,9 @@
 	// Where the map is looking. What the crumbs name is the view — the region the map is
 	// framed on, walked into from a pin, a crumb or the zoom — so they belong beside the
 	// thing they are about. It was a bar across the top of the map itself for that reason,
-	// and it is one square in the head of the block under the map now, standing next to the
-	// badge naming the open place: what the only path left letters is the cut ABOVE that
-	// place (see +page.svelte's `aboveCrumbs`), a cut belongs beside its place, and the
+	// and it is one square at the head of the row laid along the map's bottom edge now, standing
+	// next to the badge naming the open place: what the only path left letters is the cut ABOVE
+	// that place (see +page.svelte's `aboveCrumbs`), a cut belongs beside its place, and the
 	// place itself is the badge's to name (see `dotsOnly`).
 	//
 	// The bar wears the panel's own surface rather than the plates' black: the crumbs head
@@ -83,18 +83,25 @@
 	// to lay one out. The whole path is still a press away, in the dropped column.
 	export let folded: boolean = false;
 	// Folded all the way down to the dots: no crumb kept beside them, no plate under them, just
-	// the square and the column it drops. For the one caller there is, which stands it on the
-	// band across the top of the page beside the game's name: the crumb a folded bar would keep
-	// is the same tile and name the badge in the block under the map already prints (see
+	// the square and the column it drops. For the one caller there is, which stands it at the head
+	// of the row along the map's bottom edge: the crumb a folded bar would keep is the same tile
+	// and name the badge in the very next cell of that row prints (see
 	// RegionCurrentBadge, drawn out of the same fields by the same component), so keeping one
-	// here is that tile printed twice on one screen — a duplicate and not a shorter path. What
+	// here is that tile printed twice an inch apart — a duplicate and not a shorter path. What
 	// is left is the way UP and nothing else, which is the only thing the badge cannot say.
 	// No plate because whether one is wanted depends on what it is stood on, which the caller
-	// knows and this does not: on a row of plates it takes the plate its neighbours wear, over
-	// terrain it needs a surface of its own to keep an outlined square legible, and in a head
-	// that already carries one a frame round a single button is a second frame. So `classes` is
-	// where the surface comes from, if it comes at all.
+	// knows and this does not: on a row that already carries one a frame round a single button is
+	// a second frame, on a row of plates it takes the plate its neighbours wear, and laid straight
+	// over terrain it needs a surface of its own to keep an outlined square legible. So `classes`
+	// is where the surface comes from, if it comes at all — and for the caller there is, it does
+	// not.
 	export let dotsOnly: boolean = false;
+	// Which way the column comes out. A path drops DOWN by default, that being where the room is
+	// under a bar at the top of something. The one caller left stands the dots on a row laid along
+	// the FOOT of the map, where down is off the bottom edge and then off the page — so it says so,
+	// and the column comes up out of the row instead. It is the same column either way; only the
+	// edge it is pinned to and the side the gap is on change.
+	export let dropUp: boolean = false;
 	export let classes: string = '';
 
 	// Never anything but folded once the crumb is off: there is nothing left to lay out.
@@ -412,8 +419,9 @@
 	{#if collapsed && expanded}
 		<!-- The path root first, down a single column: what a row could not hold in one line it
 			holds in as many lines as there are steps — every step that names a place, and only
-			those (see `dropped`). It slides out from under the bar
-			and stands over the map rather than pushing the plates below it down — the column is
+			those (see `dropped`). It slides out from under the bar — or out of the top of it, where
+			the bar is stood on the map's own bottom edge and under it is off the page (see `dropUp`)
+			— and stands over the map rather than pushing the plates around it aside: the column is
 			the bar being read, not another plate in the stack, and the corner underneath it is
 			where you were before you asked. Its own width, not the bar's: a column of place
 			names is as wide as the longest of them. The one surface here not let through: the bar
@@ -427,7 +435,10 @@
 			do is run off the screen, so that is what is written down. -->
 		<div
 			transition:slide={{ duration: 200 }}
-			class="absolute left-0 top-full z-10 mt-2 flex w-max max-w-[75vw] flex-col gap-0.5 overflow-hidden rounded-lg bg-base-100 p-2 text-white shadow-xl"
+			class={classNames(
+				'absolute left-0 z-10 flex w-max max-w-[75vw] flex-col gap-0.5 overflow-hidden rounded-lg bg-base-100 p-2 text-white shadow-xl',
+				dropUp ? 'bottom-full mb-2' : 'top-full mt-2'
+			)}
 		>
 			{#each dropped as crumb}
 				{#if crumb === lastCrumb && crumb.pressable}

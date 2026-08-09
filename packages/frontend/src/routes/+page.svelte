@@ -868,8 +868,8 @@
 	// The drill path down to (and including) the open region was worked out here — the URL
 	// path when a region is clicked, else the zoom focus path minus its frontier pin — for the
 	// bar of crumbs that stood over the map. There is no such bar: the one path this page
-	// letters is the cut ABOVE the open region, in the column beside the map (see `abovePath`),
-	// and that one is walked off the node rather than off the view.
+	// letters is the cut ABOVE the open region, folded to its dots on the row across the foot of
+	// the terrain (see `abovePath`), and that one is walked off the node rather than off the view.
 
 	// The map column had two tabs and has none: the terrain, and the shows that level divides
 	// between. It was three before that, the middle of them being the list of the places the open
@@ -1147,17 +1147,17 @@
 	// why the open town, now that it is listed, is counted in them too.
 	$: subdivisionNodes = regionLevelNodes(regionNodes, openRegion);
 
-	// The path standing beside the badge in the head of the block: the way down to the place the
-	// open region sits *inside*, which is the cut above it and never the open region itself. The
-	// badge it stands next to has already named where the map is — a path repeating it is the
-	// head saying Catalunya twice in one cell — so what the path is for is the one thing the
-	// badge cannot say, which is where that place is. Its last step is therefore the parent: the
+	// The path standing beside the badge on the row across the foot of the terrain: the way down
+	// to the place the open region sits *inside*, which is the cut above it and never the open
+	// region itself. The badge it stands next to has already named where the map is — a path
+	// repeating it is the row saying Catalunya twice — so what the path is for is the one thing
+	// the badge cannot say, which is where that place is. Its last step is therefore the parent: the
 	// comarca over a town, the province over a comarca, and the Països Catalans over a territory,
 	// there being nothing above a territory but the whole of them.
 	//
 	// Empty at the top view, which is the one place with nothing above it at all: the badge is
 	// the Països Catalans and there is no superior cut to name. The path is left off rather than
-	// drawn saying the same thing twice, and the badge has the cell to itself.
+	// drawn saying the same thing twice, and the row closes up around the badge and the tabs.
 	$: abovePath = openNode ? nodePath(regionNodes, openNode.key).slice(0, -1) : null;
 
 	// And that path lettered the way every path on this map is lettered (see crumbLadder), so a
@@ -3086,10 +3086,12 @@
 
 			The plate is the theme's primary at full strength. It was a bar in a row of bars with a
 			path of crumbs beside it, drawn at full strength precisely where that path was drawn at
-			80% — a path is a thing being looked through to the map under it; a name is not. What
-			stands beside it now is the place the map is open on, which is not a thing to see
-			through either, so the two plates read as one statement: this game, and where in it you
-			are.
+			80% — a path is a thing being looked through to the map under it; a name is not. The
+			path stood beside it as its folded dots for a while after that, and has gone down to the
+			row across the foot of the map to stand against the badge naming the open place: where
+			you are and the way out of it are one statement, and neither of them is a fixed thing
+			about the game. So nothing stands beside this plate now — the band is the game's name at
+			the near end and what can be asked about the game at the far one.
 
 			The same badge is the tab's mark (see static/favicon.ico and the link in app.html), and
 			it is drawn differently there on purpose: an icon is a square with room round the word,
@@ -3124,38 +3126,13 @@
 			</span>
 		</div>
 
-		<!-- The way up out of where the map is standing: the dots and the column of place names
-			they drop (see MapBreadcrumbs' `dotsOnly`). It stands against the name because the name
-			is the near end of this row and a path reads from its root — this game, and then the way
-			back up through it — and because everything else on the row is a fixed thing about the
-			game while this is the one mark that knows where you are.
-			It has been a bar across the map's top edge, a mark in the head of the block under the
-			map, and a square in the corner of the strip over the terrain. What sent it up here is
-			the same thing each time: it is a control and not a reading, and the readings kept
-			arriving beside it — a badge naming the open place in that block's head, the tally of
-			the level on that strip — each of them saying where you are while this says how to
-			leave. On the row of the game's own furniture there is nothing for it to be confused
-			with.
-			Nothing at all at the top view, which is the one place with nothing above it, and the
-			two marks at the far end are held there by `ml-auto` either way.
-			Drawn as the two marks at the far end are and for the same reason — `self-stretch
-			aspect-square` in the name plate's own fill, so the row is squares of one height at
-			both ends of it. `z-[1000]` is the column it drops rather than the square: the band has
-			no stacking context of its own, so without it the names would come down BEHIND
-			Leaflet's panes, which start at 400. It sits in the range the map's furniture already
-			uses (see FullScreenModal, where 1300 clears the lot).
-			Pressed for what the path was always pressed for: a step opens its region, an empty
-			rung takes the map to that tier's zoom. Through `openFromColumn` like every press in
-			the block below, so picking a place puts the search field away with it. -->
-		{#if aboveCrumbs}
-			<MapBreadcrumbs
-				classes="z-[1000] flex aspect-square flex-none items-center justify-center self-stretch rounded-lg bg-primary shadow-xl"
-				crumbs={aboveCrumbs}
-				onSelect={(key) => (key ? openFromColumn(key) : open(null))}
-				onZoom={zoomToTier}
-				dotsOnly
-			/>
-		{/if}
+		<!-- (The way up out of where the map is standing — the dots and the column of place names
+			they drop — stood here, against the game's name, on the reading that a path reads from
+			its root and that a control belongs on the row of the game's own furniture. It is the
+			first thing on the row laid along the foot of the terrain now (see the map column),
+			against the badge that names the open place: a cut belongs beside its place, and the way
+			OUT of somewhere and the name of where you are read as one statement rather than as two
+			marks a column apart. What is left on this band is fixed things about the game.) -->
 
 		<!-- (The radio stood here, between the way up and the questions, and it is on the pin the
 			map stands on the open place now — the last line of that plate, the song and the
@@ -3505,100 +3482,141 @@
 						<div
 							class="pointer-events-none absolute inset-x-3 bottom-0 z-[900] flex justify-center"
 						>
-							<!-- Two cells of one grid, where the map is standing at the near one and the three
-								tabs at the far one. What they are is one statement in two halves — this is where
-								the map is standing, and these are the three things to say about it — so they are
-								a grid of two rather than a row that happens to hold both: each gets half the
-								row's width whatever is in the other, and a long town name cannot walk the tabs
-								off the edge nor a short one leave them adrift in the middle.
-								The place stood on the band across the top of the page before either, a whole
-								column away from the answers about it (see the band, where the middle of the row
-								used to be), and then at the head of the block under the map. -->
+							<!-- The way out of the place, then the place, then the three things to say about
+								it: a row of one square and two halves. The square is the path and gives nothing;
+								the two halves are a grid of their own, so that each gets half of whatever the
+								square leaves whatever is in the other, and a long town name cannot walk the tabs
+								off the edge nor a short one leave them adrift in the middle. It is a grid nested
+								in a row and not three tracks of one grid, because the dots are not a third
+								reading of the place — they are the way to stop reading it — and a track of their
+								own would have made the row a third narrower for no name and no word.
+								The place stood on the band across the top of the page before any of this, a
+								whole column away from the answers about it (see the band), and then at the head
+								of the block under the map. -->
 							<div
-								class="pointer-events-auto grid max-w-full grid-cols-2 items-center gap-2 rounded-t-lg bg-base-100/80 p-2 shadow-xl"
+								class="pointer-events-auto flex max-w-full items-center gap-2 rounded-t-lg bg-base-100/80 p-2 shadow-xl"
 							>
-								<!-- The near cell is where the map is standing, said once and by one thing: the
-									badge that names the place. Lettered exactly as a crumb and as a row of the
-									list under it are, and pressed for what every row that names a place is
-									pressed for (see RegionCurrentBadge). It carried the radio's play/pause on its
-									second line for a while; the radio is the last line of the pin standing on the
-									open place now, where the station is already said by the plate carrying it.
-									`min-w-0` so a long name truncates inside its half rather than widening the
-									cell.
-									The dots stood before it for a while — the way back up out of the place, which
-									came down here from a strip over the map on the ground that a cut belongs
-									beside its place. It is back on that strip (see the map), at the near end of
-									the row the radar holds the far end of: what the path moves when it is pressed
-									is the terrain, and this cell is the one place on the page where a second way
-									of naming the open place could only ever be the same tile and name twice. -->
-								<RegionCurrentBadge
-									classes="min-w-0"
-									row={subdivisionCurrent}
-									on:select={(event) => openFromColumn(event.detail.key)}
-								/>
+								<!-- The way up out of where the map is standing: the dots and the column of place
+									names they drop (see MapBreadcrumbs' `dotsOnly`). First on the row, and against
+									the badge, because what it letters is the cut ABOVE the place that badge names
+									(see `aboveCrumbs`) — a cut belongs beside its place, and a path reads from its
+									root leftward into the name it arrives at.
+									It has been a bar across the map's top edge, a mark in the head of the block
+									under the map, a square in the corner of the strip over the terrain, and the
+									second plate on the band at the top of the page, beside the game's own name.
+									What kept sending it away was that the readings kept arriving beside it — the
+									badge, the tally of the level — each saying where you are while this says how
+									to leave; what brings it back is that the badge came down here too, and the
+									two of them ARE the one statement it was being kept apart from. Nothing else
+									on this row is a fixed thing about the game, which is what the band it has
+									left is now made of.
+									No plate of its own: the row it stands in already carries one, and a frame
+									round a single button inside a frame is a second frame (see the prop). The
+									square is DaisyUI's outlined 32px, the same square an empty rung of the path
+									is drawn in, and it needs no height from this row — so no `self-stretch`, the
+									row being as tall as the tabs beside it rather than a line of equal squares.
+									`dropUp`, because down from here is off the bottom of the map and then off the
+									page: the column of names comes out of the top of the row instead.
+									Nothing at all at the top view, which is the one place with nothing above it,
+									and the row simply closes up — the badge and the tabs are its whole width then.
+									`z-[1000]` is the column it drops rather than the square, so the names come
+									down over the plate and the terrain either side of it rather than into them.
+									Pressed for what the path was always pressed for: a step opens its region, an
+									empty rung takes the map to that tier's zoom. Through `openFromColumn` like
+									every press in the block below, so picking a place puts the search field away
+									with it. -->
+								{#if aboveCrumbs}
+									<MapBreadcrumbs
+										classes="z-[1000] flex flex-none items-center"
+										crumbs={aboveCrumbs}
+										onSelect={(key) => (key ? openFromColumn(key) : open(null))}
+										onZoom={zoomToTier}
+										dotsOnly
+										dropUp
+									/>
+								{/if}
 
-								<!-- The tabs, said the way the map's own two were said over the terrain:
-									DaisyUI's boxed tabs, `role="tablist"`, and which is up held on the page
-									rather than pointed at with `aria-controls` — the panel they turn over is a
-									box away, in the column beside the map, which is exactly why the state is the
-									page's and not either box's.
-									Two of them are one tab that changes with the kind of place open, and never
-									both (see `placesOffered`): the town for a municipality, the list of places for
-									every coarser cut. A municipality is read as the town it is — the side on it,
-									the plate naming it, the fight to be had — and a province is read as the places
-									it divides into; neither has anything to say in the other's shape, and offering
-									it dark said that one press later. They were three tabs at every tier for as
-									long as the list was about the level rather than about the place.
-									The box is the one that is offered dark, because it is the only one that is
-									about the same place as the tab beside it: most towns on most days are outside
-									the booster window and have no box, and a town whose box this reader has
-									already opened has none left either — which is a fact about the town worth
-									printing on the town's own row of tabs.
-									The far cell of the row, and held to the far edge of it (`justify-end`), so the
-									tabs stand against the row's own edge rather than adrift in the middle of
-									their half. None of them gives — each tab is `whitespace-nowrap` — so what a
-									half too narrow for them does is scroll (`overflow-x-auto`): a word
-									broken across two lines in a tab is worse than a row that slides. -->
-								<div role="tablist" class="tabs-boxed tabs min-w-0 justify-end overflow-x-auto">
-									{#if townOffered}
+								<div class="grid min-w-0 flex-1 grid-cols-2 items-center gap-2">
+									<!-- The near cell is where the map is standing, said once and by one thing: the
+										badge that names the place. Lettered exactly as a crumb and as a row of the
+										list under it are, and pressed for what every row that names a place is
+										pressed for (see RegionCurrentBadge). It carried the radio's play/pause on
+										its second line for a while; the radio is the last line of the pin standing
+										on the open place now, where the station is already said by the plate
+										carrying it. `min-w-0` so a long name truncates inside its half rather than
+										widening the cell.
+										It is the one place on the page where a second way of naming the open place
+										could only ever be the same tile and name twice, which is why the dots
+										beside it keep no crumb of their own (see `dotsOnly`). -->
+									<RegionCurrentBadge
+										classes="min-w-0"
+										row={subdivisionCurrent}
+										on:select={(event) => openFromColumn(event.detail.key)}
+									/>
+
+									<!-- The tabs, said the way the map's own two were said over the terrain:
+										DaisyUI's boxed tabs, `role="tablist"`, and which is up held on the page
+										rather than pointed at with `aria-controls` — the panel they turn over is a
+										box away, in the column beside the map, which is exactly why the state is the
+										page's and not either box's.
+										Two of them are one tab that changes with the kind of place open, and never
+										both (see `placesOffered`): the town for a municipality, the list of places for
+										every coarser cut. A municipality is read as the town it is — the side on it,
+										the plate naming it, the fight to be had — and a province is read as the places
+										it divides into; neither has anything to say in the other's shape, and offering
+										it dark said that one press later. They were three tabs at every tier for as
+										long as the list was about the level rather than about the place.
+										The box is the one that is offered dark, because it is the only one that is
+										about the same place as the tab beside it: most towns on most days are outside
+										the booster window and have no box, and a town whose box this reader has
+										already opened has none left either — which is a fact about the town worth
+										printing on the town's own row of tabs.
+										The far cell of the row, and held to the far edge of it (`justify-end`), so the
+										tabs stand against the row's own edge rather than adrift in the middle of
+										their half. None of them gives — each tab is `whitespace-nowrap` — so what a
+										half too narrow for them does is scroll (`overflow-x-auto`): a word
+										broken across two lines in a tab is worse than a row that slides. -->
+									<div role="tablist" class="tabs-boxed tabs min-w-0 justify-end overflow-x-auto">
+										{#if townOffered}
+											<button
+												type="button"
+												role="tab"
+												aria-selected={townTab === 'town'}
+												class={classNames('tab whitespace-nowrap', {
+													'tab-active': townTab === 'town'
+												})}
+												on:click={() => (townTab = 'town')}
+											>
+												{$_('map.town.tabs.town')}
+											</button>
+										{/if}
 										<button
 											type="button"
 											role="tab"
-											aria-selected={townTab === 'town'}
+											aria-selected={townTab === 'box'}
+											disabled={!townBoxOffered}
 											class={classNames('tab whitespace-nowrap', {
-												'tab-active': townTab === 'town'
+												'tab-active': townTab === 'box',
+												'tab-disabled cursor-default opacity-40': !townBoxOffered
 											})}
-											on:click={() => (townTab = 'town')}
+											on:click={() => (townTab = 'box')}
 										>
-											{$_('map.town.tabs.town')}
+											{$_('map.town.tabs.box')}
 										</button>
-									{/if}
-									<button
-										type="button"
-										role="tab"
-										aria-selected={townTab === 'box'}
-										disabled={!townBoxOffered}
-										class={classNames('tab whitespace-nowrap', {
-											'tab-active': townTab === 'box',
-											'tab-disabled cursor-default opacity-40': !townBoxOffered
-										})}
-										on:click={() => (townTab = 'box')}
-									>
-										{$_('map.town.tabs.box')}
-									</button>
-									{#if placesOffered}
-										<button
-											type="button"
-											role="tab"
-											aria-selected={townTab === 'places'}
-											class={classNames('tab whitespace-nowrap', {
-												'tab-active': townTab === 'places'
-											})}
-											on:click={() => (townTab = 'places')}
-										>
-											{$_('map.town.tabs.places')}
-										</button>
-									{/if}
+										{#if placesOffered}
+											<button
+												type="button"
+												role="tab"
+												aria-selected={townTab === 'places'}
+												class={classNames('tab whitespace-nowrap', {
+													'tab-active': townTab === 'places'
+												})}
+												on:click={() => (townTab = 'places')}
+											>
+												{$_('map.town.tabs.places')}
+											</button>
+										{/if}
+									</div>
 								</div>
 							</div>
 						</div>
