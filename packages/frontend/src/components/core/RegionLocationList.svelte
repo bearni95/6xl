@@ -15,9 +15,10 @@
 	// map; then it was painted over the terrain, as the second of that column's three tabs; and
 	// it is now a tab of the block UNDER the map, beside the open town and that town's box (see
 	// +page.svelte's `townTab`) — a list of names being an answer to what is at the open place
-	// rather than a picture of the level, which is what the two tabs left over the terrain are.
-	// The shares row it was headed by and the field that fills it stayed up there, in the box
-	// above this one rather than on a sibling tab.
+	// rather than a picture of the level, which is what the tabs left over the terrain were.
+	// The shares row it was headed by and the field that fills it stayed up on the map for a
+	// while and have come down after it: they are the two rows directly above this one again,
+	// since a press that hides rows and a press that replaces them belong on the box they edit.
 
 	// What the open region divides into (see regionLevelNodes), already lettered by the caller —
 	// and already without the head among them, since the caller is what tallies the shares over
@@ -26,19 +27,19 @@
 	// The place the map is open on. Only ever read to mark it where it falls among its sisters,
 	// which only a town is: no coarser region is one of its own subdivisions.
 	export let current: RegionRow | null = null;
-	// Every place on the map matching what is typed in the field beside the map, lettered
+	// Every place on the map matching what is typed in the field above this list, lettered
 	// exactly as `rows` are and carrying the tier each one is, which is what they are grouped
 	// under. The search is the caller's — the tree is theirs and so is the matching — and while
 	// there is a query these stand here in place of the level: a search is a list of places, and
 	// this is where this map lists places.
 	export let searchRows: (RegionRow & { type: RegionType })[] = [];
-	// What is being looked for. Read rather than bound: the field itself stands on the shares
-	// row in the column beside the map, and this list only has to know whether it is answering a
-	// question or drawing a level.
+	// What is being looked for. Read rather than bound: the field itself stands on the row above
+	// this list, and this list only has to know whether it is answering a question or drawing a
+	// level.
 	export let searchQuery: string = '';
-	// The show the list is being read through, picked off the shares row in that same column.
-	// Handed in rather than held here because the press that sets it is over there, and null is
-	// the whole level.
+	// The show the list is being read through, picked off the shares row above it. Handed in
+	// rather than held here because the press that sets it is up there, and null is the whole
+	// level.
 	export let activeShow: number | null = null;
 	export let classes: string = '';
 
@@ -81,9 +82,9 @@
 	list than the window, and it is given a height to divide rather than a run of rows as tall as
 	its contents (see the `min-h-0` the caller hands it). `min-h-0` is what lets it be shorter
 	than its own contents — a flex item is floored at its content height without it, which is a
-	box that scrolls the page instead of itself. The padding is the one the head's shares row
-	carries in the column beside the map, kept so the two read as one column's worth of rows even
-	stood apart. -->
+	box that scrolls the page instead of itself. The side padding is the one the shares row
+	above it carries, so the head and the rows under it read as one column and not two boxes
+	stacked. -->
 <div
 	class={classNames('flex min-h-0 flex-col gap-0.5 overflow-y-auto px-2 py-2 text-white', classes)}
 >
@@ -125,7 +126,7 @@
 		{/each}
 	{:else}
 		<!-- The level itself: every place the open region divides into, or the ones flying the show
-			picked on the shares row beside the map. The row that is the place the map is open on
+			picked on the shares row above. The row that is the place the map is open on
 			takes the fill, so it can be found among its sisters without being counted along them —
 			only a town is ever among its own level, so there is at most one of them. -->
 		{#each visibleRows as row (row.key)}

@@ -882,9 +882,10 @@
 	// was the tab that was up whenever anybody wanted the tally to be about somewhere — so the two
 	// are read at once and this game is a map with no way to be looking at anything else.
 
-	// The show the level is being read through: picked on the shares row across the top of the
-	// terrain and applied to the list of places in the block below it, which is why it is held on
-	// the page rather than in either box. Null is the whole level.
+	// The show the level is being read through: picked on the shares row at the head of the list
+	// of places in the block under the map and applied to the rows below it, which is why it is
+	// held on the page rather than in either box — the tally is taken over the whole level here,
+	// and the list is handed what to hide. Null is the whole level.
 	let activeShow: number | null = null;
 
 	// Pressing the picked show again clears it, pressing another turns the list over to that one.
@@ -898,9 +899,9 @@
 	// another list — of another level, in another place — so the show goes with the old one
 	// rather than silently hiding most of what has just been opened. It lived with the shares row
 	// while that row was a component of its own; the row is markup on this page now, so the rule
-	// is here, named on the open region so it re-runs when the map moves. The two are in different
-	// boxes — the row across the top of the terrain, the list in the block under it — which
-	// changes nothing about the rule: what it is about is the level, and the level is the page's.
+	// is here, named on the open region so it re-runs when the map moves. The row and the list
+	// are one box under the map again, which changes nothing about the rule: what it is about is
+	// the level, and the level is the page's.
 	let filteredFor: string | null = null;
 	$: if ((openRegion ?? null) !== filteredFor) {
 		filteredFor = openRegion ?? null;
@@ -923,12 +924,13 @@
 				.slice(0, 100)
 		: [];
 
-	// Asking for the field: it comes out, and the block under the map turns to its list, because
-	// that is where what is typed here is answered. Pressing the glass is a reader saying they
-	// want to find a place, which is exactly what that list holds — so the answer is already on
-	// screen when the first letter lands. The block turns because the field being out IS what puts
-	// the list back over a town (see `placesOffered`); there is no tab to press and nothing to
-	// remember, and it turns back the moment the field folds away.
+	// Asking for the field: it comes out on the row under the glass that was pressed, at the head
+	// of the very list the matches will stand in — so the answer is already on screen when the
+	// first letter lands, and the glass is only ever reachable where that list is (its cell is in
+	// the shares row, and that row heads the list). Walking onto a town without folding the field
+	// away keeps it: the field being out IS what puts the list back over a town (see
+	// `placesOffered`), so the question survives the map moving under it and goes the moment the
+	// field does.
 	function openSearch() {
 		searchOpen = true;
 	}
@@ -1267,7 +1269,9 @@
 	//
 	// The one thing that puts the list back on a town is a search, because the list is where a
 	// search is answered (see openSearch): the field turns up places from the whole map, which is
-	// not a question about the open one at all. It goes again with the field.
+	// not a question about the open one at all. It goes again with the field. Which also means
+	// the glass is unreachable from a town, the glass being a cell of the row that heads the
+	// list — a reader looks for a place from the list of places, and a town is not one.
 	$: placesOffered = !townOffered || searchOpen;
 
 	// (Which of the three the block shows used to be state, and is not: a `townTab` of 'town',
@@ -1670,8 +1674,8 @@
 	// and before that a sibling of the map taking a flat 450px of the row. What emptied it was
 	// each view finding the thing it is about: the roster is the side standing in the map's own
 	// corner, the account is the cog at the end of the plate under it, the standings are the
-	// shares row across the top of the map itself, a town's pack is the box drawn on
-	// that town, the search is a cell of that same shares row, and the radio runs wherever it
+	// shares row at the head of the list of places under the map, a town's pack is the box drawn
+	// on that town, the search is a cell of that same shares row, and the radio runs wherever it
 	// is turned on. A menu of what is left over is a menu of nothing, so the bar over the
 	// terrain says the game's name and no more.
 	//
@@ -3235,107 +3239,36 @@
 							classes="min-h-0 flex-1"
 						/>
 
-						<!-- The strip across the top of the terrain, and the two things laid on it: what
-							the level the map is open on is made of, at the near corner, and the way OUT to a
-							festa nobody has opened, at the far one. Both are about the map and nothing else —
-							one counts what is on screen, the other takes the view somewhere it has not looked
-							— so they are the map's own and not the page's.
+						<!-- The strip across the top of the terrain, and the one thing left on it: the way
+							OUT to a festa nobody has opened, at the far corner. It is about the map and
+							nothing else — it takes the view somewhere it has not looked — so it is the map's
+							own and not the page's.
+							The near corner held the tally of the shows the level's places fly, with the
+							looking glass as its last cell and the field under it. All three have gone down
+							into the block below, at the head of the list of places they act on (see the
+							panel): a share narrows that list and the glass replaces it with what a search
+							turned up, so what they do and the thing they do it to are one box now rather
+							than two at opposite ends of the map. What they were doing up here was being
+							read at the same moment as the terrain, which the list is read at too — it
+							stands in the column beside this one.
 							The name of the game, the questions put to it, who drew it and the way back UP
 							out of the open place are all on the band above (see the page's first row): the
 							last of those stood in this corner for a while, and what sent it up was that a
 							path is a control over the whole page's idea of where you are, and the band is
 							where this game keeps its controls.
-							`pointer-events-none` with each of the two turning them back on, since the room
-							between and around them is terrain and terrain has to stay draggable. `z-[900]`
+							`pointer-events-none` with the square turning them back on, since the room
+							around it is terrain and terrain has to stay draggable. `z-[900]`
 							clears Leaflet's own panes (overlays 400-600, controls 800) without reaching
 							the arena's 1200. No inset is measured off it and handed to the map: the pins
 							are dealt where the polygons put them, and a reader who wants what is under it
 							pans. It stands whatever the map is doing — there is no tab left for it to be
 							hidden behind — and a full view used to take it away too; nothing on this page
 							answers a sheet any more (see CHROME_BLUR).
-							`items-start`, so the tally hangs from the top edge and the square beside it does
-							not stretch to whatever the tally has grown to. -->
+							`items-start`, so the square hangs from the top edge rather than stretching to
+							a strip that spans the map. -->
 						<div
 							class="pointer-events-none absolute inset-x-3 top-3 z-[900] flex items-start gap-2"
 						>
-							<!-- The near corner: the shows the level's places fly and how much of each, with
-								the field under it when it is out.
-								It was a tab of its own over this same terrain, then the near end of this same
-								strip, then the middle of the bottom edge, and a row at the foot of the column
-								beside the map before any of those. What it is doing on the map at all is being
-								read at the same moment as the map: the level drawn and the level counted were
-								two tabs, so a reader could have the country or the division of it and never
-								both, and the division is a reading OF what is on screen. What it is doing back
-								at the TOP is standing on the one row this map has for the things that act on
-								it — the radar takes the view to a place, the tally narrows the list of places,
-								and a reader looking for either looks in one corner rather than at two opposite
-								edges.
-								It grows DOWNWARD from that edge as the field comes out, which is why the field
-								is the second child here and was the first while the column hung off the
-								bottom: either way it opens into the map and the marks stay where the reader
-								last pressed one.
-								Pressing a share narrows the list of places in the block below; the grid is
-								handed the whole division whatever is picked, and the tally is this page's over
-								every row of the level, because a share is what this level IS and not what is
-								left of it after a press. Pressing the picked show again clears it and pressing
-								another turns the list over, so there is one gesture and it is its own undo.
-								It is as wide as what is in it, which is what makes its width a reading in
-								itself — a level flying three shows is a short plate and one flying eight is a
-								long one. It was held to `max-w-sm` and stretched to it while the cells divided
-								whatever box they were given; the cells are as wide as the longest percentage
-								in them now (see ShowShareGrid), so there is no box left to cap. `min-w-0` is
-								all that remains of the cap: it lets the column give way to the square beside
-								it where the marks would otherwise outrun the map, rather than pushing it off
-								the corner it holds. The field takes the grid's own width, being the other
-								child of that column.
-								`bg-base-100/30`: the terrain reads through the plate, which is what a mark laid
-								over a map should let it do — the tally is about what is under it. -->
-							<div class="flex min-w-0 flex-col gap-2">
-								<!-- It carries the radar's plate — rounded, shadowed — at three tenths of the
-									page's own surface, which is enough to hold the white marks off whatever tile
-									is under them and little enough that the country goes on being seen through
-									the thing that is counting it. -->
-								<ShowShareGrid
-									shares={subdivisionShares}
-									active={activeShow}
-									classes="pointer-events-auto rounded-lg bg-base-100/30 text-white shadow-xl"
-									on:select={(event) => toggleShow(event.detail.id)}
-								>
-									<!-- The looking glass, as the last cell of that grid. It stood at the far end
-										of the breadcrumb bar over the map once, where it had to fold a field away
-										into a glyph to leave the path any room; here the glyph is a cell like the
-										shares beside it and the field comes up on the row under it.
-										On this row because this row is the one that acts on the level: the cells
-										beside it narrow it to a show, and this goes and finds places that are not
-										on it at all. -->
-									<button
-										slot="end"
-										type="button"
-										class="flex items-center justify-center rounded-md p-1 hover:bg-white/10"
-										aria-label={$_('map.search.label')}
-										aria-expanded={searchOpen}
-										on:click={openSearch}
-									>
-										<img src="/assets/icons/lorc/magnifying-glass.svg" class="w-full" alt="" />
-									</button>
-								</ShowShareGrid>
-
-								{#if searchOpen}
-									<!-- The field itself, on its own row under the glyph that asked for it. It puts
-										itself away when it is left empty and takes the matches with it on Escape
-										(see LocationSearchBox); what it holds is matched by this page against the
-										whole tree, and the matches stand in the block under the map, which the
-										press on the glass has already turned to its list (see openSearch). So the
-										answer is on screen beside the question rather than on a tab the reader has
-										to know to press, and nothing moves on a keystroke. -->
-									<LocationSearchBox
-										bind:value={searchQuery}
-										bind:open={searchOpen}
-										classes="pointer-events-auto shadow-xl"
-									/>
-								{/if}
-							</div>
-
 							<!-- The radar. The map carries days of festes at once and no marks to find them
 								by, so the boxes waiting out there are found by panning across the country
 								looking for one — which is a search, and this is the button that does it: press
@@ -3344,14 +3277,16 @@
 								across on a desktop as on a phone.
 								It has been at the far end of a bar over the map, then a mark in the furniture
 								column beside it, then a square alone in this corner, then the end of a row
-								with the path at the other one — and it is the end of a row again, with the
-								tally at the other one, the path having gone up to the band.
+								with the path at the other one, then the end of one with the tally at the
+								other — and it is a square alone in this corner again, the path having gone up
+								to the band and the tally down into the block.
 								A size of its own, where the marks it used to stand among were drawn to a
-								row's height (`self-stretch aspect-square`): the tally beside it is a plate of
-								whatever height its marks come to and not a row to be as tall as. `size-10` is
-								what that row came to, so the square is the same square. `ml-auto` so the
-								corner it holds is the far one however short the tally is, and `flex-none` so
-								a long one takes room off itself rather than off this.
+								row's height (`self-stretch aspect-square`): nothing stands beside it up here
+								now, and while the tally did it was a plate of whatever height its marks came
+								to and not a row to be as tall as. `size-10` is what that row came to, so the
+								square is the same square. `ml-auto` so the corner it holds is the far one of a
+								strip that still spans the map, and `flex-none` so it stays that square
+								whatever comes to stand beside it.
 								Disabled when there is nothing left to point at — every box in the window
 								opened, or none loaded yet — because a radar that answers "here" or answers
 								nothing is a press with no destination. -->
@@ -3626,7 +3561,12 @@
 			was drawn as a third way of reading the map. It never was one: the terrain and the
 			shares are pictures of the level and the list is its names, which is the same kind of
 			thing as the town's own side and the town's own box — what is at the place the map is
-			open on. So it is read where those are read, in the block, at the block's own size. -->
+			open on. So it is read where those are read, in the block, at the block's own size.
+			And the shares came down after it, with the looking glass they carried and the field
+			under that: a tally of how the listed places divide is a reading of the list, and a
+			press that hides rows or replaces them belongs on the box it edits rather than at the
+			far corner of the map. So the two presses that act on the level and the level's own
+			names are one box, and the only thing left over the terrain is the radar. -->
 		{#if townBlock}
 			<div
 				transition:blur={CHROME_BLUR}
@@ -3646,8 +3586,14 @@
 					scroller is two bars for one list and a box that can be pushed out of its own
 					parent. So the overflow is switched off for it and the list is handed the
 					panel's height (`min-h-0 flex-1`) to do what it already does with it.
-					There is nothing to press in this block and no state to hold. Which of the three
-					things is standing is read off the place itself: the list of places wherever the open
+					`gap-2` for the one of the three that is more than one thing: the list of places
+					comes with the row that tallies it and, while it is out, the field that fills it,
+					and three boxes stacked flush read as one long box. It costs the other two nothing,
+					an only child having nothing to be spaced from.
+					No state is held here — the show picked on that row and whether the field is out
+					are the page's, since what they are about is the level and the level is the page's
+					(see `activeShow`, `searchOpen`). Which of the three things is standing is read off
+					the place itself: the list of places wherever the open
 					place is not a town or a search is being typed (`placesOffered`), the wrapper where the
 					town has one this reader can still take (`townBoxOffered`), and the party on the town
 					otherwise. They were three tabs in here, and then a row of them across the foot of the
@@ -3656,18 +3602,78 @@
 					unopened box today has exactly one thing to say, and it says the rest the moment the
 					box is opened. -->
 				<div
-					class={classNames('flex min-h-0 w-full flex-1 flex-col items-center', {
+					class={classNames('flex min-h-0 w-full flex-1 flex-col items-center gap-2', {
 						'overflow-y-auto': !placesOffered
 					})}
 				>
 					{#if placesOffered}
-						<!-- The level the map is open on, listed. Handed the same rows the shares strip
-							over the terrain is tallied over, the same matches the field on that strip turns
-							up, and the show that row has picked — the press is up there, the hiding is
-							here with the rows it hides, and the two boxes are one glance apart rather
-							than one press. Picking one is the map's own gesture: `openFromColumn`,
-							exactly as a crumb or the badge on the map's own row, so a walk down the tiers
-							reads the same whichever of them the reader is using to do it. -->
+						<!-- The head of the list: the shows the listed places fly and how much of each,
+							with the looking glass as its last cell. It was a plate laid over the terrain at
+							the map's near corner, and before that a tab of its own over that terrain, the
+							middle of the map's bottom edge, and a row at the foot of the column beside it.
+							What it is doing HERE is standing on the thing it acts on: pressing a share
+							hides every row below that does not fly it, and pressing the glass replaces
+							those rows with what a search turned up — both of them are edits to the list
+							under this row, and they were being made from the opposite corner of the page.
+							The tally is over the whole level whatever is picked, because a share is what
+							this level IS and not what is left of it after a press; pressing the picked
+							show again clears it and pressing another turns the list over, so there is one
+							gesture and it is its own undo.
+							`w-full flex-none`: it divides the panel's width into a cell per show, the way
+							a grid handed a box does — it was as wide as its own marks while it floated
+							over the map, which is a width that had to be read against the terrain rather
+							than against anything. And no plate: `bg-base-100/30` was the terrain reading
+							through a mark laid over it, and there is no terrain under this. White ink, as
+							the list below it is, and the same `px-2` so the two read as one column.
+							The glass leaves the map with it, so the field is reachable only where this row
+							is — which is where a search is answered (see `placesOffered`, and the list,
+							which puts the matches in place of the level). -->
+						<ShowShareGrid
+							shares={subdivisionShares}
+							active={activeShow}
+							classes="w-full flex-none text-white"
+							on:select={(event) => toggleShow(event.detail.id)}
+						>
+							<!-- The looking glass, as the last cell of that grid. It stood at the far end
+								of the breadcrumb bar over the map once, where it had to fold a field away
+								into a glyph to leave the path any room; here the glyph is a cell like the
+								shares beside it and the field comes up on the row under it.
+								In this row because this row is the one that acts on the list: the cells
+								beside it narrow it to a show, and this goes and finds places that are not
+								on the level at all. -->
+							<button
+								slot="end"
+								type="button"
+								class="flex items-center justify-center rounded-md p-1 hover:bg-white/10"
+								aria-label={$_('map.search.label')}
+								aria-expanded={searchOpen}
+								on:click={openSearch}
+							>
+								<img src="/assets/icons/lorc/magnifying-glass.svg" class="w-full" alt="" />
+							</button>
+						</ShowShareGrid>
+
+						{#if searchOpen}
+							<!-- The field itself, on its own row under the glyph that asked for it and above
+								the rows it is about to turn over. It puts itself away when it is left empty
+								and takes the matches with it on Escape (see LocationSearchBox); what it holds
+								is matched by this page against the whole tree, and the matches stand in the
+								list directly below in place of the level. So the question and its answer are
+								one box, and nothing moves on a keystroke but the rows underneath. -->
+							<LocationSearchBox
+								bind:value={searchQuery}
+								bind:open={searchOpen}
+								classes="w-full flex-none"
+							/>
+						{/if}
+
+						<!-- The level the map is open on, listed. Handed the same rows the shares row
+							above it is tallied over, the same matches the field turns up, and the show
+							that row has picked — the press and the rows it hides are one box now, where
+							they were a glance apart while the row floated over the terrain. Picking one is
+							the map's own gesture: `openFromColumn`, exactly as a crumb or the badge on the
+							map's own row, so a walk down the tiers reads the same whichever of them the
+							reader is using to do it. -->
 						<RegionLocationList
 							classes="w-full min-h-0 flex-1"
 							rows={subdivisions}

@@ -23,23 +23,23 @@
 	//
 	// At most, and not always: the row is laid out with exactly as many columns as there are
 	// cells to put in it, up to eight, and wraps past that. It used to be eight columns whatever
-	// was in them, which is right for a grid that divides a box it has been given — the cells
-	// took a share of the box each and the marks grew and shrank with it — and wrong for one
-	// that is as wide as what is in it, which is what this is now (see +page.svelte, where it
-	// stands centred over the bottom edge of the map). Eight columns holding three marks is five
-	// empty tracks, and empty tracks are 0 wide but the gaps between them are not: the plate
-	// would run a thumb's width past its last mark, on a row whose whole width is a statement
-	// about how many shows there are.
+	// was in them, which leaves five empty tracks under three marks — and an empty track is 0
+	// wide where the gaps between them are not, so the row runs a thumb's width past its last
+	// mark on a grid whose whole width is a statement about how many shows there are. Caller's
+	// choice which of the two kinds of box it is: handed a width (`w-full`, which is what it
+	// takes at the head of the list of places) the tracks divide it and the marks grow and
+	// shrink with it; left to itself it is as wide as its own cells, which is what it was while
+	// it floated over the terrain and its width had to be read against a map.
 	//
 	// `grid-cols-N` is `repeat(N, minmax(0, 1fr))`, and a fr track in a shrink-to-fit grid
-	// resolves to the widest content in ANY column — so the columns come out equal and as wide
-	// as the longest reading ("100%"), rather than each one sized to its own percentage and the
-	// marks all different sizes.
+	// resolves to the widest content in ANY column — so where there is no width to divide the
+	// columns still come out equal and as wide as the longest reading ("100%"), rather than each
+	// one sized to its own percentage and the marks all different sizes.
 	export let shares: { id: number; name: string; share: number }[] = [];
 	// The show the list below is being read through, where one has been picked: that cell takes
 	// the primary fill, so what is filling the list is said on the thing that was pressed. The
 	// grid holds none of this itself — which show is picked is a fact about the list, and the
-	// list is the tab next door (see +page.svelte).
+	// list is the box this row heads (see +page.svelte).
 	export let active: number | null = null;
 	export let classes: string = '';
 
