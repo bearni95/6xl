@@ -1180,8 +1180,9 @@
 			     loses its buttons exactly as its column is cleared. So the board is still the
 			     fight; this is a second way of reaching the same three orders, and both are live at
 			     once — an order given on either is drawn on both.
-			     On its own fill, because the sheet is transparent and the map is what is behind it
-			     (see the modal's `transparent`).
+			     On its own fill: it is the foot of the sheet, where the page is graded down to
+			     nine tenths and the town is faintly through it, so a row of orders reads off its
+			     own ground rather than off whatever is under there.
 			     Drawn whether there are rows in it yet or not: it is the foot of a column spread
 			     end to end (above), so a block that arrived with the fight would have let the board
 			     settle at the bottom of the view first and then jump up as the orders came in. An

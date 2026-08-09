@@ -1616,7 +1616,8 @@
 	// --- The town a fight is staged on, alone on the map ---------------------------
 	// The arena is the one full view that is ABOUT a place: the roster, the badges, the
 	// leaderboard and the boosters are pages laid over the map, and a fight is an event on a
-	// town the map is still showing (which is why that sheet paints no page of its own). So
+	// town — which is faintly through the foot of the sheet, where the page grades down to nine
+	// tenths, so what is under there has to be that town and nothing else. So
 	// while it is up, the map is the one town — brought to the middle of the canvas at the
 	// zoom it stands whole at, washed at 80% instead of the 20% a picked town reads the
 	// satellite through, and everything else covered in black with no border left anywhere
@@ -4124,14 +4125,17 @@
 	key and label the fight: which town a battle is over and which generation of its
 	team it is against are the server's record, kept on the battle itself, so the fight
 	that is reported is the fight that was opened.
-	This sheet paints no page (`transparent`, as the booster window does): a fight is not a page
-	laid over the map like the roster or the leaderboard — it is an event on a town the map is
-	still showing — so it is staged on the map, the terrain live under it and the board standing
-	on top. What clears the country behind it is the spotlight, which belongs to the fight and not
-	to this sheet (see holdSpotlight): the sheet itself does nothing to the map at all, as none of
-	them do. Nothing here needs the page: the canvas is opaque and
-	carries its own border, and every word the arena says is on a card with its own base-100
-	(the result panel, the sign-in and no-team cards).
+	This sheet wears the page every other full view wears — base-100 at full strength at the top,
+	graded to nine tenths at the foot — as the booster window does. It asked for no page at all
+	for a while, the reasoning being that a fight is an event on a town the map is still showing
+	rather than a page laid over it, and what that bought was a board read off live terrain whose
+	ground moved with wherever the map happened to be scrolled to. The grade already says the
+	thing the transparency was for: the town is faintly there under the foot of the fight. What
+	clears the country behind it is the spotlight, which belongs to the fight and not to this
+	sheet (see holdSpotlight): the sheet itself does nothing to the map at all, as none of them do.
+	The arena's own fills stay as they are — the canvas is opaque and carries its own border, and
+	every word it says is on a card with its own base-100 (the result panel, the sign-in and
+	no-team cards) — since a card that letters something is a card wherever it stands.
 	The sheet's own way out is held shut while a finished fight is on its way to the server:
 	reporting is what ends the battle, so a player let out before it lands would walk away
 	from a fight the server still has open. That is the one thing the sheet cannot know for
@@ -4151,7 +4155,6 @@
 	<FullScreenModal
 		title="Combat"
 		bare
-		transparent
 		closeLabel="Close combat"
 		closeDisabled={fightReporting}
 		on:close={onFightClosed}

@@ -28,8 +28,12 @@
 	// last of the content and the view reads as something laid over the map rather
 	// than as another screen. It is the gradient alone that paints it — a background
 	// colour under a stop with alpha in it would show through and make the foot opaque
-	// again, which is the whole of what the grade says. `transparent` takes even that
-	// away — see the prop.
+	// again, which is the whole of what the grade says. Every sheet wears it, the
+	// booster window and the combat arena included: both asked for no page at all for a
+	// while — a canvas of boxes, a board over the town being fought for — and both were
+	// drawings read off live terrain, their ground moving with wherever the map happened
+	// to be scrolled to. The grade says the thing that transparency was for, and says it
+	// the same way everywhere, so there is no `transparent` prop any more.
 	//
 	// The blur is a Svelte transition rather than a stylesheet's, since the component
 	// is only ever mounted while it is open (a CSS transition has nothing to animate
@@ -74,20 +78,6 @@
 	 * is, so it is the host that says.
 	 */
 	export let closeDisabled: boolean = false;
-	/**
-	 * Paint no page at all: the sheet keeps its size, its bar and its way out, and the map
-	 * is simply behind the content rather than behind a grade of base-100.
-	 *
-	 * One sheet asks for it: the combat arena, which is a fight over a town the map is still
-	 * showing rather than a page laid over it. The booster window asked too for a while, its
-	 * content being a canvas of boxes with nothing between them — and gave it back, a window of
-	 * boxes read off live terrain being a window whose ground moves with the map under it.
-	 *
-	 * Every other full view is content to read and keeps its page. What a sheet gives up with
-	 * it is the ground under its own words: a transparent sheet's content must carry its own
-	 * fill wherever it letters anything, or it is read off live terrain.
-	 */
-	export let transparent: boolean = false;
 	/**
 	 * Make the whole sheet a way out: a click anywhere on it closes, and leaves by the same
 	 * blur the ✕ and Escape leave by.
@@ -146,10 +136,10 @@
 	on:click={onSheetClick}
 >
 	<div
-		class={classNames('flex h-full w-full flex-col overflow-hidden', {
-			'bg-gradient-to-b from-base-100 to-base-100/90': !transparent,
-			'gap-4 p-6': !bare
-		})}
+		class={classNames(
+			'flex h-full w-full flex-col overflow-hidden bg-gradient-to-b from-base-100 to-base-100/90',
+			{ 'gap-4 p-6': !bare }
+		)}
 	>
 		{#if !bare}
 			<div class="flex flex-none items-center gap-3">
