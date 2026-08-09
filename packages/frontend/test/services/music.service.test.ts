@@ -330,14 +330,32 @@ describe('the radio', () => {
 		expect(get(service.state).playing).toBe(true);
 	});
 
-	it('leaves the dial where it is while the radio is off', async () => {
-		// A radio that is off has nothing to say about where the map is, and a station
-		// changing under a paused player would hand whoever presses play next a station
-		// they did not leave it on.
+	it('turns the dial to the place on screen while the radio is off, silently', async () => {
+		// It is the dial that follows the map, not the volume: the band on the map letters
+		// the station the open place flies whether or not there is sound, so a reader
+		// walking about with the radio down is not left reading the last town anybody
+		// listened to. Nothing starts playing — sound only ever comes from a gesture.
 		const service = await tunedIn();
 		service.follow(22);
 		await settle(CROSSFADE_MS);
-		expect(get(service.state).station).toBe(11);
+		expect(get(service.state).station).toBe(22);
+		expect(get(service.state).track).toEqual(order(22)[1]);
+		expect(get(service.state).playing).toBe(false);
+	});
+
+	it('starts the station the map last named when the radio is turned on', async () => {
+		// And the press that turns it on is a press on a place: what comes out is that
+		// place's station, joined where its own clock has got to, rather than a second of
+		// wherever the dial was left before the reader walked.
+		const service = await tunedIn();
+		service.follow(22);
+		await settle(CROSSFADE_MS);
+
+		service.toggle();
+		await settle();
+		expect(get(service.state).station).toBe(22);
+		expect(get(service.state).track).toEqual(order(22)[1]);
+		expect(get(service.state).playing).toBe(true);
 	});
 
 	it('stays where it is for a place that names no show, or one with no songs', async () => {

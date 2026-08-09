@@ -54,9 +54,10 @@ import type { MusicTrack, MusicCollection } from '$types/music.type';
  * is the only place it is a select at all; and the map's, which tunes it to the show the
  * place it is open on flies (see {@link MusicService.follow}) — so what is playing is about
  * where the reader is, and the music moves with them without their asking. The map's hand
- * is on the dial whether or not there is sound: it moves a running radio at once, and a
- * silent one is left aimed at the place on screen, so the press that turns it on comes up
- * on that town's station and not on whichever one the dial was last left at. A change of
+ * is on the dial whether or not there is sound: a running radio changes station at once, and
+ * a silent one is tuned just the same, so the band on the map letters that place's station
+ * while it is quiet and the press that turns it on starts what the band was already saying.
+ * Turning the dial is never turning the sound on. A change of
  * station under a listener is crossfaded rather than cut, since the map
  * moves often and a cut every time it did would read as the radio breaking. Only the
  * *station* fades: the songs within one hand over the way a station's do.
@@ -196,11 +197,12 @@ class MusicService {
 	private wanted = false;
 
 	/**
-	 * The show the map last said the reader is standing on, whether or not the radio was
-	 * on to act on it (see {@link follow}). Kept because a radio that is off still has a
-	 * place: the press that turns it on is a press on a town, and it is that town's
-	 * station it has to come up on — otherwise every town on the map opens with whatever
-	 * the dial happened to be left on, which is one song for the whole country.
+	 * The show the map last said the reader is standing on (see {@link follow}). The dial
+	 * is put there as it is said, so this is normally where the dial already is; what it
+	 * is for is the one moment that cannot be obeyed — a place named before the collection
+	 * has been read has no station to be tuned to yet, and the press that turns the radio
+	 * on has to come up on that place's station rather than on whatever the dial was left
+	 * at, which would be one song for the whole country.
 	 *
 	 * Null before the map has said anything and after the listener has turned the dial
 	 * themselves: an explicit choice outranks the place until the map next moves.
@@ -327,14 +329,21 @@ class MusicService {
 	 * about it (its town's show, or the plurality of the towns under a region), so a
 	 * reader who drills into a comarca hears what that comarca is mostly made of.
 	 *
-	 * Three things make this the map's move and not the listener's, and each is deliberate:
+	 * The dial moves whether or not there is sound. It is the *dial* that follows the map,
+	 * not the volume: a place on screen is a station on this radio, so the station said on
+	 * the map's own band is the one the place flies, and pressing play there starts what
+	 * the band has been saying all along. It held back while the radio was off for a while,
+	 * on the reasoning that a station changing under a paused player would hand whoever
+	 * pressed play next a station they did not leave it on — what that actually did was
+	 * leave the band lettering the last town anybody had listened to, so a reader walking
+	 * the map with the sound down saw one song for the whole country and the radio looked
+	 * broken. Nothing starts playing here either way: sound is only ever started from a
+	 * gesture (see {@link toggle}, {@link switchOn}), and everything below this leaves
+	 * `wanted` exactly as it found it.
 	 *
-	 * - **Sound only moves while it is on.** A station audibly changing under a paused
-	 *   player would be a radio playing to nobody. But where the map is *is* noted while
-	 *   it is off (see {@link followed}), because the press that turns it back on is a
-	 *   press on a place and has to come up on that place's station — a radio that
-	 *   forgot every town it was carried over while it was silent played the same song
-	 *   for the whole country.
+	 * Two things still make this the map's move and not the listener's, and each is
+	 * deliberate:
+	 *
 	 * - **Nothing is remembered.** The listener's station is the one they turned the dial
 	 *   to (see {@link remember}); where they happened to have the map when they closed
 	 *   the page is not a choice about music.
@@ -343,11 +352,14 @@ class MusicService {
 	 *   unknown, and a radio does not retune on one, nor forget where it last was. Nor
 	 *   does a show with no songs move it: there is no station to go to, so it stays
 	 *   where it is rather than going quiet.
+	 *
+	 * Where the map is is noted as well as acted on (see {@link followed}), for the one
+	 * case the dial cannot be moved in: a place named before the collection has been read
+	 * has no station to go to yet, and {@link switchOn} aims at it again.
 	 */
 	follow(showId: number | null): void {
 		if (showId === null) return;
 		this.followed = showId;
-		if (!this.wanted) return;
 		this.select(showId, false);
 	}
 

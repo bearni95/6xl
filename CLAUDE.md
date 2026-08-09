@@ -249,11 +249,16 @@ the **dial** (`StationDial.svelte`) — a select naming the stations, which *is*
 line, since that line was already naming the show and a radio says its station once. There is
 no skip: a radio has no next song.
 
-**The map turns the dial.** While the radio is on, `musicService.follow` tunes it to the show
-the place the map is open on flies — a town's own show, the plurality of the towns under a
-region, the plurality of the whole map at the top view — so what is playing is about where the
-reader is standing. It only moves a radio that is on, it is never written down as the
-listener's choice of station, and a place that names no show moves nothing. A change of
+**The map turns the dial.** `musicService.follow` tunes it to the show the place the map is
+open on flies — a town's own show, the plurality of the towns under a region, the plurality of
+the whole map at the top view — so what is playing is about where the reader is standing. It
+moves the dial whether or not there is sound: a running radio changes station at once, and a
+silent one is tuned just the same, so the band on the map letters that place's station while
+it is quiet and the press that turns it on starts what the band was already saying. Turning
+the dial is never turning the sound on — sound only ever starts from a gesture. It is never
+written down as the listener's choice of station, and a place that names no show, or one whose
+show has no songs, moves nothing: there is no station to go to, so it stays where it is rather
+than going quiet. A change of
 station is therefore common and unasked-for, so it is **crossfaded** rather than cut: the
 arriving station gets an audio element of its own and comes up equal-power over 1.2s while the
 leaving one plays its own song out. Only the *station* fades; the songs within one hand over
