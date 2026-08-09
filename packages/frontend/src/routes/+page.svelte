@@ -1068,8 +1068,8 @@
 
 	// The songs, asked for by the page rather than by whatever happens to be drawing the radio.
 	// Every surface that draws it also asks (see MusicToggle, MusicPlayer) and they all share the
-	// one fetch, but none of them is always up: the radio is the first row of the plate on the
-	// map's bottom edge now (see TownRadio), and that row draws nothing until there is a song to
+	// one fetch, but none of them is always up: the radio is one cell of the band on the
+	// map's bottom edge now (see TownRadio), and that cell draws nothing until there is a song to
 	// letter. The page is what is always here, and it needs the collection loaded for its own sake
 	// anyway — `follow` below can only
 	// turn a dial that has stations on it, and a radio left playing on the last visit only comes
@@ -3053,10 +3053,10 @@
 			OUT of somewhere and the name of where you are read as one statement rather than as two
 			marks a column apart. What is left on this band is fixed things about the game.) -->
 
-		<!-- (The radio stood here, between the way up and the questions, and it is the first row of
-			the plate on the map's bottom edge now — the song and the play/pause: see TownRadio. It
+		<!-- (The radio stood here, between the way up and the questions, and it is the second cell
+			of the band on the map's bottom edge now — the song and the play/pause: see TownRadio. It
 			had to letter its own station to be read anywhere on this band; down there the station
-			is already said by the badge on the row under it, which is that place's own crumb, tile
+			is already said by the badge in the cell beside it, which is that place's own crumb, tile
 			and show. It went by way of the pin the map stands on the open place, which said the
 			station just as well and moved with the town it was standing on.) -->
 
@@ -3397,8 +3397,12 @@
 						<div
 							class="pointer-events-none absolute inset-x-0 bottom-0 z-[900]"
 						>
-							<!-- Two rows on one band: what is playing, and then where you are and the way out
-								of it — the dots, and the badge naming the place.
+							<!-- Two cells on one band: where you are and the way out
+								of it, the dots and the badge naming the place — and beside them, in the
+									second, what is playing. Two columns rather than the two rows this was,
+									because the band is the map's whole width and the place has never needed
+									more than half of it: a row each lettered the song across a width nothing
+									was using and made the band twice as deep to do it.
 								It spans the map and is the same width whatever is on it, which is most of what
 								it is. It was a shrink-to-fit plate centred on the bottom edge, as wide as
 								whatever it held, and what that gave a reader was a plate that grew and shrank as
@@ -3415,34 +3419,9 @@
 								whole column away from the answers about it (see the band), and then at the head
 								of the block under the map. -->
 							<div
-								class="pointer-events-auto flex w-full flex-col gap-2 bg-base-100/80 p-2 shadow-xl"
+								class="pointer-events-auto grid w-full grid-flow-col auto-cols-fr items-center gap-2 bg-base-100/80 p-2 shadow-xl"
 							>
-								<!-- The radio, first and across the whole plate: the song running past and the
-									play/pause at the far end of it (see TownRadio). It was the last line of the
-									pin the map stands on the open place, on the reading that a station is a show
-									and the pin's own second line already says which — and it is here for the same
-									reason, since the badge one row below is that same crumb out of those same
-									fields (see RegionCurrentBadge). What the pin could not give it is a fixed
-									place: a mark stands where its town is, so the radio went wherever the map was
-									panned and was as small as a caption on a mark. This corner does not move.
-									A row of its own rather than a cell of the one below, because it is the one
-									thing on this plate that is not about the open place — the map tunes the dial,
-									but what is playing is the game's sound and goes on playing across a walk from
-									one town to the next — and because a title is a line that wants a width, which
-									is what a plate's whole width is for.
-									It draws nothing at all until there is a song, so the band is the row below by
-									itself until then and the column's gap closes with it: an empty line across the
-									top of this band would say a radio is there and broken.
-									Nothing is said about its width: the band is the map's width whatever is on it,
-									and a flex column stretches its rows to itself. It wore a `w-0 min-w-full` while
-									the band was as wide as what was in it — width nothing, minimum everything, so
-									that a song title counted for zero in the sum deciding how wide the plate came
-									out and could not resize it every few minutes. There is no sum any more. What is
-									too long for the row is what the banner is for (see MarqueeText, which scrolls
-									only when the line is wider than the box). -->
-								<TownRadio />
-
-								<div class="flex items-center gap-2">
+								<div class="flex min-w-0 items-center gap-2">
 										<!-- The way up out of where the map is standing: the dots and the column of place
 										names they drop (see MapBreadcrumbs' `dotsOnly`). First on the row, and against
 										the badge, because what it letters is the cut ABOVE the place that badge names
@@ -3504,6 +3483,30 @@
 										on:select={(event) => openFromColumn(event.detail.key)}
 									/>
 								</div>
+
+								<!-- And the radio, in the second cell: the song running past and the play/pause
+									under it (see TownRadio). It was the last line of the pin the map stands on the
+									open place, on the reading that a station is a show and the pin's own second line
+									already says which — and it is here for the same reason, since the badge in the
+									cell beside it is that same crumb out of those same fields (see
+									RegionCurrentBadge). What the pin could not give it is a fixed place: a mark
+									stands where its town is, so the radio went wherever the map was panned and was
+									as small as a caption on a mark. This corner does not move.
+									Second and not first because it is the one thing on this band that is not about
+									the open place — the map tunes the dial, but what is playing is the game's sound
+									and goes on playing across a walk from one town to the next — and a band is read
+									from the place it names outward. It had a row of its own above that place for a
+									while, on the reading that a title is a line that wants a width; half a band is
+									width enough for a banner, and it costs the band no depth.
+									It draws nothing at all until there is a song, and the band is the cell beside it
+									by itself until then rather than that cell and a hole: `grid-flow-col` with
+									`auto-cols-fr` makes as many equal columns as there are children, so a silent
+									radio hands the place its whole width back. An empty half of this band would say
+									a radio is there and broken.
+									Nothing is said about its width here either. What is too long for the cell is what
+									the banner is for (see MarqueeText, which scrolls only when the line is wider than
+									the box). -->
+								<TownRadio />
 							</div>
 						</div>
 					</div>
@@ -3988,8 +3991,8 @@
 									whole of it again.
 									It shared this row with the radio for a while, as two halves of the column's one
 									width — both of them being things this player had switched on, as against the map
-									at the other corner. The radio has gone onto the map itself, as the first row of
-									the plate on its bottom edge (see TownRadio): the radio follows the map, so a card
+									at the other corner. The radio has gone onto the map itself, as one cell of
+									the band on its bottom edge (see TownRadio): the radio follows the map, so a card
 									of its own down here was saying, in a second corner, what the row naming the open
 									place says by naming it. What shares the row instead is the one
 									press that belongs to this plate: the cog.
