@@ -3018,8 +3018,9 @@
 		the columns' axis and not this band's.
 
 		`items-stretch` is what makes them all one height: three of them are squares, and stretching
-		means they, the name's plate and the radio's take whatever height the row comes to rather
-		than a number written here that would have to be kept in step with it. The padding is the
+		means they, the name's plate and the radio take whatever height the row comes to rather
+		than a number written here that would have to be kept in step with it. The radio is the one
+		of them with two lines of type in it, so what that height is is largely its. The padding is the
 		band's rather than each child's, so they are spaced by one `gap-2` and inset by one
 		`px-2`. What holds the far end against the far edge is the radio in the middle, which is
 		the one item here that gives: the two marks were pushed over by an `ml-auto` for as long as
@@ -3112,8 +3113,10 @@
 			/>
 		{/if}
 
-		<!-- The radio, in the middle of the row: the mark that says whether it is running and the
-			title running past behind it, and the whole plate is the play/pause (see MusicBanner).
+		<!-- The radio, in the middle of the row: the station it is tuned to over the song that is
+			on, with the mark that says whether it is running, and the whole of it is the play/pause
+			(see MusicBanner). It carries no fill — the primary on this row is what the game's own
+			furniture is drawn in, and the radio is the one thing here that is a reading.
 			Where the map is standing stood here for a while and the radio was its second line,
 			which put the control inside a reading about a town; the reading heads the block under
 			the map now and the radio is here on its own account, among the things this row is
