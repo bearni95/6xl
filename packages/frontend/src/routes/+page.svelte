@@ -3492,34 +3492,31 @@
 			place belongs under the three who would have to be beaten.
 
 			It is a box of the page's own grid at both widths now, and the difference between them
-			is which track it stands in. Below `md` it is the second of the three rows, the next
-			thing down after the terrain, and it is AS TALL AS WHAT IS IN IT: the row is `auto` and
-			this box names no height of its own, so the Municipi tab's own column — three statues at
-			3:4 of their cells, the standing under them, the plate under that — is measured and the
-			block comes to exactly it. The map is what gives: the first row is `minmax(0,1fr)` and
-			takes whatever is left over, which is the right way round for two boxes on a phone where
-			only one of them has a size of its own. A map is legible at any height; a picture of who
-			holds the town is legible at its own and at no other.
+			is which track it stands in. Below `md` it is the second of the three rows: the next
+			thing down after the terrain, and a SQUARE — `aspect-square w-full`, 1:1 of the page's
+			own width, and nothing else. Two things are read in it — three statues and a plate under
+			them, or a booster box, which is 30:37 of whatever width it is given — and both are
+			pictures, so what they want is a picture's box rather than a strip the column happened to
+			have left. Three statues and a plate laid over a map that fills a phone would cover the
+			better part of what one can see of the country, which is why on that width the picture
+			stands beside the place rather than on top of it.
 
-			It was a SQUARE, `aspect-square w-full`, on the reasoning that what is read in here are
-			pictures and a picture wants a picture's box. It is the same reasoning that says this
-			should be content-sized, and the square was the wrong way of acting on it: 1:1 of the
-			page's WIDTH is a number about the one axis that has nothing to do with how tall three
-			statues and a plate come to, so it was a box that cut the column it was drawn for — the
-			plate off the bottom of the Municipi tab — while the terrain above it kept room nothing
-			was asking for. A cap on that square (two fifths of the viewport, briefly) only cut it
-			sooner. Nothing here is a share of anything now.
+			The square is the block's size and never a starting point for one, which is the whole of
+			what is decided here. It carries no ceiling and no floor: not a share of the viewport
+			(that was `max-h-[40dvh]` briefly, which cut the Municipi tab sooner than the square
+			did), and not the map's floor said from this end either (`max-h-[calc(100dvh-16rem)]`,
+			which was the same box drawn by subtraction). A height in here would be a second answer
+			to how tall this is, and the two would disagree on exactly the phones the question is
+			about. What the map gets is what the square leaves: the first row is `minmax(0,1fr)` and
+			gives.
 
-			The one height still written down is the ceiling, `max-h-[calc(100dvh-16rem)]`, and it
-			is not about this block: it is the map's floor, said from this end. The band above and
-			the side's folded strip below come to a shade over 9rem between them, so 16rem leaves
-			the terrain something like 7rem whatever happens in here — a strip of country rather
-			than nothing at all, on a small phone with a long town in it. Past that the panel
-			scrolls, which is what it does at every width anyway. The Llocs tab is at the ceiling
-			always and by its own nature: a list of places is a scroller with no height of its own
-			(see RegionLocationList, which is given one to divide), so it fills whatever this box
-			will go to and divides that.
-			`md:max-h-none`: from `md` up this is half of a column and the grid says how tall it is.
+			So the answer to a column too tall for it is a SCROLL and not a taller box. Whatever
+			stands in here is read inside the square, and each of the three tabs already has its way
+			of doing that (see the panel below): the Municipi and the Sobre tabs scroll the panel
+			itself, and the Llocs tab hands the height to the list, which is a scroller by nature and
+			divides whatever it is given. Nothing is cut — a plate at the foot of a long town is one
+			short drag away, in the box the picture is framed in.
+			`md:aspect-auto`: from `md` up this is half of a column and the grid says how tall it is.
 
 			From `md` up it is the TOP HALF OF THE THIRD COLUMN: `md:col-start-3 md:row-start-1`, in
 			the first of two `minmax(0,1fr)` rows, with the furniture in the second. So the block and
@@ -3579,7 +3576,7 @@
 		{#if townBlock}
 			<div
 				transition:blur={CHROME_BLUR}
-				class="row-start-2 flex max-h-[calc(100dvh-16rem)] w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:max-h-none md:border-b-2 md:border-t-0"
+				class="row-start-2 flex aspect-square w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:aspect-auto md:border-b-2 md:border-t-0"
 			>
 				<!-- The head of the block: two cells of one grid, where the map is standing at the near
 					one and the three tabs at the far one. What they are is one statement in two
@@ -3713,7 +3710,19 @@
 							on:select={(event) => openFromColumn(event.detail.key)}
 						/>
 					{:else if townTab === 'town' && townPin}
-						<TownPin marker={townPin} named={false} alwaysReveal classes="w-full max-w-[500px]" />
+						<!-- `flex-none`, exactly as the box below it carries: this column is what regularly
+							outgrows the square, and a flex item in a column that is out of room SHRINKS
+							before its parent scrolls. Shrunk is not the same as scrolled — the statues, the
+							standing and the plate would each be squeezed a little to fit a box they do not
+							fit, which is the picture being redrawn wrong rather than framed and read
+							through. Held to its own height, what is too tall for the square scrolls inside
+							it, which is what the panel around it is for. -->
+						<TownPin
+							marker={townPin}
+							named={false}
+							alwaysReveal
+							classes="w-full max-w-[500px] flex-none"
+						/>
 					{:else if townTab === 'box' && townBox}
 						<!-- The box itself, drawn in the document rather than on a canvas: the very
 							component the map stands on the town and the Booster tab lays its grid out
