@@ -51,10 +51,13 @@ import type { MusicTrack, MusicCollection } from '$types/music.type';
  * turned it off, because they did not.
  *
  * The dial is turned by two hands. The listener's, on the select in the burger menu, which
- * is the only place it is a select at all; and the map's, which while the radio is on tunes
- * it to the show the place it is open on flies (see {@link MusicService.follow}) — so what
- * is playing is about where the reader is, and the music moves with them without their
- * asking. A change of station under a listener is crossfaded rather than cut, since the map
+ * is the only place it is a select at all; and the map's, which tunes it to the show the
+ * place it is open on flies (see {@link MusicService.follow}) — so what is playing is about
+ * where the reader is, and the music moves with them without their asking. The map's hand
+ * is on the dial whether or not there is sound: it moves a running radio at once, and a
+ * silent one is left aimed at the place on screen, so the press that turns it on comes up
+ * on that town's station and not on whichever one the dial was last left at. A change of
+ * station under a listener is crossfaded rather than cut, since the map
  * moves often and a cut every time it did would read as the radio breaking. Only the
  * *station* fades: the songs within one hand over the way a station's do.
  *
@@ -192,6 +195,18 @@ class MusicService {
 	 */
 	private wanted = false;
 
+	/**
+	 * The show the map last said the reader is standing on, whether or not the radio was
+	 * on to act on it (see {@link follow}). Kept because a radio that is off still has a
+	 * place: the press that turns it on is a press on a town, and it is that town's
+	 * station it has to come up on — otherwise every town on the map opens with whatever
+	 * the dial happened to be left on, which is one song for the whole country.
+	 *
+	 * Null before the map has said anything and after the listener has turned the dial
+	 * themselves: an explicit choice outranks the place until the map next moves.
+	 */
+	private followed: number | null = null;
+
 	/** The in-flight (or finished) read, so several mounts share one fetch. */
 	private reading: Promise<void> | null = null;
 
@@ -267,8 +282,9 @@ class MusicService {
 	/**
 	 * Turn the radio on, or off if it is already on. The only entry point that may
 	 * start sound, so it must be reached from a real click: browsers refuse a `play()`
-	 * that no gesture asked for. Turning it on tunes in first — a radio that had been
-	 * off for a while is not resumed where it stopped, it is joined where it now is.
+	 * that no gesture asked for. Turning it on tunes in first — to the place the map is
+	 * open on, and there at the moment it is at, since a radio that had been off for a
+	 * while is not resumed where it stopped but joined where it now is.
 	 */
 	toggle(): void {
 		const audio = this.element();
@@ -286,9 +302,8 @@ class MusicService {
 			audio.pause();
 			return;
 		}
-		this.wanted = true;
 		this.remember({ on: true });
-		this.tune();
+		this.switchOn();
 	}
 
 	/**
@@ -296,8 +311,13 @@ class MusicService {
 	 * `null` for the songs that open no show. The radio stays on or off as it was, and
 	 * the new station is joined where it now is — there is no starting one from the
 	 * top. A show the collection has no station for is not tuned to.
+	 *
+	 * This is the listener's own hand on the dial, so it drops the place the map had been
+	 * standing on: a station picked deliberately must survive the press that turns the
+	 * sound on, and would not if that press went back to the town on screen.
 	 */
 	tuneTo(showId: number | null): void {
+		this.followed = null;
 		this.select(showId, true);
 	}
 
@@ -309,20 +329,43 @@ class MusicService {
 	 *
 	 * Three things make this the map's move and not the listener's, and each is deliberate:
 	 *
-	 * - **Only while it is on.** A radio that is off has nothing to say about where the
-	 *   map is, and a station silently changing under a paused player would surprise
-	 *   whoever pressed play next with a station they did not leave it on.
+	 * - **Sound only moves while it is on.** A station audibly changing under a paused
+	 *   player would be a radio playing to nobody. But where the map is *is* noted while
+	 *   it is off (see {@link followed}), because the press that turns it back on is a
+	 *   press on a place and has to come up on that place's station — a radio that
+	 *   forgot every town it was carried over while it was silent played the same song
+	 *   for the whole country.
 	 * - **Nothing is remembered.** The listener's station is the one they turned the dial
 	 *   to (see {@link remember}); where they happened to have the map when they closed
 	 *   the page is not a choice about music.
 	 * - **`null` is not a station here.** The dial's `null` means the songs that open no
 	 *   show, while a place with no show is a place the map cannot name one for — an
-	 *   unknown, and a radio does not retune on one. Nor does a show with no songs move
-	 *   it: there is no station to go to, so it stays where it is rather than going quiet.
+	 *   unknown, and a radio does not retune on one, nor forget where it last was. Nor
+	 *   does a show with no songs move it: there is no station to go to, so it stays
+	 *   where it is rather than going quiet.
 	 */
 	follow(showId: number | null): void {
-		if (!this.wanted || showId === null) return;
+		if (showId === null) return;
+		this.followed = showId;
+		if (!this.wanted) return;
 		this.select(showId, false);
+	}
+
+	/**
+	 * Start the sound, on the station the place on screen flies. The three ways a radio
+	 * comes on — the press, a remembered "on" restored, and the gesture that restore
+	 * waits for — are all one thing: sound where there was none, at wherever the map has
+	 * got to by then. Aiming before the tune rather than tuning twice is what keeps the
+	 * first thing heard from being a second of the old station.
+	 *
+	 * No crossfade: a fade is for a dial turned under a song that is already playing, and
+	 * there is nothing here to come out of.
+	 */
+	private switchOn(): void {
+		this.wanted = true;
+		const moved = this.followed !== null && this.aim(this.followed);
+		this.tune();
+		if (moved) this.measure(this.station());
 	}
 
 	/**
@@ -333,15 +376,29 @@ class MusicService {
 	 * radio that is off is simply what it will be playing when it comes back on.
 	 */
 	private select(showId: number | null, remember: boolean): void {
-		const current = this.station();
-		if (!current || current.showId === showId) return;
-		if (!this.stations.some((station) => station.showId === showId)) return;
-
-		this.tuned = showId;
-		this.index = 0;
+		if (!this.aim(showId)) return;
 		if (remember) this.remember({ station: showId });
 		this.tune(false, true);
 		this.measure(this.station());
+	}
+
+	/**
+	 * Move the dial to `showId` without touching the sound, and say whether it moved. The
+	 * one place the tuned station is decided, for the two things that then do different
+	 * work with it: a change under a running radio, which is crossfaded ({@link select}),
+	 * and a radio being turned on, which has nothing to fade ({@link switchOn}).
+	 *
+	 * A station that is not there and the one already tuned both leave it where it is, so
+	 * callers may say where they want to be as often as they like.
+	 */
+	private aim(showId: number | null): boolean {
+		const current = this.station();
+		if (!current || current.showId === showId) return false;
+		if (!this.stations.some((station) => station.showId === showId)) return false;
+
+		this.tuned = showId;
+		this.index = 0;
+		return true;
 	}
 
 	/**
@@ -547,8 +604,7 @@ class MusicService {
 		if (this.resumed) return;
 		this.resumed = true;
 		if (!get(this.memory).on || !this.element()) return;
-		this.wanted = true;
-		this.tune();
+		this.switchOn();
 		this.awaitGesture();
 	}
 
@@ -586,8 +642,7 @@ class MusicService {
 			// they may have turned it off since the page loaded. Only a radio still
 			// remembered as on, and not already on, is started here.
 			if (!get(this.memory).on || this.wanted) return;
-			this.wanted = true;
-			this.tune();
+			this.switchOn();
 		};
 
 		const onGesture = () => {
