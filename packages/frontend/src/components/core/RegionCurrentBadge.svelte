@@ -11,10 +11,10 @@
 	//
 	// It carried the radio for a while — the song lettered under the place's name, the row itself
 	// being the play/pause — on the reading that the row naming the open place was the one press
-	// with the least of its own to do. The radio is the last line of the pin the map stands on the
-	// open place now (see TownRadio), where the station is already said by the plate's own second
-	// line — so what is playing is read on the mark standing on the place it is playing for, and
-	// this row is left to say what the place is.
+	// with the least of its own to do. The radio is a row of its own directly above this one now
+	// (see TownRadio), where the station is already said by the crumb this badge draws — so what
+	// is playing is read one line off the place it is playing for, and this row is left to say
+	// what the place is.
 	//
 	// Its own component because this is the map's answer to "where am I", drawn exactly as a
 	// crumb and as a row of the list of places are, and one thing is decided about it here that

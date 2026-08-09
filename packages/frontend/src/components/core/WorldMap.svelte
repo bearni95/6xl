@@ -5,7 +5,6 @@
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
 	import TownHolder from '$components/core/TownHolder.svelte';
-	import TownRadio from '$components/core/TownRadio.svelte';
 	import { PLATE_CLASSES, TILE_CLASSES } from '$components/core/TownPlate.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import { levelIndexForView } from '$utils/geo/level-of-detail';
@@ -889,13 +888,11 @@
 		const wrap = document.createElement('div');
 		wrap.className = classNamesFor(marker);
 
-		// Whether this is the mark for the place the map is open on, which is the one thing on a
-		// pin that is not a fact about its region: the radio (see below). Read off the picked
-		// mark's id rather than taken as an argument, because the same region arrives here by two
-		// roads — as a member of the tier being drawn and as the mark that outlives the tier (see
-		// `pickedMarker` and addPin) — and a pin that carried the radio down one of them and not
-		// the other would gain and lose it on a zoom.
-		const carriesRadio = !!pickedMarker && pickedMarker.id === marker.id;
+		// (One thing on this pin was not a fact about its region — the radio, drawn on the mark for
+		// the place the map is open on and on no other, which is why this function used to have to
+		// know which mark that was. It is on the row along the map's own bottom edge now, beside
+		// the badge naming that same place, so every line of every plate here is again a fact about
+		// the region the pin stands on and nothing here asks about the picked mark.)
 
 		// The line back to the place is NOT in here. It stands on the point, in a pane of its
 		// own under every mark on the map (see addLeader), so that a line never crosses a
@@ -1004,28 +1001,19 @@
 			plate.appendChild(bar);
 		}
 
-		// And the radio, last line of the plate, on the one mark the map draws for the place it is
-		// open on and on no other (see `pickedMarker`). The station is already up there: the map
+		// (The radio was the last line of this plate, on the one mark the map drew for the place it
+		// was open on. What put it here was that the station is already said up there — the map
 		// tunes the radio to the show the open place flies (see musicService.follow) and the pin's
-		// second line is that show, on a tile in the place's own colour — so what is missing from
-		// this plate is only what is on and whether it is running, which is the whole of what the
-		// row adds (see TownRadio).
+		// second line is that show, on a tile in the place's own colour — so the plate carried
+		// everything about the radio except what is on and whether it is running.
 		//
-		// It stood on the band across the top of the page before this, and on the row naming the
-		// open place before that. Both had to letter the station themselves to be read; a mark
-		// standing on the town does not.
-		//
-		// The guard goes on the play/pause alone and not on the row the way the bar above takes it
-		// whole: the song beside the button is a line on this plate like the two above it, and
-		// pressing a line on this plate opens the place it names and turns the block under the map
-		// to it (see the marker's `onClick` and the page's pin press). Pausing the radio is the one
-		// thing on the pin that must not do that as well. Handed over as a function rather than
-		// applied here, since which box in a row is the control is the row's own business.
-		if (carriesRadio) {
-			const radio = document.createElement('div');
-			trackPinMount(marker.id, mount(TownRadio, { target: radio, props: { guard: guardWidget } }));
-			plate.appendChild(radio);
-		}
+		// The row along the map's bottom edge says the station as well, being lettered with the
+		// same crumb out of the same fields (see RegionCurrentBadge), and it says it in a place
+		// that does not move: a pin stands where its town is, so the radio went wherever the map
+		// was panned to and was as small as a mark's caption. That row is one press away from
+		// nothing and always in the same corner, which is what a radio wants. It also cost this
+		// function the `guardWidget` it had to hand the play/pause — a control laid over the map
+		// rather than mounted into a Leaflet marker is not terrain to begin with.)
 
 		// The side sitting on the region, where there is one: the very statues the roster
 		// draws a team with — floor, character, name, place and all — three across, standing

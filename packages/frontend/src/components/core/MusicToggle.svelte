@@ -4,8 +4,8 @@
 	import { musicService } from '$services/music.service';
 
 	// The radio's play/pause drawn as a bare button, which is both of the places it stands: the
-	// plate in the burger menu, and the far end of the last line of the pin the map stands on the
-	// open place (see TownRadio). The two are one control on one store — the shape is the
+	// plate in the burger menu, and the far end of the radio row on the map's bottom edge (see
+	// TownRadio). The two are one control on one store — the shape is the
 	// caller's, the reading is not.
 	//
 	// It says what the element is really doing rather than what it was last told to do, and

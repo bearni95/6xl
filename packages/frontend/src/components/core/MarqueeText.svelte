@@ -5,8 +5,8 @@
 	// horizontally, end to end, for as long as it stands there.
 	//
 	// It is for the one line on screen that cannot be shortened and cannot be given more
-	// room — a song's title on the radio (see TownRadio), which stands on the plate of the
-	// pin the map puts on the open place, and the title is whatever the record is called. An
+	// room — a song's title on the radio (see TownRadio), which is the first row of the plate
+	// laid on the map's bottom edge, and the title is whatever the record is called. An
 	// ellipsis is the honest mark when a name can be recognised from its head (a town, an
 	// account); a song on a radio is being announced, and half an announcement is not one.
 	//

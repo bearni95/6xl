@@ -49,8 +49,8 @@
 	// radio's play/pause, stood on the crumb's own tile, and the song at the far end — for the
 	// same reason the box is out here: a button does not hold a button. Then the mark and the
 	// song became that row's second line, handed in through a slot, and the row itself was the
-	// press. Both are gone with the radio, which is the last line of the pin standing on the open
-	// place now (see TownRadio): every row this game draws is one press that opens a place, and
+	// press. Both are gone with the radio, which is a row of its own on the plate at the map's
+	// bottom edge now (see TownRadio): every row this game draws is one press that opens a place, and
 	// what stands under the name is the show it flies.
 </script>
 

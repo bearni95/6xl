@@ -1,6 +1,7 @@
 <script context="module" lang="ts">
 	// What pressing the mark is called, wherever the mark is drawn — the button on the menu's
-	// plate and the one at the end of the pin's last line (see MusicToggle, TownRadio). One radio,
+	// plate and the one at the end of the radio row on the map's bottom edge (see MusicToggle,
+	// TownRadio). One radio,
 	// so one name for the press: two names would be two controls to anyone who reaches them by
 	// their names.
 	export const musicPressLabel = (playing: boolean) => (playing ? 'Pause music' : 'Play music');
