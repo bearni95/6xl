@@ -3339,108 +3339,62 @@
 							classes="min-h-0 flex-1"
 						/>
 
-						<!-- The corner at the top of the terrain: the way OUT to a festa nobody has
-							opened, and nothing else. It is about the map and nothing else — it takes the
-							view somewhere it has not looked — so it is the map's own and not the page's.
+						<!-- The strip across the top of the terrain, and the two things laid on it: what
+							the level the map is open on is made of, at the near corner, and the way OUT to a
+							festa nobody has opened, at the far one. Both are about the map and nothing else —
+							one counts what is on screen, the other takes the view somewhere it has not looked
+							— so they are the map's own and not the page's.
 							The name of the game, the questions put to it, who drew it and the way back UP
 							out of the open place are all on the band above (see the page's first row): the
 							last of those stood in this corner for a while, and what sent it up was that a
 							path is a control over the whole page's idea of where you are, and the band is
 							where this game keeps its controls.
-							What is left is one square, so the strip is kept for what the strip was doing
-							all along: `pointer-events-none` with the square turning them back on, since
-							the room around it is terrain and terrain has to stay draggable. `z-[900]`
+							`pointer-events-none` with each of the two turning them back on, since the room
+							between and around them is terrain and terrain has to stay draggable. `z-[900]`
 							clears Leaflet's own panes (overlays 400-600, controls 800) without reaching
 							the arena's 1200. No inset is measured off it and handed to the map: the pins
 							are dealt where the polygons put them, and a reader who wants what is under it
 							pans. It stands whatever the map is doing — there is no tab left for it to be
 							hidden behind — and a full view used to take it away too; nothing on this page
-							answers a sheet any more (see CHROME_BLUR). -->
+							answers a sheet any more (see CHROME_BLUR).
+							`items-start`, so the tally hangs from the top edge and the square beside it does
+							not stretch to whatever the tally has grown to. -->
 						<div
 							class="pointer-events-none absolute inset-x-3 top-3 z-[900] flex items-start gap-2"
 						>
-							<!-- The radar. The map carries days of festes at once and no marks to find them
-								by, so the boxes waiting out there are found by panning across the country
-								looking for one — which is a search, and this is the button that does it: press
-								it and the map opens the nearest town whose box is still unopened (see
-								findNearestBox). It stands at every width, because a box is as hard to come
-								across on a desktop as on a phone.
-								It has been at the far end of a bar over the map, then a mark in the furniture
-								column beside it, then a square alone in this corner, then the end of a row
-								with the path at the other one — and it is alone in the corner again, the
-								path having gone up to the band.
-								A size of its own, where the marks it used to stand among were drawn to a
-								row's height (`self-stretch aspect-square`): there is no row here to be as
-								tall as. `size-10` is what that row came to, so the square is the same square.
-								`ml-auto` because it is the only thing in the strip and the corner it wants is
-								the far one.
-								Disabled when there is nothing left to point at — every box in the window
-								opened, or none loaded yet — because a radar that answers "here" or answers
-								nothing is a press with no destination. -->
-							<button
-								type="button"
-								class="pointer-events-auto ml-auto flex size-10 flex-none cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
-								aria-label={$_('map.radar.nearest')}
-								disabled={!radarTarget}
-								on:click={findNearestBox}
-							>
-								<img src="/assets/icons/lorc/radar-sweep.svg" class="size-6" alt="" />
-							</button>
-						</div>
-
-						<!-- The other edge of the terrain: what the level the map is open on is made of —
-							the shows those places fly and how much of each — with the field, when it is
-							out, on the row above it.
-							It was a tab of its own over this same terrain, then the near end of the strip
-							at the top, and a row at the foot of the column beside the map before either of
-							those. What it is doing on the map at all is being read at the same moment as
-							the map: the level drawn and the level counted were two tabs, so a reader could
-							have the country or the division of it and never both, and the division is a
-							reading OF what is on screen. What it is doing at the BOTTOM is leaving the top
-							to the two presses that take the map somewhere else — a tally is not one of
-							those; it is what the view already says, counted — and the bottom edge is the
-							one a map has to spare, the pins and the polygons a reader is working over
-							sitting in the middle of the box.
-							Anchored to that edge rather than filling from it (`bottom-3`, no `top`), so the
-							column grows UPWARD as the field comes out and the marks stay where the reader
-							last pressed one.
-							Pressing a share narrows the list of places in the block below; the grid is
-							handed the whole division whatever is picked, and the tally is this page's over
-							every row of the level, because a share is what this level IS and not what is
-							left of it after a press. Pressing the picked show again clears it and pressing
-							another turns the list over, so there is one gesture and it is its own undo.
-							It is as wide as what is in it and stood in the middle of the edge: the strip
-							spans the map (`inset-x-3`) and `justify-center` puts one shrink-to-fit column
-							in the middle of it, which is what makes the row's width a reading in itself —
-							a level flying three shows is a short plate and one flying eight is a long one,
-							and either is centred on the same axis rather than growing off one corner. It
-							was held to `max-w-sm` and stretched to it while the cells divided whatever box
-							they were given; the cells are as wide as the longest percentage in them now
-							(see ShowShareGrid), so there is no box left to cap. `max-w-full` is all that
-							remains of the cap, and it only ever bites where the marks would outrun the
-							map. The field takes the grid's own width, being the other child of that
-							column.
-							`bg-base-100/30`: the terrain reads through the plate, which is what a mark laid
-							over a map should let it do — the tally is about what is under it. -->
-						<div
-							class="pointer-events-none absolute inset-x-3 bottom-3 z-[900] flex justify-center"
-						>
-							<div class="flex max-w-full flex-col gap-2">
-								{#if searchOpen}
-									<!-- The field itself, on its own row over the glyph that asked for it. It puts
-										itself away when it is left empty and takes the matches with it on Escape
-										(see LocationSearchBox); what it holds is matched by this page against the
-										whole tree, and the matches stand in the block under the map, which the
-										press on the glass has already turned to its list (see openSearch). So the
-										answer is on screen beside the question rather than on a tab the reader has
-										to know to press, and nothing moves on a keystroke. -->
-									<LocationSearchBox
-										bind:value={searchQuery}
-										bind:open={searchOpen}
-										classes="pointer-events-auto shadow-xl"
-									/>
-								{/if}
-
+							<!-- The near corner: the shows the level's places fly and how much of each, with
+								the field under it when it is out.
+								It was a tab of its own over this same terrain, then the near end of this same
+								strip, then the middle of the bottom edge, and a row at the foot of the column
+								beside the map before any of those. What it is doing on the map at all is being
+								read at the same moment as the map: the level drawn and the level counted were
+								two tabs, so a reader could have the country or the division of it and never
+								both, and the division is a reading OF what is on screen. What it is doing back
+								at the TOP is standing on the one row this map has for the things that act on
+								it — the radar takes the view to a place, the tally narrows the list of places,
+								and a reader looking for either looks in one corner rather than at two opposite
+								edges.
+								It grows DOWNWARD from that edge as the field comes out, which is why the field
+								is the second child here and was the first while the column hung off the
+								bottom: either way it opens into the map and the marks stay where the reader
+								last pressed one.
+								Pressing a share narrows the list of places in the block below; the grid is
+								handed the whole division whatever is picked, and the tally is this page's over
+								every row of the level, because a share is what this level IS and not what is
+								left of it after a press. Pressing the picked show again clears it and pressing
+								another turns the list over, so there is one gesture and it is its own undo.
+								It is as wide as what is in it, which is what makes its width a reading in
+								itself — a level flying three shows is a short plate and one flying eight is a
+								long one. It was held to `max-w-sm` and stretched to it while the cells divided
+								whatever box they were given; the cells are as wide as the longest percentage
+								in them now (see ShowShareGrid), so there is no box left to cap. `min-w-0` is
+								all that remains of the cap: it lets the column give way to the square beside
+								it where the marks would otherwise outrun the map, rather than pushing it off
+								the corner it holds. The field takes the grid's own width, being the other
+								child of that column.
+								`bg-base-100/30`: the terrain reads through the plate, which is what a mark laid
+								over a map should let it do — the tally is about what is under it. -->
+							<div class="flex min-w-0 flex-col gap-2">
 								<!-- It carries the radar's plate — rounded, shadowed — at three tenths of the
 									page's own surface, which is enough to hold the white marks off whatever tile
 									is under them and little enough that the country goes on being seen through
@@ -3454,7 +3408,7 @@
 									<!-- The looking glass, as the last cell of that grid. It stood at the far end
 										of the breadcrumb bar over the map once, where it had to fold a field away
 										into a glyph to leave the path any room; here the glyph is a cell like the
-										shares beside it and the field comes up on the row above it.
+										shares beside it and the field comes up on the row under it.
 										On this row because this row is the one that acts on the level: the cells
 										beside it narrow it to a show, and this goes and finds places that are not
 										on it at all. -->
@@ -3469,7 +3423,51 @@
 										<img src="/assets/icons/lorc/magnifying-glass.svg" class="w-full" alt="" />
 									</button>
 								</ShowShareGrid>
+
+								{#if searchOpen}
+									<!-- The field itself, on its own row under the glyph that asked for it. It puts
+										itself away when it is left empty and takes the matches with it on Escape
+										(see LocationSearchBox); what it holds is matched by this page against the
+										whole tree, and the matches stand in the block under the map, which the
+										press on the glass has already turned to its list (see openSearch). So the
+										answer is on screen beside the question rather than on a tab the reader has
+										to know to press, and nothing moves on a keystroke. -->
+									<LocationSearchBox
+										bind:value={searchQuery}
+										bind:open={searchOpen}
+										classes="pointer-events-auto shadow-xl"
+									/>
+								{/if}
 							</div>
+
+							<!-- The radar. The map carries days of festes at once and no marks to find them
+								by, so the boxes waiting out there are found by panning across the country
+								looking for one — which is a search, and this is the button that does it: press
+								it and the map opens the nearest town whose box is still unopened (see
+								findNearestBox). It stands at every width, because a box is as hard to come
+								across on a desktop as on a phone.
+								It has been at the far end of a bar over the map, then a mark in the furniture
+								column beside it, then a square alone in this corner, then the end of a row
+								with the path at the other one — and it is the end of a row again, with the
+								tally at the other one, the path having gone up to the band.
+								A size of its own, where the marks it used to stand among were drawn to a
+								row's height (`self-stretch aspect-square`): the tally beside it is a plate of
+								whatever height its marks come to and not a row to be as tall as. `size-10` is
+								what that row came to, so the square is the same square. `ml-auto` so the
+								corner it holds is the far one however short the tally is, and `flex-none` so
+								a long one takes room off itself rather than off this.
+								Disabled when there is nothing left to point at — every box in the window
+								opened, or none loaded yet — because a radar that answers "here" or answers
+								nothing is a press with no destination. -->
+							<button
+								type="button"
+								class="pointer-events-auto ml-auto flex size-10 flex-none cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
+								aria-label={$_('map.radar.nearest')}
+								disabled={!radarTarget}
+								on:click={findNearestBox}
+							>
+								<img src="/assets/icons/lorc/radar-sweep.svg" class="size-6" alt="" />
+							</button>
 						</div>
 					</div>
 
