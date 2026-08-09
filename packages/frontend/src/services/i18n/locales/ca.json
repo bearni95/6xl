@@ -83,13 +83,6 @@
 		}
 	},
 	"map": {
-		"town": {
-			"tabs": {
-				"town": "Municipi",
-				"box": "Sobre",
-				"places": "Llocs"
-			}
-		},
 		"radar": {
 			"nearest": "Ves al sobre sense obrir més proper"
 		},
