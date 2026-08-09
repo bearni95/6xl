@@ -1212,18 +1212,18 @@
 		)
 	).map((standing) => ({ id: standing.id, name: standing.name, share: standing.share }));
 
-	// The pin the map is drawing on the place at the head, where that place is a town — the
-	// mark itself and
-	// not a copy of it: it comes out of `buildMarkers`, the very function the map's pins are
-	// built by, called on the one node with everything that function is given for the whole
-	// tier. So the side standing on the town, its occupant, its standing and the control under
-	// it are decided in exactly one place, and the column beside the map cannot come to say
-	// something the mark on the map does not.
+	// The open town's pin, where that place is a town — and the only one anywhere on this page
+	// that is drawn, the terrain carrying none at all now (see `hidden` in buildMarkers). It is
+	// the mark itself and not a copy of it: it comes out of `buildMarkers`, the very function
+	// the map's pins are built by, called on the one node with everything that function is given
+	// for the whole tier. So the side standing on the town, its occupant, its standing and the
+	// control under it are decided in exactly one place, and the block under the map cannot come
+	// to say something the map's own model of that town does not.
 	//
 	// Towns only, because a pin's team, holder and standing are a town's alone (see
-	// buildMarkers) and a coarser region's mark is its plate by itself, which is the crumb row
-	// already standing on the band at the top of the page. And a town with no show has no pin —
-	// buildMarkers skips it — so the column says nothing extra about it either.
+	// buildMarkers) and a coarser region's mark is its plate by itself, which is the crumb the
+	// row on the map's bottom edge already letters. And a town with no show has no pin —
+	// buildMarkers skips it — so the block says nothing extra about it either.
 	$: townPin =
 		openNode?.type === 'Municipality'
 			? (buildMarkers(
@@ -1236,8 +1236,7 @@
 					regionSieges,
 					holders,
 					$showGlyphs,
-					festaBoxById,
-					openNode.key
+					festaBoxById
 				)[0] ?? null)
 			: null;
 
@@ -2576,8 +2575,7 @@
 		sieges: ReadonlyMap<string, RegionSiege>,
 		occupied: ReadonlyMap<string, MunicipalityHolder>,
 		glyphs: ReadonlyMap<number, string>,
-		offers: ReadonlyMap<string, MapBoosterBox>,
-		pinned: string | null
+		offers: ReadonlyMap<string, MapBoosterBox>
 	): MapMarker[] {
 		const pins: MapMarker[] = [];
 		for (const node of nodes) {
@@ -2617,26 +2615,27 @@
 				subtitle: restoreCatalanArticle(node.name),
 				featureIds: geometry.muniIds.get(node.key) ?? [],
 				dimmed: relevant ? !relevant.has(node.key) : false,
-				// Built like any other and drawn for one place only: the region that has been
-				// picked, which is what a caller building that one pin on its own asks for (see
-				// buildPickedMarker) and what a caller building a whole tier never does — a level
-				// of the stack is the model of the breakdown and puts no plate on the terrain at
-				// all, since the one mark drawn has to outlive the level it is a member of.
-				// Every other pin is left off the map — the pin is still the tier's,
-				// still measured for where the view is looking, still what a click on the land
-				// is resolved through and still what lights its region when its polygons are
-				// pointed at; there is simply no plate standing on the terrain for it, because
-				// what a plate said is read in the column beside the map now, of the whole level
-				// at once. The one exception is the place being looked at, which is worth saying
-				// where it is standing as well as in the column: the shape breathing under it
-				// says which shape, and the plate on it says which place.
+				// Every pin, always. Not a plate on this terrain at any tier, at any zoom, picked
+				// or not — the map is the country, and a mark is a caption laid over the part of
+				// it the caption is about.
+				// The last one standing was the picked place's, kept on the ground that where you
+				// are is worth saying on the terrain as well as in the column. The row along the
+				// map's own bottom edge says it now, and says it better: the same crumb out of the
+				// same fields (see RegionCurrentBadge), plus the way up out of the place, the
+				// three readings of it and what is playing — in a corner that does not move,
+				// where a pin stood wherever its town happened to be and went off screen with a
+				// pan. What is left saying which shape is the shape: the polygon breathing under
+				// the spotlight, which is the one way of pointing at a place on a map that covers
+				// nothing up.
 				//
-				// Said here, on the mark itself, rather than by keeping only one marker: the
-				// tiers ARE the map's model of what is on screen (see buildMarkerLevels), and a
-				// map with pins missing would have gaps in its focus, its click resolution and
-				// its framing. This is the one flag that separates being modelled from being
-				// drawn, and it is what it was built for.
-				hidden: node.key !== pinned,
+				// Said here, on the mark itself, rather than by building fewer markers: the tiers
+				// ARE the map's model of what is on screen (see buildMarkerLevels), and a map with
+				// pins missing would have gaps in its focus, its click resolution and its framing.
+				// Every pin is still the tier's, still measured for where the view is looking,
+				// still what a click on the land is resolved through and still what lights its
+				// region when its polygons are pointed at. This is the one flag that separates
+				// being modelled from being drawn, and it is what it was built for.
+				hidden: true,
 				// The place, and the tab that place is read on (see openFromPin) — one press, since
 				// opening somewhere and being shown it are not two things a reader asked for.
 				onClick: () => openFromPin(node)
@@ -2737,8 +2736,7 @@
 		sieges: ReadonlyMap<string, RegionSiege>,
 		occupied: ReadonlyMap<string, MunicipalityHolder>,
 		glyphs: ReadonlyMap<number, string>,
-		offers: ReadonlyMap<string, MapBoosterBox>,
-		pinned: string | null
+		offers: ReadonlyMap<string, MapBoosterBox>
 	): MapMarker[][] {
 		const levels: MapMarker[][] = [];
 		for (let d = 0; d <= depth; d++) {
@@ -2753,21 +2751,21 @@
 					sieges,
 					occupied,
 					glyphs,
-					offers,
-					pinned
+					offers
 				)
 			);
 		}
 		return levels;
 	}
 
-	// Nothing about a siege and nothing about an occupant: the map's own pins are told the
-	// plate's three facts and no more, so the one that is drawn carries the show's mark, the
-	// place's name and the show's name and stops there. Whose the place is, how far it has
-	// been taken and what may be done about it are read in the column beside the map, where
-	// there is room for them and where they stand for the place that was picked rather than
-	// for whatever the zoom has drifted over. Empty maps rather than a flag, because what a
-	// pin says has always been what it was given.
+	// Nothing about a siege and nothing about an occupant: the stack is told the plate's three
+	// facts and no more, so a pin of it carries the show's mark, the place's name and the show's
+	// name and stops there. Whose the place is, how far it has been taken and what may be done
+	// about it are read in the block under the map, where there is room for them and where they
+	// stand for the place that was picked rather than for whatever the zoom has drifted over.
+	// Empty maps rather than a flag, because what a pin says has always been what it was given —
+	// and the stack is drawn nowhere at all now (see `hidden`), so what it is not told is what
+	// it never has to be kept honest about.
 	const NO_SIEGES: ReadonlyMap<string, RegionSiege> = new Map();
 	const NO_HOLDERS: ReadonlyMap<string, MunicipalityHolder> = new Map();
 	// And nothing about a pack either, which is the same rule said about the third thing a
@@ -2794,63 +2792,18 @@
 		NO_SIEGES,
 		NO_HOLDERS,
 		$showGlyphs,
-		NO_BOXES,
-		null
-	);
-
-	// The picked place's own pin, built exactly as the tier's are and handed to the map beside
-	// them (see WorldMap's `pickedMarker`), which is what keeps it standing at every zoom.
-	//
-	// Not one of the stack's own any more, and not because the stack could not carry it: it
-	// carried it, in the one level the place is a member of, and lost it the moment the wheel
-	// folded that level up — the mark the reader asked for by name being the first thing the
-	// zoom took away. So the levels are the model of the breakdown, whole and every pin of them
-	// left off the terrain (`pinned` is null above), and the one mark drawn is this, over
-	// whichever level is on screen. It is the same function building both: this one is asked
-	// with the place named as the pinned one, so it comes back the one pin the map draws.
-	//
-	// Nothing about a siege, an occupant or a pack here either, for the reason the levels have
-	// none: the plate on the terrain says the show's mark, the place's name and the show's
-	// name, and the column beside the map says the rest. The pack is the one of the three that
-	// this mark could have carried and does not — being the picked town's, it is the only pin
-	// a box would have stood on — and that is exactly the box the block under the map draws
-	// (see NO_BOXES and `townBox`): once, in the column, and not a second time on the terrain.
-	function buildPickedMarker(
-		key: string | null,
-		nodes: RegionNode[],
-		geometry: RegionGeometry,
-		relevant: Set<string> | null,
-		glyphs: ReadonlyMap<number, string>,
-		offers: ReadonlyMap<string, MapBoosterBox>
-	): MapMarker | null {
-		if (!key) return null;
-		const node = findNode(nodes, key);
-		if (!node) return null;
-		return (
-			buildMarkers(
-				[node],
-				geometry,
-				relevant,
-				null,
-				[],
-				null,
-				NO_SIEGES,
-				NO_HOLDERS,
-				glyphs,
-				offers,
-				key
-			)[0] ?? null
-		);
-	}
-
-	$: pickedMarker = buildPickedMarker(
-		selected,
-		regionNodes,
-		regionGeometry,
-		relevantKeys,
-		$showGlyphs,
 		NO_BOXES
 	);
+
+	// (The picked place's own pin was built here — the same function, asked for one node and
+	// handed to the map beside the stack as WorldMap's `pickedMarker`, which is what kept it
+	// standing at every zoom rather than being folded away with the level it belongs to. It was
+	// the last mark drawn on this terrain and there are none now: where the reader is standing
+	// is said by the row along the map's bottom edge, in words, in a corner that does not move,
+	// and by the polygon breathing under the spotlight, which points at a place without lying
+	// over it. The stack itself is untouched — it is the model, not the drawing (see `hidden`
+	// in buildMarkers) — and the map goes on resolving clicks, framing views and lighting
+	// regions off it exactly as before.)
 
 	// Every town's feature id → the pin standing over that town on the tier the map is
 	// drawing right now. A pin carries the municipality ids of everything under it
@@ -3306,7 +3259,6 @@
 							minZoom={7}
 							{overlays}
 							{markerLevels}
-							{pickedMarker}
 							{hiddenLineUrls}
 							{pulse}
 							{focusBounds}

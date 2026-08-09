@@ -76,6 +76,12 @@
 		/**
 		 * One mark drawn at every tier: the place the reader has picked.
 		 *
+		 * Nothing hands one over today — the game's map draws no plates on its terrain at all
+		 * (see `hidden`, which the page sets on every pin of every tier), where you are being
+		 * said by the row along the map's bottom edge and shown by the polygon under the
+		 * spotlight. What is written here is what this prop is FOR, and it is the honest answer
+		 * wherever a caller does want one mark to outlive the zoom.
+		 *
 		 * A pin in the stack belongs to a tier and goes when that tier does — which is right for
 		 * a mark the map chose to draw, and wrong for the one mark the reader asked for by name.
 		 * A town picked at the town tier used to vanish the moment the wheel folded its comarca
