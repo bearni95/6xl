@@ -861,6 +861,17 @@
 		return lat >= south && lat <= north && lng >= west && lng <= east;
 	}
 
+	// One box inside a mark that is a control rather than part of the mark: the challenge's bar,
+	// the booster box, the radio's play/pause. Without this a press on it would go on up to the
+	// marker — re-opening the region and re-framing the view under the reader — and a drag begun
+	// on it would pan the map. Leaflet's own way of saying "this DOM is a widget, not terrain",
+	// said once here because three kinds of mark ask for it and a mark that forgot to would be a
+	// button that moves the map.
+	function guardWidget(element: HTMLElement): void {
+		Leaf!.DomEvent.disableClickPropagation(element);
+		Leaf!.DomEvent.disableScrollPropagation(element);
+	}
+
 	// Build a pin's DOM: the one plate that says what the pin is — the tile at its left end,
 	// the place's name and its show's beside it — and, on the picked town, the side holding
 	// it standing over that plate. The wrapper is translated so its bottom centre sits on
@@ -985,12 +996,7 @@
 		// the team is — it runs a clock of its own when it is counting down.
 		if (marker.challenge) {
 			const bar = document.createElement('div');
-			// The controls are the pin's, not the map's: without this a click on the button
-			// would go on up to the marker (re-opening the region, re-framing the view under
-			// the reader) and a drag begun on it would pan the map. Leaflet's own way of
-			// saying "this DOM is a widget, not terrain".
-			Leaf!.DomEvent.disableClickPropagation(bar);
-			Leaf!.DomEvent.disableScrollPropagation(bar);
+			guardWidget(bar);
 			trackPinMount(
 				marker.id,
 				mount(TownChallenge, { target: bar, props: { ...marker.challenge } })
@@ -1009,14 +1015,15 @@
 		// open place before that. Both had to letter the station themselves to be read; a mark
 		// standing on the town does not.
 		//
-		// The same guard the challenge bar takes, for the same reason: the press belongs to the
-		// pin and not to the terrain under it, so a click on it must not go on up to the marker
-		// and re-open the region, and a drag begun on it must not pan the map.
+		// The guard goes on the play/pause alone and not on the row the way the bar above takes it
+		// whole: the song beside the button is a line on this plate like the two above it, and
+		// pressing a line on this plate opens the place it names and turns the block under the map
+		// to it (see the marker's `onClick` and the page's pin press). Pausing the radio is the one
+		// thing on the pin that must not do that as well. Handed over as a function rather than
+		// applied here, since which box in a row is the control is the row's own business.
 		if (carriesRadio) {
 			const radio = document.createElement('div');
-			Leaf!.DomEvent.disableClickPropagation(radio);
-			Leaf!.DomEvent.disableScrollPropagation(radio);
-			trackPinMount(marker.id, mount(TownRadio, { target: radio }));
+			trackPinMount(marker.id, mount(TownRadio, { target: radio, props: { guard: guardWidget } }));
 			plate.appendChild(radio);
 		}
 
@@ -1116,8 +1123,7 @@
 				kind === 'disc'
 					? discElement(boosterBox, 'pin')
 					: boxElement(boosterBox, statues ? 'statues' : 'pin');
-			Leaf!.DomEvent.disableClickPropagation(holder);
-			Leaf!.DomEvent.disableScrollPropagation(holder);
+			guardWidget(holder);
 			const action = boxAction(boosterBox, kind);
 			if (action) holder.addEventListener('click', () => action());
 			(kind === 'box' && statues ? statues : wrap).appendChild(holder);

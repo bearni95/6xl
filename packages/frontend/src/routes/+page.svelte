@@ -951,6 +951,23 @@
 		open(key);
 	}
 
+	// What a press on a mark does: it opens the place, and it turns the block under the map to the
+	// tab that kind of place is read on — the town for a municipality, the list of places for
+	// every coarser cut (see `townTab`). The block follows the selection on its own, so this says
+	// nothing new for a walk INTO somewhere; what it is for is the press that changes no
+	// selection, which is most presses on a mark, the map drawing a pin for the place it is
+	// already open on. A reader who has gone to the box tab and then presses the town's own pin is
+	// asking to be shown the town, and a mark that answered nothing at all would be a mark that
+	// stopped working once you were standing on it.
+	//
+	// The land takes this press too, since a click on a polygon is answered by whatever the pin
+	// over it does (see pinByFeatureId) — which is the point: the terrain and the mark standing on
+	// it open the same place onto the same tab.
+	function openFromPin(node: RegionNode) {
+		townTab = node.type === 'Municipality' ? 'town' : 'places';
+		open(node.key);
+	}
+
 	// The crumbs: a root crumb back to the top view, then one per ancestor down to the region
 	// the bar is about. The last crumb is that region and renders as plain text; the rest link
 	// back up to their tier.
@@ -1240,17 +1257,30 @@
 	$: townBoxOffered = Boolean(townBox && !townBox.claimed);
 
 	// Whether there is a town to draw at all, which is the whole of what the first tab under the
-	// map is enabled by. Only the bottom tier has a pin of its own: a province is not a place a
+	// map is. Only the bottom tier has a pin of its own: a province is not a place a
 	// side stands on, and above the municipality that tab has nothing to be about.
 	$: townOffered = Boolean(townPin);
 
-	// Which of the three the block under the map is showing: the town — the side standing on it,
+	// And whether the list of places is offered, which is the same question upside down: the two
+	// tabs are one tab that changes with what kind of place is open. A municipality is read as the
+	// town it is — the side on it, the plate naming it, the fight to be had — and every coarser cut
+	// is read as the places it divides into; neither has anything to say in the other's shape, and
+	// a tab standing there dark said that one press later.
+	//
+	// The one thing that puts the list back on a town is a search, because the list is where a
+	// search is answered (see openSearch): the field turns up places from the whole map, which is
+	// not a question about the open one at all. It goes again with the field.
+	$: placesOffered = !townOffered || searchOpen;
+
+	// Which of them the block under the map is showing: the town — the side standing on it,
 	// the plate naming it and the fight to be had for it — the box that town has waiting, or the
 	// places the open region divides into. The first two are answers about the one town; the third
-	// is the level around it, and it came here off the row of tabs over the terrain, where it was
-	// a third way of reading the map. It is not that: the terrain, drawn, and the shows, tallied,
-	// are pictures of the level, and a list of names is what is at the place — which is the
-	// question this block is the answer to, at whatever tier the map is standing.
+	// is what a coarser cut is made of, and it came here off the row of tabs over the terrain,
+	// where it was a third way of reading the map. It is not that: the terrain, drawn, and the
+	// shows, tallied, are pictures of the level, and a list of names is what is at the place —
+	// which is the question this block is the answer to, at whatever tier the map is standing.
+	// The town and the list are never offered together (see `placesOffered`), so at any one
+	// moment this is two tabs at a town and one above it.
 	// The town is the default, and it is the default again at every new town: walking into a
 	// place to be shown its wrapper rather than who holds it is the page answering a question
 	// that was asked about the last town.
@@ -1283,6 +1313,11 @@
 	// and that step is the one the reader asked for by name.
 	$: if (townTab === 'box' && !townBoxOffered) townTab = townOffered ? 'town' : 'places';
 	$: if (townTab === 'town' && !townOffered) townTab = 'places';
+	// And the same the other way, now that the two are exclusive: the list is not there to be
+	// standing on once the open place is a town. It is what a search leaves behind when the field
+	// folds away while a town is open (see `placesOffered`), and what the reset above lands on for
+	// the moment between a town being picked and its pin being built.
+	$: if (townTab === 'places' && !placesOffered) townTab = 'town';
 
 	// Whether that block is standing at all, which is now only whether the map is ready. It was
 	// written out at the `{#if}` alone while the block was a band laid over the terrain, where
@@ -2600,7 +2635,9 @@
 				// its framing. This is the one flag that separates being modelled from being
 				// drawn, and it is what it was built for.
 				hidden: node.key !== pinned,
-				onClick: () => open(node.key)
+				// The place, and the tab that place is read on (see openFromPin) — one press, since
+				// opening somewhere and being shown it are not two things a reader asked for.
+				onClick: () => openFromPin(node)
 			});
 		}
 		return pins;
@@ -3557,8 +3594,8 @@
 						that names the place. Lettered exactly as a crumb and as a row of the list under
 						it are, and pressed for what every row that names a place is pressed for (see
 						RegionCurrentBadge). It carried the radio's play/pause on its second line for a
-						while; the radio is a plate of its own on the band at the top of the page now, a
-						control that follows the map not being a reading about a town. `min-w-0` so a
+						while; the radio is the last line of the pin standing on the open place now,
+						where the station is already said by the plate carrying it. `min-w-0` so a
 						long name truncates inside its half rather than widening the cell.
 						The dots stood before it for a while — the way back up out of the place, which
 						came down here from a strip over the map on the ground that a cut belongs beside
@@ -3572,39 +3609,41 @@
 						on:select={(event) => openFromColumn(event.detail.key)}
 					/>
 
-					<!-- The three, said the way the map's own two are said over the terrain: DaisyUI's
+					<!-- The tabs, said the way the map's own two are said over the terrain: DaisyUI's
 						boxed tabs, `role="tablist"`, and which is up held on the page rather than
 						pointed at with `aria-controls` (see the tab row over the map, which this is a
 						second of).
-						Two of them are disabled by what the open place has and by nothing else (see
-						`townOffered` and `townBoxOffered`): only the bottom tier is a place a side
-						stands on, so above the municipality there is no town to draw; and most towns on
-						most days are outside the booster window and have no box at all, a town whose box
-						this reader has already opened having none left to draw either. A tab that is
-						dark is the honest shape of that — the alternative was a tab that opens onto an
-						empty panel, which says the same thing one press later.
-						The third is never dark: there is a level under every place on this map, the top
-						view included, so the list always has something to say. Which is what makes it
-						the one both of the others fall back to (see `townTab`).
+						Two of them are one tab that changes with the kind of place open, and never
+						both (see `placesOffered`): the town for a municipality, the list of places for
+						every coarser cut. A municipality is read as the town it is — the side on it,
+						the plate naming it, the fight to be had — and a province is read as the places
+						it divides into; neither has anything to say in the other's shape, and offering
+						it dark said that one press later. They were three tabs at every tier for as
+						long as the list was about the level rather than about the place.
+						The box is the one that is offered dark, because it is the only one that is
+						about the same place as the tab beside it: most towns on most days are outside
+						the booster window and have no box, and a town whose box this reader has
+						already opened has none left either — which is a fact about the town worth
+						printing on the town's own row of tabs.
 						The far cell of the head, and held to the far edge of it (`justify-end`), so the
-						three stand against the block's own edge rather than adrift in the middle of
+						tabs stand against the block's own edge rather than adrift in the middle of
 						their half. None of them gives — each tab is `whitespace-nowrap` — so what a
-						half too narrow for three words does is scroll (`overflow-x-auto`): a word
+						half too narrow for them does is scroll (`overflow-x-auto`): a word
 						broken across two lines in a tab is worse than a row that slides. -->
 					<div role="tablist" class="tabs-boxed tabs min-w-0 justify-end overflow-x-auto">
-						<button
-							type="button"
-							role="tab"
-							aria-selected={townTab === 'town'}
-							disabled={!townOffered}
-							class={classNames('tab whitespace-nowrap', {
-								'tab-active': townTab === 'town',
-								'tab-disabled cursor-default opacity-40': !townOffered
-							})}
-							on:click={() => (townTab = 'town')}
-						>
-							{$_('map.town.tabs.town')}
-						</button>
+						{#if townOffered}
+							<button
+								type="button"
+								role="tab"
+								aria-selected={townTab === 'town'}
+								class={classNames('tab whitespace-nowrap', {
+									'tab-active': townTab === 'town'
+								})}
+								on:click={() => (townTab = 'town')}
+							>
+								{$_('map.town.tabs.town')}
+							</button>
+						{/if}
 						<button
 							type="button"
 							role="tab"
@@ -3618,17 +3657,19 @@
 						>
 							{$_('map.town.tabs.box')}
 						</button>
-						<button
-							type="button"
-							role="tab"
-							aria-selected={townTab === 'places'}
-							class={classNames('tab whitespace-nowrap', {
-								'tab-active': townTab === 'places'
-							})}
-							on:click={() => (townTab = 'places')}
-						>
-							{$_('map.town.tabs.places')}
-						</button>
+						{#if placesOffered}
+							<button
+								type="button"
+								role="tab"
+								aria-selected={townTab === 'places'}
+								class={classNames('tab whitespace-nowrap', {
+									'tab-active': townTab === 'places'
+								})}
+								on:click={() => (townTab = 'places')}
+							>
+								{$_('map.town.tabs.places')}
+							</button>
+						{/if}
 					</div>
 				</div>
 
