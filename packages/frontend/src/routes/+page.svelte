@@ -12,6 +12,7 @@
 	import WorldMap from '$components/core/WorldMap.svelte';
 	import MapBreadcrumbs from '$components/core/MapBreadcrumbs.svelte';
 	import RegionCurrentBadge from '$components/core/RegionCurrentBadge.svelte';
+	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import TownRadio from '$components/core/TownRadio.svelte';
 	import RegionLocationList from '$components/core/RegionLocationList.svelte';
 	import ShowShareGrid from '$components/core/ShowShareGrid.svelte';
@@ -1258,27 +1259,28 @@
 	$: townOffered = Boolean(townPin);
 
 	// And whether the list of places is what the block holds, which is the same question upside
-	// down. A municipality is read as the town it is — the side on it, the plate naming it, the
-	// fight to be had, the wrapper it has waiting — and every coarser cut is read as the places it
-	// divides into; neither has anything to say in the other's shape. There was a row of tabs
-	// saying so, with one of the two always missing from it; the kind of place open answers it
-	// without being asked, so the row is gone and this is the whole of what is left of it.
+	// down. A municipality is read as the town it is — the wrapper it has waiting today, or, once
+	// there is none to take, the side on it, the plate naming it and the fight to be had — and
+	// every coarser cut is read as the places it divides into; neither has anything to say in the
+	// other's shape. There was a row of tabs saying so, with one of the two always missing from
+	// it; the kind of place open answers it without being asked.
 	//
 	// The one thing that puts the list back on a town is a search, because the list is where a
 	// search is answered (see openSearch): the field turns up places from the whole map, which is
 	// not a question about the open one at all. It goes again with the field.
 	$: placesOffered = !townOffered || searchOpen;
 
-	// (Which of them the block was showing used to be state: a `townTab` of 'town', 'box' or
-	// 'places', a row of tabs to move it with, a reset to the town on every new selection, a
-	// landing the radar reserved to put the reader on the wrapper, and three guards keeping it off
-	// a tab that was not there to be pressed. None of it survives, and none of it is missed: the
-	// three were never three, since the town and the list are the same tab under two kinds of
-	// place, and the wrapper is the last block of the town's own column — a pin has drawn its box
-	// there since there were pins (see TownPin). What is up is therefore a fact about the open
-	// place and the search, which is `placesOffered` above, and there is nothing left for a press
-	// to change or for a guard to correct. The radar's landing goes with it: it sends the reader
-	// to a town whose column ends in the box that was asked for.)
+	// (Which of the three the block shows used to be state, and is not: a `townTab` of 'town',
+	// 'box' or 'places', a row of tabs to move it with, a reset to the town on every new
+	// selection, a landing the radar reserved to put the reader on the wrapper, and three guards
+	// keeping it off a tab that was not there to be pressed. The three things are still three and
+	// still in that order — the list where the open place is not a town, the wrapper where the
+	// town has one this reader can take, the party on the town otherwise — but none of it is a
+	// choice: `placesOffered` and `townBoxOffered` are facts about the open place, and a town with
+	// an unopened box today has exactly one thing to say. So there is nothing for a press to
+	// change and nothing for a guard to correct, and opening the pack is what turns the block over
+	// to the town, which is what the reader would have pressed for anyway. The radar's landing
+	// goes with it: it sends the reader to a town whose block IS the box that was asked for.)
 
 	// Whether that block is standing at all, which is now only whether the map is ready. It was
 	// written out at the `{#if}` alone while the block was a band laid over the terrain, where
@@ -2094,12 +2096,13 @@
 	$: radarTarget = nearestUnclaimedBox(radarFrom, festaBoxes, selected);
 
 	// The radar's press: open that town exactly as its pin, its crumb or its table row would,
-	// which frames the map onto its polygons and stands its box up at the foot of the column
-	// beside it. Nothing is claimed and nothing is raised — the reader asked where to go, not for
-	// the pack. Nothing beyond the town is said either: the box is the last block of the town's
-	// own column (see TownPin), so opening the town is landing on what was asked for by name.
-	// It used to have to name the tab as well, and to reserve that landing across a navigation,
-	// because the wrapper was a tab of its own that every new selection reset away from.
+	// which frames the map onto its polygons and stands its box up in the block beside it.
+	// Nothing is claimed and nothing is raised — the reader asked where to go, not for the pack.
+	// Nothing beyond the town is said either: a town with a box still to be taken shows the box
+	// and nothing else (see `townBoxOffered`), so opening the town IS landing on what was asked
+	// for by name. It used to have to name the tab as well, and to reserve that landing across a
+	// navigation, because the wrapper was a tab of its own that every new selection reset away
+	// from.
 	function findNearestBox(): void {
 		if (!radarTarget) return;
 		open(radarTarget.id);
@@ -3490,11 +3493,10 @@
 										beside it keep no crumb of their own (see `dotsOnly`).
 										It shared this row with the three tabs for a while — a grid of two halves, so a
 										long town name could not walk them off the edge — and has it to itself now that
-										there are none. What that row of tabs picked between was the town, the wrapper
-										that town has waiting and the places the open region divides into, and none of
-										the three needed picking: the town and the list are one tab under two kinds of
-										place (see `placesOffered`), and the wrapper is the last block of the town's
-										own column (see TownPin), where a pin has always drawn it. -->
+										there are none. The three things those tabs picked between are all still in the
+										block under the map, in the same order; what went is the picking, each of them
+										being what the open place has to say rather than one of three things it might
+										(see `placesOffered` and `townBoxOffered`, and the block itself). -->
 
 									<RegionCurrentBadge
 										classes="min-w-0 flex-1"
@@ -3595,19 +3597,19 @@
 			up to the 500px the pin on the terrain is drawn at, so the statues here are the size
 			they are on a mark.
 
-			Two things stand here and one of them at a time, and nothing picks between them: the
-			town — who is on it, the plate naming it, the fight to be had for it and the wrapper it
-			has waiting — where the open place is a municipality, and the places the open region
-			divides into where it is any coarser cut (see `placesOffered`). They are one answer to
-			one question, asked of the two kinds of place there are: what is there, at this place.
-			It was three tabs, the wrapper being one of them, and then a row of them across the foot
-			of the terrain: the town and the list were never two answers a reader could want at one
-			place, one of them was therefore always missing from the row, and the wrapper is the
-			last block of the town's own column (see TownPin), which is where a pin has drawn its
-			box for as long as pins have carried one. So a row of tabs was a control offering to
-			pick between one thing and a thing already on screen. The block holds one child, and
-			`items-center gap-2` is what it takes to centre it, there being nothing left to space it
-			from.
+			Three things stand here and one of them at a time, and nothing picks between them —
+			which is the whole of the difference between this and the row of tabs it used to carry.
+			They are the same three in the same order: the places the open region divides into
+			where it is any coarser cut than a town (see `placesOffered`), the wrapper where the
+			town has one this reader can still take (see `townBoxOffered`), and the party on the
+			town — who is on it, the plate naming it, the fight to be had for it — otherwise. They
+			are three answers to one question, what is there at this place, and which of them is
+			the answer is a fact about the place rather than something to be asked for: a coarser
+			cut has no side standing on it, and a town de festa with an unopened box has one thing
+			to say today and says the rest the moment the box is opened. So the tabs were a control
+			whose every press could be worked out from what it was pressed on. The block holds one
+			child, and `items-center gap-2` is what it takes to centre it, there being nothing left
+			to space it from.
 			The list is the newcomer, and it came off the row of tabs over the terrain, where it
 			was drawn as a third way of reading the map. It never was one: the terrain and the
 			shares are pictures of the level and the list is its names, which is the same kind of
@@ -3632,12 +3634,15 @@
 					scroller is two bars for one list and a box that can be pushed out of its own
 					parent. So the overflow is switched off for it and the list is handed the
 					panel's height (`min-h-0 flex-1`) to do what it already does with it.
-					There is nothing to press in this block and no state to hold: which of the two is
-					standing is `placesOffered`, a fact about the kind of place the map is open on and
-					whether a search is being typed. It was three tabs in here, then a row of them across
-					the foot of the terrain, then none — the town and the list never being two answers a
-					reader could want at one place, and the wrapper being the last block of the town's
-					own column. -->
+					There is nothing to press in this block and no state to hold. Which of the three
+					things is standing is read off the place itself: the list of places wherever the open
+					place is not a town or a search is being typed (`placesOffered`), the wrapper where the
+					town has one this reader can still take (`townBoxOffered`), and the party on the town
+					otherwise. They were three tabs in here, and then a row of them across the foot of the
+					terrain — the same three things in the same order, with a press in the middle of it.
+					What the press was for was choosing, and there is nothing to choose: a town with an
+					unopened box today has exactly one thing to say, and it says the rest the moment the
+					box is opened. -->
 				<div
 					class={classNames('flex min-h-0 w-full flex-1 flex-col items-center', {
 						'overflow-y-auto': !placesOffered
@@ -3660,27 +3665,57 @@
 							{activeShow}
 							on:select={(event) => openFromColumn(event.detail.key)}
 						/>
+					{:else if townBoxOffered && townBox}
+						<!-- The wrapper, alone. A town inside the booster window with a box this reader has
+							not opened is a town with one thing to say, and everything else about it is said
+							over the top of it: a reader who walks into a festa and is shown three statues and
+							a siege bar has to go looking for the one thing that is only there today. So the
+							box takes the block whole and the party waits — for the moment it is opened, which
+							is when this stops being an offer (see `townBoxOffered`) and the town's own column
+							comes up in its place. The tabs did the same thing with a press in the middle of
+							it; what is gone is the press and not the order.
+							Drawn in the document rather than on a canvas: the very component the Booster tab
+							lays its grid out with, off the very `MapBoosterBox` the pin was handed (see
+							`townBox`), so the two are one object and not two pictures of one.
+							At the 200px a pin draws it at, which is the size a box is read at wherever it is
+							stood in a column — the component takes its height off whatever width it is given
+							(30:37 of it), so the width is the whole of what has to be said.
+							A button and not a div with a handler, for the reason it is one inside the pin: the
+							press is the box's own and it is the pack it opens (see openPack, which answers the
+							door first for a reader with no account). -->
+						<button
+							type="button"
+							class="w-[200px] flex-none"
+							on:click={() => townBox?.onClick?.()}
+						>
+							<BoosterBox
+								coverUrl={townBox.coverUrl ?? null}
+								logoUrl={townBox.logoUrl ?? null}
+								showId={townBox.showId ?? null}
+								locationName={townBox.locationName ?? null}
+								light={townBox.light ?? false}
+							/>
+						</button>
 					{:else if townPin}
-						<!-- The town, whole: the side standing on it, the plate naming it, the fight to be
-							had for it — and the wrapper it has waiting, at the foot of that same column,
-							which is where a pin has drawn its box for as long as pins have carried one (see
-							TownPin). It was a tab of its own in here until the tabs went, drawn out of the
-							very `MapBoosterBox` this pin is handed, at the same 200px, with the same press:
-							the same object twice, once in the column it belongs to and once beside it.
-							Handed over only where it is there to be taken (see `townBoxOffered`) — most
-							towns on most days are outside the booster window, and a box this reader has
-							already opened is not an offer. That was the tab offered dark; it is the column
-							simply ending a block sooner now.
-							`flex-none`, exactly as the box below it carries: this column is what regularly
-							outgrows the square, and a flex item in a column that is out of room SHRINKS
-							before its parent scrolls. Shrunk is not the same as scrolled — the statues, the
-							standing and the plate would each be squeezed a little to fit a box they do not
-							fit, which is the picture being redrawn wrong rather than framed and read
-							through. Held to its own height, what is too tall for the square scrolls inside
-							it, which is what the panel around it is for. -->
+						<!-- The party on the town: the side standing on it, the plate naming it and the fight
+							to be had for it. What the block holds once there is no box to be taken — either
+							because the booster window does not reach this town (which is most towns most days)
+							or because the one it deals has been opened, a town dealing two a year and neither
+							twice (see `townBoxOffered`). So opening a pack is what turns this block over from
+							the wrapper to the town, which is the order the tabs were pressed in and is now the
+							order they arrive in.
+							No `box` handed over: TownPin draws one at the foot of its column where it is given
+							one, and a box drawn under the statues here would be the wrapper the branch above
+							this one is for, printed a second time and smaller, on the one screen where it is
+							already known to be gone.
+							`flex-none`: this column is what regularly outgrows the square, and a flex item in
+							a column that is out of room SHRINKS before its parent scrolls. Shrunk is not the
+							same as scrolled — the statues, the standing and the plate would each be squeezed a
+							little to fit a box they do not fit, which is the picture being redrawn wrong rather
+							than framed and read through. Held to its own height, what is too tall for the
+							square scrolls inside it, which is what the panel around it is for. -->
 						<TownPin
 							marker={townPin}
-							box={townBoxOffered ? townBox : null}
 							named={false}
 							alwaysReveal
 							classes="w-full max-w-[500px] flex-none"
