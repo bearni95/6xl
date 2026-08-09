@@ -3495,6 +3495,10 @@
 									RegionCurrentBadge). What the pin could not give it is a fixed place: a mark
 									stands where its town is, so the radio went wherever the map was panned and was
 									as small as a caption on a mark. This corner does not move.
+									The whole cell is the press, and the mark inside it is a mark (see TownRadio):
+									a third of a band carrying one control and nothing else it could mean is a block
+									with exactly one thing to do, and a block like that is the thing to press — which
+									is the same reading the row naming the open place is pressed under.
 									Last and not first because it is the one thing on this band that is not about
 									the open place — the map tunes the dial, but what is playing is the game's sound
 									and goes on playing across a walk from one town to the next — and a band is read

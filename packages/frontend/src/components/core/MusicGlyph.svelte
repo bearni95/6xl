@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
-	// What pressing the mark is called, wherever the mark is drawn — the button on the menu's
-	// plate and the one at the end of the radio row on the map's bottom edge (see MusicToggle,
-	// TownRadio). One radio,
+	// What pressing the mark is called, wherever the press is — the button on the menu's plate,
+	// and the whole of the radio's cell on the map's bottom edge, which carries this name itself
+	// and draws the mark inside it as a picture (see MusicToggle, TownRadio). One radio,
 	// so one name for the press: two names would be two controls to anyone who reaches them by
 	// their names.
 	export const musicPressLabel = (playing: boolean) => (playing ? 'Pause music' : 'Play music');
@@ -11,8 +11,9 @@
 	// The radio's one mark: a triangle when it is stopped, two bars when it is running.
 	//
 	// Its own component because it is drawn wherever the radio is pressable — today as the whole
-	// of a button, on the menu's plate and at the end of the pin's radio line (see MusicToggle),
-	// and it has stood inside a line of text that was itself the press. Two copies of the paths
+	// of a button on the menu's plate (see MusicToggle) and as the mark inside the cell that is
+	// itself the press on the map's bottom edge (see TownRadio), and it has stood inside a line
+	// of text that was the press before that. Two copies of the paths
 	// would be how the game comes to show a triangle in one corner and two bars in the other for
 	// one radio.
 	//

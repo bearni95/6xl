@@ -3,10 +3,11 @@
 	import MusicGlyph, { musicPressLabel } from '$components/core/MusicGlyph.svelte';
 	import { musicService } from '$services/music.service';
 
-	// The radio's play/pause drawn as a bare button, which is both of the places it stands: the
-	// plate in the burger menu, and the far end of the radio row on the map's bottom edge (see
-	// TownRadio). The two are one control on one store — the shape is the
-	// caller's, the reading is not.
+	// The radio's play/pause drawn as a bare button, which is what a play/pause standing among
+	// other controls wants to be: the plate in the burger menu is the one such place left. The
+	// radio on the map's bottom edge is a cell that is entirely its own press and draws the mark
+	// alone inside it (see TownRadio, MusicGlyph) — same store, same name for the press, no
+	// button in it to nest. The shape is the caller's, the reading is not.
 	//
 	// It says what the element is really doing rather than what it was last told to do, and
 	// says it wherever the radio is pressable, because every one of those reads the one service
