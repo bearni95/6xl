@@ -3399,10 +3399,13 @@
 						>
 							<!-- Two cells on one band: where you are and the way out
 								of it, the dots and the badge naming the place — and beside them, in the
-									second, what is playing. Two columns rather than the two rows this was,
-									because the band is the map's whole width and the place has never needed
-									more than half of it: a row each lettered the song across a width nothing
-									was using and made the band twice as deep to do it.
+								last, what is playing. Columns rather than the two rows this was, because the
+								band is the map's whole width and neither of those things has ever needed all of
+								it: a row each lettered the song across a width nothing was using and made the
+								band twice as deep to do it. Three columns and the place across two of them,
+								rather than a half each, because a name is a line that has to be read whole where
+								a song is a line that carries itself past (see MarqueeText) — the one that cannot
+								scroll gets the room.
 								It spans the map and is the same width whatever is on it, which is most of what
 								it is. It was a shrink-to-fit plate centred on the bottom edge, as wide as
 								whatever it held, and what that gave a reader was a plate that grew and shrank as
@@ -3419,9 +3422,9 @@
 								whole column away from the answers about it (see the band), and then at the head
 								of the block under the map. -->
 							<div
-								class="pointer-events-auto grid w-full grid-flow-col auto-cols-fr items-center gap-2 bg-base-100/80 p-2 shadow-xl"
+								class="pointer-events-auto grid w-full grid-cols-3 items-center gap-2 bg-base-100/80 p-2 shadow-xl"
 							>
-								<div class="flex min-w-0 items-center gap-2">
+								<div class="col-span-2 flex min-w-0 items-center gap-2">
 										<!-- The way up out of where the map is standing: the dots and the column of place
 										names they drop (see MapBreadcrumbs' `dotsOnly`). First on the row, and against
 										the badge, because what it letters is the cut ABOVE the place that badge names
@@ -3484,7 +3487,7 @@
 									/>
 								</div>
 
-								<!-- And the radio, in the second cell: the song running past and the play/pause
+								<!-- And the radio, in the last cell: the song running past and the play/pause
 									under it (see TownRadio). It was the last line of the pin the map stands on the
 									open place, on the reading that a station is a show and the pin's own second line
 									already says which — and it is here for the same reason, since the badge in the
@@ -3492,17 +3495,19 @@
 									RegionCurrentBadge). What the pin could not give it is a fixed place: a mark
 									stands where its town is, so the radio went wherever the map was panned and was
 									as small as a caption on a mark. This corner does not move.
-									Second and not first because it is the one thing on this band that is not about
+									Last and not first because it is the one thing on this band that is not about
 									the open place — the map tunes the dial, but what is playing is the game's sound
 									and goes on playing across a walk from one town to the next — and a band is read
 									from the place it names outward. It had a row of its own above that place for a
-									while, on the reading that a title is a line that wants a width; half a band is
-									width enough for a banner, and it costs the band no depth.
-									It draws nothing at all until there is a song, and the band is the cell beside it
-									by itself until then rather than that cell and a hole: `grid-flow-col` with
-									`auto-cols-fr` makes as many equal columns as there are children, so a silent
-									radio hands the place its whole width back. An empty half of this band would say
-									a radio is there and broken.
+									while, on the reading that a title is a line that wants a width; a third of a band
+									is width enough for a banner, and it costs the band no depth.
+									It draws nothing at all until there is a song, and its column simply stands empty
+									then. The columns are counted out (`grid-cols-3`) rather than made from whatever
+									children happen to turn up, so the place is `col-span-2` whether the radio is
+									sounding or not — which is the same reason this band spans the map at all: a thing
+									always in the same place at the same size is read without being found first, and a
+									name that changed width when the music stopped would be the plate that grew and
+									shrank as the reader walked, back again by another route.
 									Nothing is said about its width here either. What is too long for the cell is what
 									the banner is for (see MarqueeText, which scrolls only when the line is wider than
 									the box). -->

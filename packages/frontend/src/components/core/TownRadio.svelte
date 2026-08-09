@@ -5,7 +5,7 @@
 	import { musicService } from '$services/music.service';
 
 	// The radio: the song running past at the width of whatever it is laid on, and the play/pause
-	// under it. It is the second cell of the band on the map's own bottom edge — beside the cell
+	// under it. It is the last cell of the band on the map's own bottom edge — beside the cell
 	// that names the open place and offers the way up out of it, not above it.
 	//
 	// It was the last line of the pin the map stands on that same place, and what put it there
@@ -24,17 +24,17 @@
 	// be two gestures on one. There is no guard on any of it any more; a row laid over the map
 	// rather than mounted into a Leaflet marker was never terrain to begin with.
 	//
-	// The two are stacked and not side by side, because the cell they share is half a band rather
-	// than the whole of one: a title given half a width and then asked to leave room for a button
-	// at the end of it is a banner running in a slot, and the banner is what the title is for. So
-	// the line takes the cell's full width and the press stands under its head, which also puts
-	// the mark at the same end of the cell as the line starts from.
+	// The two are stacked and not side by side, because the cell they share is the last third of
+	// a band rather than the whole of one: a title given a third of a width and then asked to
+	// leave room for a button at the end of it is a banner running in a slot, and the banner is
+	// what the title is for. So the line takes the cell's full width and the press stands under
+	// its head, which also puts the mark at the same end of the cell as the line starts from.
 	//
-	// Nothing at all until there is a song — an empty half of a band says a radio is there and
-	// broken. Both halves withhold themselves on the same store, so this never comes out as a
-	// button with no line or a line with no button. Drawing nothing is also what hands the band
-	// back its whole width: the cells are the children there are (see the band's `grid-flow-col`),
-	// so a silent radio is one cell and not two with a hole in it.
+	// Nothing at all until there is a song — an empty cell says a radio is there and broken. Both
+	// halves withhold themselves on the same store, so this never comes out as a button with no
+	// line or a line with no button. The band does not close up around the absence: its columns
+	// are counted out and the place spans two of them either way, so a reader who turns the sound
+	// off does not find the name of where they are standing a different size afterwards.
 
 	export let classes: string = '';
 
