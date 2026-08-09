@@ -16,7 +16,9 @@ import {
 	cellSide,
 	columnLabel,
 	findPath,
+	FIRST_COLUMN,
 	isBoardCell,
+	LAST_COLUMN,
 	MIDDLE_ROW
 } from '$utils/mugen/grid';
 import type { CombatColor } from '$types/character-definition.type';
@@ -904,8 +906,9 @@ describe('the stand-off', () => {
 		// The white cell of a lane: the ground between the two lines, and what *either*
 		// side's fighter walks onto the turn it wins there.
 		const wonGround = (lane: number): Cell => ({ q: 0, r: RIVAL_CELLS[lane].r });
-		// Where the fighter that lost the lane goes: the back of its own half, a column
-		// behind the line it opened on. It is out of the fight, not off the board.
+		// Where the fighter that lost the lane goes: the back of its own half — which on a
+		// board whose halves are one column deep is the ground it opened on, so it stands the
+		// fight out where it fought it. It is out of the fight, not off the board.
 		const fallenGround = (side: 'error' | 'info', lane: number): Cell => ({
 			q: fallenColumn(side, RIVAL_CELLS[lane].r),
 			r: RIVAL_CELLS[lane].r
@@ -915,15 +918,15 @@ describe('the stand-off', () => {
 			expect(RIVAL_CELLS).toHaveLength(PLAYER_CELLS.length);
 			for (const cell of RIVAL_CELLS) {
 				expect(isBoardCell(cell.q, cell.r)).toBe(true);
-				// The front of the rival's own half, never the shared ground: column b on
+				// The whole of the rival's own half, never the shared ground: column a on
 				// every lane, the rows being level with one another.
-				expect(columnLabel(cell.q)).toBe('b');
+				expect(columnLabel(cell.q)).toBe('a');
 				expect(cellSide(cell.q)).toBe('red');
 			}
 			for (const cell of PLAYER_CELLS) {
 				expect(isBoardCell(cell.q, cell.r)).toBe(true);
-				// Column d: the front of the player's own half, across the white one.
-				expect(columnLabel(cell.q)).toBe('d');
+				// Column c: the whole of the player's own half, across the white one.
+				expect(columnLabel(cell.q)).toBe('c');
 				expect(cellSide(cell.q)).toBe('blue');
 			}
 			// Nobody opens on the white column: it is what the lanes are played for, so it
@@ -964,18 +967,21 @@ describe('the stand-off', () => {
 			for (const cell of PLAYER_CELLS) expect(cell.q).toBe(PLAYER_CELLS[0].q);
 		});
 
-		it('leaves the fallen a step back from wherever their own lane opened', () => {
-			// A retreat is a step backwards, so it is read off the lane rather than off the
-			// line — which today gives every lane of a side the same column, both lines
-			// being level, and would go on being a step backwards for one that was not.
+		it('stands the fallen at the back of their own half, which is the ground they opened on', () => {
+			// A retreat is a step backwards, read off the lane rather than off the line. The
+			// board has no ground behind either line to take that step onto, so the step is
+			// not taken and the beaten fighter holds the cell it lost — on its own side, and
+			// never out on the white column or in the far half.
 			for (const side of ['info', 'error'] as const) {
 				const cells = side === 'info' ? PLAYER_CELLS : RIVAL_CELLS;
 				for (const opening of cells) {
 					const back = { q: fallenColumn(side, opening.r), r: opening.r };
 					expect(isBoardCell(back.q, back.r)).toBe(true);
-					// Behind the opening, on the fighter's own side, and somewhere else.
-					expect(Math.abs(back.q)).toBe(Math.abs(opening.q) + 1);
+					expect(back.q).toBe(opening.q);
 					expect(cellSide(back.q)).toBe(cellSide(opening.q));
+					// And a step backwards is what it would be if there were anywhere to step:
+					// the outermost column of the fighter's own half either way.
+					expect(Math.abs(back.q)).toBe(Math.max(Math.abs(FIRST_COLUMN), Math.abs(LAST_COLUMN)));
 				}
 			}
 		});
@@ -1017,8 +1023,8 @@ describe('the stand-off', () => {
 				{ id: 'r0', cell: fallenGround('error', 0) },
 				{ id: 'p0', cell: wonGround(0) }
 			]);
-			// Column a, the back of red's half: the board's own left-hand edge, which is
-			// where a beaten rival stands out the rest of the fight.
+			// Column a, the whole of red's half and so the back of it: the board's own
+			// left-hand edge, where a beaten rival stands out the rest of the fight.
 			expect(columnLabel(log.moved[0].cell.q)).toBe('a');
 			expect(cellSide(log.moved[1].cell.q)).toBe('purple');
 		});
@@ -1072,13 +1078,13 @@ describe('the stand-off', () => {
 			await playTurn(controller);
 			expect(fighterOf(get(controller), 'p0').down).toBe(true);
 			// A lane is won on the same ground whoever wins it: the rival takes the white
-			// cell, and the player's beaten fighter retracts to column e, the back of its own
-			// half. The ground is not a side's until somebody is standing on it.
+			// cell, and the player's beaten fighter holds column c, the back of its own half.
+			// The ground is not a side's until somebody is standing on it.
 			expect(log.moved).toEqual([
 				{ id: 'p0', cell: fallenGround('info', 0) },
 				{ id: 'r0', cell: wonGround(0) }
 			]);
-			expect(columnLabel(log.moved[0].cell.q)).toBe('e');
+			expect(columnLabel(log.moved[0].cell.q)).toBe('c');
 			expect(cellSide(log.moved[1].cell.q)).toBe('purple');
 		});
 

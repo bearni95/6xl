@@ -26,15 +26,16 @@ import {
 } from '$utils/mugen/grid';
 
 describe('board cells', () => {
-	it('is four rows of five, every column running every row', () => {
+	it('is four rows of three, every column running every row', () => {
 		// Three lanes and the row of ground above them, which is board like any other.
 		expect(BOARD_ROWS).toBe(4);
 		expect(FIRST_ROW).toBe(FIRST_LANE_ROW - 1);
 		// The middle lane is the middle of what is fought over, not of the board.
 		expect(MIDDLE_ROW).toBe(1);
-		// Two red columns, the white one, two blue: a rectangle, and even either side of
-		// its middle — which the hex field's odd sixth column could never be.
-		expect(BOARD_COLUMNS).toBe(5);
+		// One red column, the white one, one blue: a rectangle, and even either side of
+		// its middle — which the hex field's odd sixth column could never be. No more than
+		// that, because every column of this field is one a lane is fought across.
+		expect(BOARD_COLUMNS).toBe(3);
 		expect(boardCells()).toHaveLength(BOARD_COLUMNS * BOARD_ROWS);
 		for (let r = FIRST_ROW; r <= LAST_ROW; r++) {
 			expect(boardCells().filter((cell) => cell.r === r)).toHaveLength(BOARD_COLUMNS);
@@ -42,15 +43,15 @@ describe('board cells', () => {
 	});
 
 	it('excludes everything off the field', () => {
-		expect(isBoardCell(3, 0)).toBe(false); // no such column
-		expect(isBoardCell(-3, 1)).toBe(false); // nor here — nothing is deeper than a
+		expect(isBoardCell(2, 0)).toBe(false); // no such column — a half is one deep
+		expect(isBoardCell(-2, 1)).toBe(false); // nor here — nothing is behind a line
 		expect(isBoardCell(0, 3)).toBe(false); // below the bottom row
 		expect(isBoardCell(0, FIRST_ROW - 1)).toBe(false); // above the top row
 	});
 
 	it('includes representative interior cells', () => {
 		expect(isBoardCell(0, 0)).toBe(true);
-		expect(isBoardCell(-2, 2)).toBe(true);
+		expect(isBoardCell(-1, 2)).toBe(true);
 		expect(isBoardCell(1, 1)).toBe(true);
 		// The corners, which on a rectangle are cells like any other.
 		expect(isBoardCell(FIRST_COLUMN, FIRST_ROW)).toBe(true);
@@ -58,11 +59,9 @@ describe('board cells', () => {
 	});
 
 	it('assigns colour side by column sign, evenly either way', () => {
-		expect(cellSide(-2)).toBe('red');
 		expect(cellSide(-1)).toBe('red');
 		expect(cellSide(0)).toBe('purple');
 		expect(cellSide(1)).toBe('blue');
-		expect(cellSide(2)).toBe('blue');
 		// Neither half holds ground the other has no answer to.
 		const red = boardCells().filter((cell) => cellSide(cell.q) === 'red');
 		const blue = boardCells().filter((cell) => cellSide(cell.q) === 'blue');
@@ -75,8 +74,8 @@ describe('cell names', () => {
 		// A column's coordinate is signed and centred on the white one; its name is its
 		// place across the board, so the left-hand column is `a` whatever q calls it.
 		expect(columnLabel(FIRST_COLUMN)).toBe('a');
-		expect(columnLabel(0)).toBe('c');
-		expect(columnLabel(LAST_COLUMN)).toBe('e');
+		expect(columnLabel(0)).toBe('b');
+		expect(columnLabel(LAST_COLUMN)).toBe('c');
 		// Rows read downward, so the top one is 1 and the numbering follows the rows —
 		// the row above the lanes included, which is what makes the first lane row 2.
 		expect(rowLabel(FIRST_ROW)).toBe('1');
@@ -131,13 +130,13 @@ describe('adjacency and pathfinding', () => {
 	it('measures a walk as the columns between plus the rows', () => {
 		expect(cellDistance({ q: 0, r: 0 }, { q: -1, r: 2 })).toBe(3);
 		// Across a whole row is the columns between, as it always was.
-		expect(cellDistance({ q: -2, r: 1 }, { q: 2, r: 1 })).toBe(4);
+		expect(cellDistance({ q: -1, r: 1 }, { q: 1, r: 1 })).toBe(2);
 	});
 
 	it('agrees with the walk: a path is as long as the distance says', () => {
 		const pairs: [Cell, Cell][] = [
-			[{ q: -2, r: 0 }, { q: 2, r: 2 }],
-			[{ q: -2, r: 2 }, { q: 2, r: 0 }],
+			[{ q: -1, r: FIRST_ROW }, { q: 1, r: 2 }],
+			[{ q: -1, r: 2 }, { q: 1, r: FIRST_ROW }],
 			[{ q: 0, r: 0 }, { q: -1, r: 2 }],
 			[{ q: -1, r: 1 }, { q: 1, r: 1 }]
 		];
@@ -149,8 +148,8 @@ describe('adjacency and pathfinding', () => {
 	});
 
 	it('findPath returns a contiguous path including both endpoints', () => {
-		const start: Cell = { q: -2, r: 2 };
-		const goal: Cell = { q: 2, r: 0 };
+		const start: Cell = { q: -1, r: 2 };
+		const goal: Cell = { q: 1, r: FIRST_ROW };
 		const path = findPath(start, goal, (c) => isBoardCell(c.q, c.r));
 		expect(path).not.toBeNull();
 		const cells = path as Cell[];

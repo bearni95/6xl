@@ -45,12 +45,12 @@
  * they are carried out by the same resolution, gifts and ordering included.
  *
  * The two lines open **face to face across the central white column** — the rivals on
- * column b ({@link RIVAL_CELLS}), the player's fighters on column d, one pair to a row —
+ * column a ({@link RIVAL_CELLS}), the player's fighters on column c, one pair to a row —
  * so that column, which nobody starts on, is the ground
  * being fought over, lane by lane. A lane is settled on
- * the board the turn it is decided: the winner either takes that white cell (the player's
- * fighter walks up onto it) or falls back a column deeper into its own half (the rival).
- * So the board itself shows how the
+ * the board the turn it is decided: the winner walks up onto that white cell, and the
+ * fighter it beat stays on the ground it lost, faded, there being no column behind
+ * either line to withdraw into ({@link fallenColumn}). So the board itself shows how the
  * fight is going, with nothing drawn under anybody's
  * feet: there is no health to track, and a fighter holding a charge simply *burns* —
  * an aura in its own colour, lit the turn it loads and out the turn it fires, so who
@@ -124,11 +124,11 @@ export const MAX_TURNS = 20;
 export const ENCOUNTERS_TO_WIN = 2;
 
 /**
- * The ground the player's line opens on, listed top→bottom on screen — column d, the
- * front of its own half, one fighter to a row, each facing the rival across the white
+ * The ground the player's line opens on, listed top→bottom on screen — column c, which is
+ * the whole of its own half, one fighter to a row, each facing the rival across the white
  * column on the same row. A fighter holds its own cell until the lane in front of it is
- * decided, and then it either takes that lane's white cell or retracts to column e behind
- * it (see {@link CombatController.settleLane}).
+ * decided, and then it either takes that lane's white cell or stands the rest of the fight
+ * out where it is (see {@link CombatController.settleLane}).
  *
  * Three a side on a three-row board, so a line is one fighter to every row of it: every
  * lane on the board is fought over, and there is no spare row for a fight to open on
@@ -141,12 +141,12 @@ export const PLAYER_CELLS: Cell[] = [
 ];
 
 /**
- * The ground the rival line opens on, listed top→bottom on screen — column b, the front
- * of its own half, one fighter to a row, each facing the player across the white column
+ * The ground the rival line opens on, listed top→bottom on screen — column a, which is the
+ * whole of its own half, one fighter to a row, each facing the player across the white column
  * between them. Neither line opens on that white column: it is the ground the lanes are
  * played for, so it starts empty and is only ever stood on by whoever wins a lane (see
  * {@link CombatController.settleLane}) — either line's winner walks up onto it, while
- * the fighter that lost the lane retracts to the column behind it.
+ * the fighter that lost the lane holds the ground it lost, faded and done.
  *
  * One column for all three lanes, mirroring the player's own line. It was not always:
  * the board was a field of hexagons, whose middle row was drawn half a cell right of the
@@ -170,25 +170,34 @@ export const RIVAL_CELLS: Cell[] = [
 export const WON_COLUMN = 0;
 
 /**
- * The column a fighter retracts to once it has been taken down: the back of its own half,
- * one column behind the ground its **own lane** opened on. Nobody is ever taken off this
- * board, so being knocked out is a place to stand rather than a disappearance: the fallen
- * give up the ground they were holding, withdraw to the back of their own half, and stay
- * there for the rest of the fight.
+ * The column a fighter stands out the fight on once it has been taken down: the back of
+ * its own half, which is the column one further out from the white one than the ground its
+ * **own lane** opened on — **when the board has one**. Nobody is ever taken off this board,
+ * so being knocked out is a place to stand rather than a disappearance: the fallen give up
+ * the ground they were holding, withdraw to the back of their own half, and stay there for
+ * the rest of the fight.
+ *
+ * Today the board does not have one. A half is a single column deep (`grid.ts`'s
+ * `FIRST_COLUMN`/`LAST_COLUMN`), so the front of it and the back of it are the same ground and there is
+ * nowhere to withdraw *to*: a beaten fighter stands the fight out on the cell it fought on,
+ * faded, and the winner walking up onto the white column in front of it is the only thing
+ * that moves. Which is the same reading — the ground it was holding was the ground being
+ * fought over, and it no longer holds it.
  *
  * Read off the opening ground rather than written down, so a line that opens somewhere
- * else falls back from wherever that is: it is the column one further out from the white
- * one, which is what "behind" means for a side whose own half is out from the centre.
- * Asked of a lane and not of a side, so that it stays a step backwards from wherever the
- * fighter making it actually stood. Both lines happen to open level today, so every lane
- * of a side answers the same column — but they have not always ({@link RIVAL_CELLS}), and
- * asked of the side, a line that opened unevenly would send one of its fighters back to
- * the cell it was already standing on, which is a fighter falling and not moving.
+ * else falls back from wherever that is, and asked of a lane and not of a side, so that it
+ * stays a step backwards from wherever the fighter making it actually stood. Both lines
+ * happen to open level today, so every lane of a side answers the same column — but they
+ * have not always ({@link RIVAL_CELLS}), and asked of the side, a line that opened
+ * unevenly would send one of its fighters back to the cell it was already standing on. The
+ * step is taken only if it lands on the board, so putting a back column behind either line
+ * is enough to have the fallen retract into it again.
  */
 export function fallenColumn(side: FighterSide, row: number): number {
 	const cells = side === 'info' ? PLAYER_CELLS : RIVAL_CELLS;
 	const opening = cells.find((cell) => cell.r === row) ?? cells[0];
-	return opening.q + Math.sign(opening.q);
+	const back = opening.q + Math.sign(opening.q);
+	return isBoardCell(back, row) ? back : opening.q;
 }
 
 /** Animation played when a fighter attacks and its definition binds no melee move. */
@@ -935,24 +944,24 @@ export class CombatController {
 	 * Walk out the result of a lane, the moment the blow that decided it lands.
 	 *
 	 * A lane is a duel over the white cell between the two who stand in it, and one blow
-	 * settles it for the whole fight. Both of them move, and they move together, because
-	 * it is one event:
+	 * settles it for the whole fight. Both of them are put where the result leaves them, and
+	 * together, because it is one event:
 	 *
-	 *   · **The loser retracts** to the back of its own half ({@link fallenColumn}) — the
-	 *     column behind the one it opened on, where it stands for the rest of the fight. It
-	 *     is out of the fight, not off the board: nothing is ever taken off this board, so
-	 *     a fighter that has been beaten is a fighter standing at the back of its own half
-	 *     with nothing left to do, which is a thing the player can see and count.
+	 *   · **The loser retracts** to the back of its own half ({@link fallenColumn}) — which
+	 *     on a board whose halves are one column deep is the ground it is already standing
+	 *     on, so it settles onto its own mark and stays there. It is out of the fight, not
+	 *     off the board: nothing is ever taken off this board, so a fighter that has been
+	 *     beaten is a fighter standing in its own half with nothing left to do, drawn faded,
+	 *     which is a thing the player can see and count.
 	 *   · **The winner takes the white column** ({@link WON_COLUMN}) on that row, on either
 	 *     side of the board. Standing there is what says the row was won, so it is the same
 	 *     cell and the same move whichever line won it — the ground a lane is played for
 	 *     does not belong to a side until somebody is standing on it.
 	 *
-	 * The winner has just struck from the cell beside the fighter it felled, which *is* the
-	 * white one — so its walk is usually the short glide from being flush against the loser
-	 * to standing in the middle of the ground it has taken, and the loser withdrawing out
-	 * from under it is what makes room to read that. Both are adopted as new homes, so
-	 * neither is walked back afterwards by anything.
+	 * The winner has just struck from the cell beside the fighter it felled — so its walk is
+	 * usually the short glide from being flush against the loser to standing in the middle
+	 * of the ground it has taken, one cell off the fighter that stays put. Both cells are
+	 * adopted as new homes, so neither fighter is walked back afterwards by anything.
 	 *
 	 * The lane's row is the loser's: it never moved from the ground it opened on, whereas
 	 * the winner is out on a strike run and standing somewhere it does not hold.

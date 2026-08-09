@@ -236,9 +236,9 @@
 	// Where each side opens. Both sides' ground belongs to the controller — it is what
 	// decides who faces whom, and it is what walks the winner of a lane on or off the
 	// white cell it was fought over — so the cells are taken from there rather than
-	// restated here: the rivals at the front of their own half, the player's team on
-	// column d at the front of theirs, level with them row for row and the white column
-	// standing empty between the two.
+	// restated here: the rivals on their own half, the player's team on column c, which is
+	// the whole of theirs, level with them row for row and the white column standing empty
+	// between the two.
 	//
 	// Both lines are filled the same way round: the party's lead on the top row, the rest
 	// of it unfolding downwards in the order the team is held in. So slot one faces slot
@@ -292,8 +292,8 @@
 		return color ? combatColorHex(color) : fallback;
 	}
 
-	// Left: the rival line at the front of its own half; right: the player's
-	// team on column d, the front of its own — the white column between them starts
+	// Left: the rival line on its own half; right: the player's
+	// team on column c, which is the whole of its own — the white column between them starts
 	// empty, being the ground the lanes are played for. Each side's first slot leads (it is the grid's own
 	// character, the rest are extras) and stands on the topmost cell, so team order and
 	// the board's top→bottom order are one and the same. Rebuilt whenever a slot or a
@@ -994,9 +994,9 @@
 		     viewport allows and there is nothing left over, so the head is lifted out of the
 		     flow and laid on the board's top edge, the board keeping the whole box and the
 		     middle of it (`sm:` and up: `absolute`, and this centring the canvas alone). On a
-		     phone the board is limited by the width instead — it comes out a wide, shallow
-		     thing with a deep band of nothing above and below it — so the head is left in the
-		     flow, and with it the orders, and the three of them are spread down the whole
+		     phone the board is limited by the width instead — a view far narrower than the
+		     field is deep, which leaves a band of nothing above and below it — so the head is
+		     left in the flow, and with it the orders, and the three of them are spread down the whole
 		     height of the view: the head at the top, the fighters' rows at the foot under the
 		     thumb that presses them, and the board in what is left between the two. Whatever
 		     room the screen turns out to have goes into the two gaps rather than into a band
@@ -1018,23 +1018,14 @@
 			     is at the top of the view and hangs off the sheet instead (below). -->
 			<div class="relative">
 				{#key boardKey}
-					<!-- On a phone the board runs off both sides of the view: the outermost column at
-					     either edge is cut down the middle and the board is drawn a fifth larger for
-					     it (`--board-bleed`, which the canvas spends on its width and only where the
-					     width is what limits it). A narrow view limits the board by its width, so the
-					     fight was being drawn small between two deep bands of nothing, and the ground
-					     it was being kept whole for is the two columns no lane is ever played across.
-					     What it costs is symmetric — half a column at each edge, the white column
-					     still down the middle of the screen — and it is off from `sm:` up, where the
-					     height is the measure that binds and there is no spare band to spend.
-					     Overflowing rather than clipped here: this box is the canvas, so the canvas
-					     hangs off it, is centred on the sheet by the column above, and is cut by the
-					     modal's own edges. -->
-					<MugenBoard
-						{grids}
-						classes="[--board-bleed:1] sm:[--board-bleed:0]"
-						on:ready={(event) => onBoardReady(event.detail)}
-					/>
+					<!-- The whole board, on every screen, at the largest size that fits the view: the
+					     canvas measures itself against the viewport on both axes and nothing here
+					     has anything to add. It used to hand the canvas a `--board-bleed` below `sm:`
+					     — a phone limited the board by its width, so half a column was pushed off
+					     each edge to buy the rest a fifth more size, the two outermost columns being
+					     ground no lane was played across. Those columns have come off the field
+					     itself, so the saving is banked and there is nothing spare left to spend. -->
+					<MugenBoard {grids} on:ready={(event) => onBoardReady(event.detail)} />
 				{/key}
 				{#if state?.outcome}
 					<!-- The fight is over, and everything there is left to say about it is said

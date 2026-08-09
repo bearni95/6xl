@@ -201,35 +201,14 @@ const GRID_LINE = 0xef4444;
 const VIEWPORT_WIDTH = '100vw';
 const VIEWPORT_HEIGHT = '100dvh';
 
-/**
- * How far the board is allowed to run off the sides of the view, as a custom property the
- * host sets on (or above) the canvas: `0` — the default — is the whole board on screen,
- * `1` is the outer column cut in half at each edge.
- *
- * It buys scale with room that is going spare. A board sized to a *narrow* view is limited
- * by the width, so it comes out shallow with a deep band of empty view above and below it
- * and the fighters drawn small in the middle — while the two outermost columns are the only
- * ground on the board no lane is ever played across: nobody opens on them and nothing is
- * won on them, they are where a fallen fighter withdraws to and stands out the fight.
- * Pushing exactly one column's width off the view, half at either edge, is therefore a
- * quarter more board everywhere it counts at the cost of the ground that counts least, and
- * it stays symmetric — the white column is still the middle of the screen, and each half
- * gives up the same sliver of its own back column.
- *
- * A property rather than a prop because *when* to spend it is a question about the screen and
- * not about the board: the host says it in a media query like any other piece of layout (the
- * combat arena: on, below `sm:`, off above it), and the canvas re-reads it on the same resize
- * that re-measures the viewport, without this class hearing about any of it.
- *
- * Which is why the switch is a multiplier on the width term alone, and why only its two ends
- * are exact: a board limited by the *height* has no spare band to spend and is left as it is,
- * whatever the property says.
- */
-const BLEED_PROPERTY = '--board-bleed';
-
-/** The width term's multiplier at full bleed: the board over what is left of it once a whole
- * column has gone off the view, which is what makes the visible board fill the width. */
-const BLEED_SCALE = BOARD_WIDTH / (BOARD_WIDTH - 1);
+// The whole board is on screen, always, and there is no property left for a host to say
+// otherwise. There was one — `--board-bleed`, a multiplier on the width term that let a
+// narrow view push a column's width off the sides, half at either edge, and draw the rest a
+// fifth larger for it. It was affordable because the board's two outermost columns were the
+// only ground no lane was played across, so what went off the screen was the ground that
+// counted least. Those columns are gone from the field itself now (`grid.ts`), which is the
+// same saving taken properly: every column that is left is one a lane is fought over, and
+// half of one hanging off the edge of the view would be half a duel.
 
 // --- The room over the fighters' heads ---------------------------------------
 // A character plants its feet on its cell's foot line and stands taller than the cell
@@ -761,6 +740,11 @@ export interface GridSpan {
  * What that costs is real and is the trade being made: a sprite wider than its cell on an
  * outer column, the order strip hung off a fighter in one, and anything reaching above the
  * board's own top row are clipped at the canvas edge rather than given room outside it.
+ * Every column of the field is an outer one now bar the white middle (`grid.ts`), so that
+ * first case is the two lines standing where they open rather than a corner of the board
+ * nobody uses — a limb that sweeps most of a cell to one side loses its far end at the
+ * edge, which is the same overlap the board is drawn with everywhere else, taken at the
+ * one place there is nothing beyond to overlap.
  */
 export function contentCrop(span: GridSpan): {
 	left: number;
@@ -1010,12 +994,13 @@ export class MugenBoard {
 	 * intrinsic ratio, which keeps the picture square with its framebuffer — the cells are
 	 * never stretched, only scaled.
 	 *
-	 * The width term carries the host's bleed ({@link BLEED_PROPERTY}), which is the one thing
-	 * here a host has any say in: at full bleed the board is drawn a column wider than the view
-	 * and hangs half a column off either edge. It rides on the width alone, so it is spent only
-	 * where there is a spare band to spend — a board limited by the height ignores it — and it
-	 * is read as a CSS property rather than passed in, so the media query that decides it is
-	 * the host's and this stays a measure.
+	 * Two terms and no third: a host has no say in this at all, and the same two figures
+	 * answer every screen. The board is three columns by four rows now, so it is taller than
+	 * it is wide and a wide screen is limited by its height, a phone by its width — either
+	 * way the whole field is on the view, at the largest size that fits, with the axis that
+	 * did not run out spending what is left over on the room round the board rather than on
+	 * board nobody can see. (The host used to be able to push a column off the sides; see
+	 * the note where that property was.)
 	 *
 	 * Read off the framebuffer as it stands, so it has to be called after the crop
 	 * ({@link fitToContent}) and again whenever that changes: the aspect ratio is the crop's,
@@ -1026,10 +1011,7 @@ export class MugenBoard {
 		const { width, height } = this.app.renderer;
 		if (!width || !height) return;
 		const aspect = width / height;
-		// 1 with no bleed asked for, BLEED_SCALE at full bleed, and the property's own default
-		// is what makes a host that has never heard of it get the whole board.
-		const spill = `calc(1 + var(${BLEED_PROPERTY}, 0) * ${BLEED_SCALE - 1})`;
-		this.app.canvas.style.width = `min(calc(${VIEWPORT_WIDTH} * ${spill}), calc(${VIEWPORT_HEIGHT} * ${aspect}))`;
+		this.app.canvas.style.width = `min(${VIEWPORT_WIDTH}, calc(${VIEWPORT_HEIGHT} * ${aspect}))`;
 		this.app.canvas.style.height = 'auto';
 	}
 

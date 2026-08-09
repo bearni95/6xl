@@ -20,8 +20,8 @@
  * on the staggered rows alone, purely to keep the field's outline symmetric — which left
  * red holding two cells of ground blue had no answer to. A square field asks for none of
  * it. The lanes are level because the rows are, the openings are level because the lanes
- * are, and the field is symmetric because it is a rectangle: two red columns, the white
- * one, two blue.
+ * are, and the field is symmetric because it is a rectangle: one red column, the white
+ * one, one blue.
  *
  * The coordinates are the plain ones — the column a cell is drawn in, and the row it
  * sits on — because that is what the board's rules are written in: a column has a
@@ -58,13 +58,23 @@ export interface Cell {
 export type CellSide = 'red' | 'purple' | 'blue';
 
 /**
- * The board's outermost columns: two red, the white one at zero, two blue. Even either
+ * The board's outermost columns: one red, the white one at zero, one blue. Even either
  * side of the middle, which is what a rectangle of squares can be and the hex field this
  * replaced could not — its sixth column was there to square the *outline* and left red a
  * column deeper than blue (see the module note).
+ *
+ * **Every column of this field is played on.** It was five wide — a back column behind
+ * each line, which nobody opened on, nothing was won on, and which existed to stand the
+ * fallen out of the way. That is ground the fight is not fought over, and a board is
+ * drawn to fit the view it is in, so the two of them were a fifth of every fighter's
+ * size spent on a pair of empty margins: the whole field had to fit the screen, so the
+ * three columns that matter came out smaller for the two that did not. Off they come.
+ * A half is one column deep now, which is the front and the back of it at once — so a
+ * fighter that has lost its lane stands the fight out where it fought it, faded, and
+ * only the winner moves (the controller's `fallenColumn`, `settleLane`).
  */
-export const FIRST_COLUMN = -2;
-export const LAST_COLUMN = 2;
+export const FIRST_COLUMN = -1;
+export const LAST_COLUMN = 1;
 /**
  * The board's rows, counted downward from the top of the screen. The top one is ground
  * above the fight (see the module note); the lanes run from {@link FIRST_LANE_ROW} to
@@ -187,7 +197,7 @@ const key = (q: number, r: number): string => `${q},${r}`;
 // whatever happens to be drawing.
 //
 // Which makes the board's own extent the plainest thing in the file: rows stack, so four
-// rows are four cells tall, and columns sit side by side, so five columns are five wide.
+// rows are four cells tall, and columns sit side by side, so three columns are three wide.
 // The hex field this replaced was neither — its rows interlocked at three quarters of a
 // height, so its extent had to be worked out rather than counted (that arithmetic now
 // lives with the one surface still laid on hexagons, `hex-lattice.ts`).
