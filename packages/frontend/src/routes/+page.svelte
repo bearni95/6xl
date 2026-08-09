@@ -3363,30 +3363,26 @@
 							</button>
 						</div>
 
-						<!-- The other edge of the terrain: where the map is standing, and the three things
-							there are to say about it. It is the head of the block under the map — see that
-							block, which is the panel those tabs turn over and nothing else now — and it is
-							laid over the terrain rather than at the top of that block because both halves of
-							it are about the place the map is open on: the badge names the place the terrain
-							is showing, and the tabs pick which reading of that place the panel holds. A row
-							that says WHERE YOU ARE reads best on the thing you are looking at, and the
-							bottom edge is the one a map has to spare — the top strip belongs to the two
-							presses that act on the level (the tally and the radar), and the pins and the
-							polygons a reader is working over sit in the middle of the box.
-							The strip spans the map (`inset-x-3`) with `justify-center` putting one
-							shrink-to-fit row in the middle of it, so the row is as wide as what is in it and
-							centred on the map's own axis. `max-w-full` is the only cap, and it bites where a
-							long town name would otherwise outrun the terrain — at which point the grid's two
-							tracks give and the badge's `min-w-0` truncates the name inside its half.
-							It sits ON that edge and not above it (`bottom-0`, where the strip at the top
+						<!-- The other edge of the terrain: where the map is standing, the way back up out
+							of it, and what is playing. It was the head of the block under the map — see that
+							block, which is the panel and nothing else now — and it is laid over the terrain
+							rather than at the top of that block because what is on it is about the place the
+							terrain is drawing. A row that says WHERE YOU ARE reads best on the thing you are
+							looking at, and the bottom edge is the one a map has to spare — the top strip
+							belongs to the two presses that act on the level (the tally and the radar), and
+							the polygons a reader is working over sit in the middle of the box.
+							The strip is the map's whole width (`inset-x-0`) and holds one band that fills it,
+							so what is on the band is placed against a box that never changes: it spanned only
+							`inset-x-3` and centred a shrink-to-fit row in the middle of that while the row was
+							as wide as its own contents, which is exactly the arrangement that made the plate
+							a different size in every town.
+							It sits ON the edge and not above it (`bottom-0`, where the strip at the top
 							keeps its `top-3`): the row is the bottom of the map the way a caption is the
 							bottom of a picture, and a plate floating a few pixels clear of the edge with a
-							sliver of terrain under it reads as a thing that has come loose. So the corners
-							it meets the edge with are square (`rounded-t-lg` rather than `rounded-lg`) —
-							a rounded corner is what a plate standing free of a boundary has, and this one
-							is standing against one.
-							`pointer-events-none` on the strip with the row turning them back on, since the
-							room either side of it is terrain and terrain has to stay draggable; `z-[900]`
+							sliver of terrain under it reads as a thing that has come loose.
+							`pointer-events-none` on the strip with the band turning them back on — which now
+							matters only for the band's own height, the strip having no room left either side
+							of it, and the terrain above it staying draggable as before; `z-[900]`
 							clears Leaflet's own panes as the strip above it does.
 							`bg-base-100/80`, which is the surface every plate on every pin standing on this
 							map is drawn on (see TownPlate's PLATE_SURFACE) — same colour, same alpha. The
@@ -3396,24 +3392,27 @@
 							tally at the top is drawn on, which is a wash BECAUSE the tally is about what is
 							under it. This row is not — it names where the map is standing. -->
 						<div
-							class="pointer-events-none absolute inset-x-3 bottom-0 z-[900] flex justify-center"
+							class="pointer-events-none absolute inset-x-0 bottom-0 z-[900]"
 						>
-							<!-- Two rows on one plate: what is playing, and then where you are with the ways
-								of acting on it — the way out of the place, the place, and the three things to
-								say about it.
-								The lower of the two is a row of one square and two halves. The square is the
-								path and gives nothing; the two halves are a grid of their own, so that each gets
-								half of whatever the square leaves whatever is in the other, and a long town name
-								cannot walk the tabs off the edge nor a short one leave them adrift in the
-								middle. It is a grid nested in a row and not three tracks of one grid, because
-								the dots are not a third reading of the place — they are the way to stop reading
-								it — and a track of their own would have made the row a third narrower for no
-								name and no word.
+							<!-- Two rows on one band: what is playing, and then where you are and the way out
+								of it — the dots, and the badge naming the place.
+								It spans the map and is the same width whatever is on it, which is most of what
+								it is. It was a shrink-to-fit plate centred on the bottom edge, as wide as
+								whatever it held, and what that gave a reader was a plate that grew and shrank as
+								they walked — one width for Alcoi, another for Sant Julià de Lòria, a third the
+								moment a song with a long title came on. Something always in the same place at
+								the same size can be read without being found first, which is what a band along
+								an edge is for. So the strip runs edge to edge (`inset-x-0`, and no
+								`justify-center` left to centre anything in it) and the band fills it.
+								No corners either: a rounded corner is what a plate standing clear of a boundary
+								has, and this one is against three — the map's bottom edge and both its sides. It
+								carried `rounded-t-lg` while it was an island in the middle of that edge, which
+								is exactly the shape it has stopped being.
 								The place stood on the band across the top of the page before any of this, a
 								whole column away from the answers about it (see the band), and then at the head
 								of the block under the map. -->
 							<div
-								class="pointer-events-auto flex max-w-full flex-col gap-2 rounded-t-lg bg-base-100/80 p-2 shadow-xl"
+								class="pointer-events-auto flex w-full flex-col gap-2 bg-base-100/80 p-2 shadow-xl"
 							>
 								<!-- The radio, first and across the whole plate: the song running past and the
 									play/pause at the far end of it (see TownRadio). It was the last line of the
@@ -3428,18 +3427,17 @@
 									but what is playing is the game's sound and goes on playing across a walk from
 									one town to the next — and because a title is a line that wants a width, which
 									is what a plate's whole width is for.
-									It draws nothing at all until there is a song, so the plate is the row below by
-									itself until then and the column's gap closes with it: an empty band across the
-									top of this plate would say a radio is there and broken.
-									`w-0 min-w-full` is how it takes that width without being what decides it: a
-									song is called whatever it is called, and a plate as wide as the longest title
-									would be a plate that changed size every few minutes. The width is settled by
-									the row below — where the widest thing is a town's name, which changes when the
-									reader walks somewhere — and the radio is stretched to it, its own content
-									counting for nothing in the sum. What is too long for that is what the banner
-									is for (see MarqueeText, which scrolls only when the line is wider than the
-									box). -->
-								<TownRadio classes="w-0 min-w-full" />
+									It draws nothing at all until there is a song, so the band is the row below by
+									itself until then and the column's gap closes with it: an empty line across the
+									top of this band would say a radio is there and broken.
+									Nothing is said about its width: the band is the map's width whatever is on it,
+									and a flex column stretches its rows to itself. It wore a `w-0 min-w-full` while
+									the band was as wide as what was in it — width nothing, minimum everything, so
+									that a song title counted for zero in the sum deciding how wide the plate came
+									out and could not resize it every few minutes. There is no sum any more. What is
+									too long for the row is what the banner is for (see MarqueeText, which scrolls
+									only when the line is wider than the box). -->
+								<TownRadio />
 
 								<div class="flex items-center gap-2">
 										<!-- The way up out of where the map is standing: the dots and the column of place
