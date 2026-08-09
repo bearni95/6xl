@@ -11,7 +11,9 @@
 	//
 	// The station first because it is the steadier of the two — a station holds while its songs
 	// come and go — and because it is the wider statement: this is what you are listening to, and
-	// then this is what is on. It is the order a radio announces itself in.
+	// then this is what is on. It is the order a radio announces itself in, and it is lettered
+	// like one: the station is the bold line and the song is the plain one under it, a heading
+	// over what is playing under it rather than a caption on it.
 	//
 	// A station *is* a show (see musicService), which is why the name above the song is the name
 	// of a show and not a second kind of thing. It comes from the same read the dial names its
@@ -31,8 +33,9 @@
 	// answers about one radio.
 	//
 	// A banner rather than a truncation for the title (see MarqueeText): a song is whatever the
-	// record is called, and a plate is a fixed width. The station above it truncates, as every
-	// name of a place or a show in this game does — a show can be recognised from its head.
+	// record is called, and the box it stands in is a fixed width. The station above it truncates,
+	// as every name of a place or a show in this game does — a show can be recognised from its
+	// head.
 	//
 	// Nothing is drawn until there is a song. The plate around it says the same thing (it has its
 	// room to withhold), and this says it on its own account because a line with no song in it is
@@ -58,12 +61,13 @@
 {#if state.track}
 	<span class={classNames('flex min-w-0 flex-col text-left leading-tight', classes)}>
 		{#if stationName}
-			<!-- The station, lettered as this game letters the show a place flies: the quieter of
-				the two lines, since it is the standing fact and the song is the news. -->
-			<span class="truncate text-xs font-medium opacity-70">{stationName}</span>
+			<!-- The station in bold, at the smaller of the two sizes: it is a heading over the
+				song rather than a line beside it, and a heading is said by weight — which leaves
+				size free to say which of the two is the longer read. -->
+			<span class="truncate text-xs font-bold opacity-70">{stationName}</span>
 		{/if}
 
-		<span class="flex min-w-0 items-center gap-1 text-sm font-semibold">
+		<span class="flex min-w-0 items-center gap-1 text-sm font-medium">
 			<MusicGlyph playing={state.playing} classes="size-4 flex-none" />
 			<!-- `min-w-0` is what lets the banner be narrower than its line, and `flex-1` is what
 				gives it the rest of the line: together they are the box the title is measured
