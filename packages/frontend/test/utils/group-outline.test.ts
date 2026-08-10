@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupOutlines, type OutlineChain } from '$utils/geo/group-outline';
+import { groupShapes, type OutlineChain } from '$utils/geo/group-outline';
 
 // A run of cells across the same row, each one degree of longitude wide and one of
 // latitude tall, so `cell(0)` and `cell(1)` share the meridian between them. Written
@@ -33,8 +33,10 @@ function row(...groups: (string | null)[]): GeoJSON.FeatureCollection {
 	};
 }
 
-const outlines = (collection: GeoJSON.FeatureCollection) =>
-	groupOutlines(collection, (feature) => (feature.properties?.group as string | null) ?? null);
+const grouping = (collection: GeoJSON.FeatureCollection) =>
+	groupShapes(collection, (feature) => (feature.properties?.group as string | null) ?? null);
+
+const outlines = (collection: GeoJSON.FeatureCollection) => grouping(collection).chains;
 
 // Every leg drawn, as unordered endpoint pairs — which is what the outline actually
 // says. Where a chain was cut and which way round it was walked are the stitcher's
@@ -58,7 +60,7 @@ const leg = (aLat: number, aLng: number, bLat: number, bLng: number) => {
 	return a < b ? `${a} ${b}` : `${b} ${a}`;
 };
 
-describe('groupOutlines', () => {
+describe('groupShapes outlines', () => {
 	it('drops the border between two shapes of the same group', () => {
 		const drawn = legs(outlines(row('bola-de-drac', 'bola-de-drac')));
 
@@ -103,7 +105,7 @@ describe('groupOutlines', () => {
 
 	it('draws nothing where nothing is grouped', () => {
 		expect(outlines(row(null, null))).toEqual([]);
-		expect(groupOutlines(null, () => 'bola-de-drac')).toEqual([]);
+		expect(groupShapes(null, () => 'bola-de-drac')).toEqual({ chains: [], runs: [] });
 	});
 
 	it('joins a group\'s legs into as few chains as it can', () => {
@@ -136,5 +138,35 @@ describe('groupOutlines', () => {
 
 		// Two rings that do not touch, so the group is two chains of four legs each.
 		expect(legs(outlines(collection)).size).toBe(8);
+	});
+});
+
+describe('groupShapes runs', () => {
+	it('makes one run of shapes that touch and share a group', () => {
+		expect(grouping(row('bola-de-drac', 'bola-de-drac')).runs).toEqual([
+			{ group: 'bola-de-drac', members: [0, 1] }
+		]);
+	});
+
+	it('makes a run each of shapes that share a group without touching', () => {
+		// The same show either side of a third: two pieces of country, and two marks.
+		expect(grouping(row('bola-de-drac', 'shin-chan', 'bola-de-drac')).runs).toEqual([
+			{ group: 'bola-de-drac', members: [0] },
+			{ group: 'shin-chan', members: [1] },
+			{ group: 'bola-de-drac', members: [2] }
+		]);
+	});
+
+	it('runs a chain of shapes joined one to the next', () => {
+		const line = Array<string>(6).fill('bola-de-drac');
+		expect(grouping(row(...line)).runs).toEqual([
+			{ group: 'bola-de-drac', members: [0, 1, 2, 3, 4, 5] }
+		]);
+	});
+
+	it('leaves ungrouped shapes out of every run', () => {
+		expect(grouping(row(null, 'shin-chan', null)).runs).toEqual([
+			{ group: 'shin-chan', members: [1] }
+		]);
 	});
 });

@@ -55,6 +55,29 @@ export interface MapOutline {
 	style: PathOptions;
 }
 
+/**
+ * A disc stood on a point, carrying one glyph: the mark for something the shapes on
+ * screen add up to, as {@link MapOutline} is the line round it.
+ *
+ * It is a caption and not a control — it catches no pointer, so the land under it is
+ * pressed exactly as if it were not there. Which is what lets one be dropped on a
+ * point that already answers for something else.
+ *
+ * Where two would lie on one another the map keeps one and drops the other, heaviest
+ * first: a mark about a bigger thing is the one worth the room. So `weight` is
+ * whatever the caller measures its things in — nothing here reads it but the sort.
+ */
+export interface MapGroupMark {
+	/** Stable id, so a rebuild can tell one mark from another. */
+	id: string;
+	/** Where the disc sits, as [lat, lng] — its centre, not a corner. */
+	position: [number, number];
+	/** Raw SVG markup for the glyph on it, inlined so it paints in the disc's own ink. */
+	iconSvg: string;
+	/** How much the mark is worth keeping where two would stand on the same spot. */
+	weight: number;
+}
+
 /** A standalone straight line (polyline) drawn on the map, independent of any GeoJSON. */
 export interface MapLine {
 	/** Ordered vertices as [lat, lng] pairs; a straight segment between each. */

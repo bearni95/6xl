@@ -1,24 +1,25 @@
 /**
- * Draws a line around each *group* of neighbouring shapes rather than around each
- * shape: given a tier's polygons and a group name per polygon, it returns the
- * outline of every run of touching polygons that share a group — the whole
- * cluster's edge, with the borders inside it gone.
+ * Reads a tier of polygons as the *groups* its shapes fall into rather than as the
+ * shapes themselves: given a group name per polygon, it works out which polygons
+ * touch which, and answers with every run of touching polygons that share a group —
+ * as the outline round each run, and as the runs themselves.
  *
  * The map uses it to say which shows the level on screen is divided between: the
- * towns of one comarca that fly the same show are one shape in pink, and the
- * comarca's own white border still crosses it. Nothing here knows about shows, or
- * about Leaflet: it takes a collection and a naming function and answers with
- * chains of points.
+ * towns of one comarca that fly the same show are one shape in pink with one disc
+ * standing on it, and the comarca's own white border still crosses it. Nothing here
+ * knows about shows, or about Leaflet: it takes a collection and a naming function
+ * and answers with chains of points and lists of indices.
  *
- * The method is the one a dissolve uses, and it is exact rather than approximate.
- * These layers are topologically clean — a border between two municipalities is
- * the *same* run of vertices in both polygons, written once forwards and once
- * backwards (the dissolved tiers pass through topojson, which quantizes them onto
- * one grid; the municipality layer inherits the coverage GISCO cut it from). So
- * every segment is looked up by its two endpoints, unordered, and the two sides
- * that own it are read off directly. A segment whose two sides are the same group
- * is interior to that group and is dropped; everything else is a group's edge and
- * is kept.
+ * Both answers come out of one walk because they are one question. The method is
+ * the one a dissolve uses, and it is exact rather than approximate: these layers
+ * are topologically clean — a border between two municipalities is the *same* run
+ * of vertices in both polygons, written once forwards and once backwards (the
+ * dissolved tiers pass through topojson, which quantizes them onto one grid; the
+ * municipality layer inherits the coverage GISCO cut it from). So every segment is
+ * looked up by its two endpoints, unordered, and the two shapes that own it are
+ * read off directly. Same group on both sides and the segment is interior: it is
+ * dropped from the outline, and the two shapes are joined into one run. Anything
+ * else is where a group ends, and is kept.
  *
  * That leaves a heap of loose segments, which is why the last step stitches them
  * end to end: 3,400 segments handed over as 3,400 polylines is 3,400 SVG paths,
@@ -31,6 +32,29 @@
 
 /** A chain of points as Leaflet takes them: `[lat, lng]`, one straight leg between each. */
 export type OutlineChain = [number, number][];
+
+/**
+ * One run of touching shapes that share a group — a single piece of the country
+ * flying one show, which is what a reader sees inside one pink line.
+ *
+ * The shapes are given as positions in the collection handed in, so a caller can
+ * take whatever it needs off its own features (their geometry, their names) without
+ * this having to guess which of those it wanted. A shape in no group is in no run:
+ * a group of null is a group for the purpose of dropping the borders inside it, and
+ * never one anything is said about.
+ */
+export interface ShapeRun {
+	/** The group every shape in the run belongs to. */
+	group: string;
+	/** Indices into `collection.features`, in the order they were read. */
+	members: number[];
+}
+
+/** What a tier's shapes add up to: the line round each run, and the runs. */
+export interface Grouping {
+	chains: OutlineChain[];
+	runs: ShapeRun[];
+}
 
 /** A position's identity as a lookup key — the vertex as it is written. */
 function pointKey(position: number[]): string {
@@ -45,44 +69,46 @@ function ringsOf(geometry: GeoJSON.Geometry | null | undefined): number[][][] {
 	return [];
 }
 
-/** One segment of a ring, held by its endpoints and by the groups on either side. */
+/** One segment of a ring, held by its endpoints and by the shapes on either side. */
 interface Edge {
 	a: string;
 	b: string;
 	/** The two positions, so a chain can be built without re-parsing the keys. */
 	from: number[];
 	to: number[];
-	/** The group on each side; the second stays null where the segment is an outer edge. */
-	left: string | null;
-	right: string | null;
-	/** Whether a second polygon has claimed it — an unshared segment has one side. */
-	shared: boolean;
+	/** The shape it was first read from, as a position in the collection. */
+	left: number;
+	/** The shape that claimed it second, or -1 while it is an outer edge. */
+	right: number;
 }
 
 /**
- * The outline of every same-group cluster in `collection`, as chains of `[lat, lng]`.
+ * The grouping of `collection` under `groupOf`, which names the group a feature
+ * belongs to or null for one that belongs to no group at all — a town whose show
+ * has not landed, say.
  *
- * `groupOf` names the group a feature belongs to, or null for one that belongs to
- * no group at all — a town whose show has not landed, say. A null is a group like
- * any other for the purpose of dropping interior borders (two show-less towns
- * side by side draw no line between them) but is never *outlined*: what is being
- * drawn is where a group ends, and "no show" is not a group anything is being said
- * about. So the edge between a group and the show-less land beside it is drawn,
- * and the edge between show-less land and the sea is not.
+ * A null is a group like any other for the purpose of dropping interior borders
+ * (two show-less towns side by side draw no line between them) but is never
+ * *outlined* and never *run*: what is being drawn is where a group ends, and "no
+ * show" is not a group anything is being said about. So the edge between a group
+ * and the show-less land beside it is drawn, and the edge between show-less land
+ * and the sea is not.
  */
-export function groupOutlines(
+export function groupShapes(
 	collection: GeoJSON.FeatureCollection | null | undefined,
 	groupOf: (feature: GeoJSON.Feature) => string | null
-): OutlineChain[] {
-	if (!collection) return [];
+): Grouping {
+	if (!collection) return { chains: [], runs: [] };
+
+	const groups = collection.features.map(groupOf);
 
 	// Every segment on the tier, keyed by its two endpoints unordered, so the two
 	// polygons that share a border meet in the same entry whichever way round each
-	// of them walks it.
+	// of them walks it. A third claimant is impossible on a clean coverage and would
+	// simply be ignored here — two shapes is what an edge has sides for.
 	const edges = new Map<string, Edge>();
 
-	for (const feature of collection.features) {
-		const group = groupOf(feature);
+	collection.features.forEach((feature, index) => {
 		for (const ring of ringsOf(feature.geometry)) {
 			for (let i = 0; i < ring.length - 1; i++) {
 				const from = ring[i];
@@ -92,28 +118,81 @@ export function groupOutlines(
 				if (a === b) continue;
 				const key = a < b ? `${a}|${b}` : `${b}|${a}`;
 				const seen = edges.get(key);
-				if (seen) {
-					seen.right = group;
-					seen.shared = true;
-				} else {
-					edges.set(key, { a, b, from, to, left: group, right: null, shared: false });
-				}
+				if (seen) seen.right = index;
+				else edges.set(key, { a, b, from, to, left: index, right: -1 });
 			}
 		}
-	}
+	});
 
-	// What survives: a segment with a different group on each side, and never one
-	// with nothing on either. An unshared segment's other side is the sea or the
-	// world past the map, which is no group — so it is kept exactly when the land
-	// side of it is in one.
+	// Which shapes are one shape: every interior segment joins its two sides, and
+	// what is left standing after the pass is the runs.
+	const runOf = new Runs(collection.features.length);
+
+	// What survives into the outline: a segment with a different group on each side.
+	// An unshared segment's other side is the sea or the world past the map, which is
+	// no group — so it is kept exactly when the land side of it is in one, and the
+	// one rule covers that too.
 	const kept: Edge[] = [];
 	for (const edge of edges.values()) {
-		if (edge.shared && edge.left === edge.right) continue;
-		if (edge.left == null && edge.right == null) continue;
+		const left = groups[edge.left];
+		const right = edge.right === -1 ? null : groups[edge.right];
+		if (left === right) {
+			if (left != null && edge.right !== -1) runOf.join(edge.left, edge.right);
+			continue;
+		}
 		kept.push(edge);
 	}
 
-	return stitch(kept);
+	// The runs, in the order their first shape appears — so a caller walking them is
+	// walking the collection, and two views of the same map list them the same way.
+	const byRoot = new Map<number, ShapeRun>();
+	const runs: ShapeRun[] = [];
+	groups.forEach((group, index) => {
+		if (group == null) return;
+		const root = runOf.rootOf(index);
+		const run = byRoot.get(root);
+		if (run) run.members.push(index);
+		else {
+			const started = { group, members: [index] };
+			byRoot.set(root, started);
+			runs.push(started);
+		}
+	});
+
+	return { chains: stitch(kept), runs };
+}
+
+/**
+ * Which shapes have been found to be one shape, as a union-find over their
+ * positions in the collection. Each shape starts as its own run and every interior
+ * segment merges two of them; `rootOf` names whichever run a shape has ended up in.
+ * Paths are flattened as they are walked, which is what keeps a chain of merges
+ * (a long valley of towns, joined one to the next) from being re-walked per member.
+ */
+class Runs {
+	private parent: number[];
+
+	constructor(size: number) {
+		this.parent = Array.from({ length: size }, (_, index) => index);
+	}
+
+	rootOf(index: number): number {
+		let root = index;
+		while (this.parent[root] !== root) root = this.parent[root];
+		let walk = index;
+		while (this.parent[walk] !== root) {
+			const next = this.parent[walk];
+			this.parent[walk] = root;
+			walk = next;
+		}
+		return root;
+	}
+
+	join(a: number, b: number): void {
+		const rootA = this.rootOf(a);
+		const rootB = this.rootOf(b);
+		if (rootA !== rootB) this.parent[rootB] = rootA;
+	}
 }
 
 /**

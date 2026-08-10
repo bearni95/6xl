@@ -13,6 +13,7 @@
 	import type {
 		MapBoosterBox,
 		MapCircle,
+		MapGroupMark,
 		MapLine,
 		MapMarker,
 		MapOutline,
@@ -26,6 +27,7 @@
 		maxZoom = 19,
 		overlays = [],
 		outline = null,
+		groupMarks = [],
 		circles = [],
 		lines = [],
 		markers = [],
@@ -77,6 +79,16 @@
 		 * Null draws nothing, which is also what an outline with no chains in it does.
 		 */
 		outline?: MapOutline | null;
+		/**
+		 * The discs standing on whatever the outline is drawn round — one glyph each, on a
+		 * point of the caller's choosing (see {@link MapGroupMark}).
+		 *
+		 * The map does two things with them the caller cannot: it drops the ones off screen,
+		 * and where two would stand on the same spot it keeps the heavier and drops the other
+		 * — both of which are questions about the view and are re-asked every time the view
+		 * settles. Everything else about a mark is the caller's.
+		 */
+		groupMarks?: MapGroupMark[];
 		/** Standalone circular regions drawn above the overlays. */
 		circles?: MapCircle[];
 		/** Standalone straight lines drawn above the overlays. */
@@ -292,6 +304,11 @@
 	// The one path that line is, so a fresh outline can take the previous one off the map.
 	// A plain variable: nothing is drawn from it — it IS what was drawn.
 	let outlineLayer: L.Polyline | null = null;
+	// The pane the discs standing on those groups are drawn in (see `groupMarks`), and the
+	// layer holding the crop of them on screen right now. Under the leader lines at 580,
+	// since a disc is a caption on the terrain and not a mark a reader acts on.
+	const GROUP_PANE = 'groupMarkPane';
+	let groupLayer: L.LayerGroup | null = null;
 	// The BoosterBox components standing in that layer, tracked for the same reason the
 	// pins' mounts are: clearing the layer only detaches their DOM, and a box left
 	// mounted holds its poster and its logo for a town no longer on screen.
@@ -593,6 +610,81 @@
 			fill: false,
 			interactive: false
 		}).addTo(mapInstance);
+	});
+
+	// How wide a group disc is (`size-10`), which is the one place that class's size has to be
+	// reckoned with rather than applied: the map decides which discs stand by measuring them
+	// against each other, and a measurement cannot be read out of a class.
+	const GROUP_DISC_EXTENT = 40;
+
+	// The disc itself: the glyph on the chrome every plate on this map is drawn on — base-100
+	// at four fifths, so the terrain reads faintly through it — inside a ring in the colour of
+	// the line round the group it belongs to, which is what says the two are one statement.
+	//
+	// The glyph is inlined rather than pointed at by an <img> so it paints in the disc's own
+	// ink (see inlineIconMarkup), and sized through a CSS rule, which outranks the svg's own
+	// 1em width and height. Decorative: what the mark says is said in full in the column
+	// beside the map, and a glyph read aloud off a map is a name nobody asked for.
+	function groupDiscElement(mark: MapGroupMark): HTMLElement {
+		const disc = document.createElement('div');
+		disc.className =
+			'flex size-10 items-center justify-center rounded-full shadow-md ' +
+			'bg-base-100/80 text-secondary ring-2 ring-secondary [&>svg]:size-6';
+		disc.setAttribute('aria-hidden', 'true');
+		disc.innerHTML = mark.iconSvg;
+		return disc;
+	}
+
+	// (Re)build the group discs for the current view: clear the crop that was standing, keep
+	// the ones inside the viewport, and drop the ones that would stand on a disc already
+	// placed. Runs whenever the marks change and whenever the map settles, so both answers
+	// track what is on screen.
+	//
+	// Heaviest first, so what survives a crowd is the mark about the biggest thing — a show
+	// holding a whole comarca keeps its disc where a single town of it beside the border
+	// loses one. The test is against the discs already placed and in container pixels,
+	// because standing on one another is a fact about the view and not about the ground:
+	// two points a kilometre apart are one mark at the top view and two a few zooms in.
+	//
+	// O(kept²), and kept is bounded by the canvas — a screen only holds so many discs that
+	// are not on top of each other, which is the very thing being enforced.
+	function rebuildGroupMarks() {
+		if (!mapInstance || !Leaf) return;
+		if (!groupLayer) groupLayer = Leaf.layerGroup().addTo(mapInstance);
+		groupLayer.clearLayers();
+
+		const bounds = mapInstance.getBounds();
+		const room = GROUP_DISC_EXTENT + PIN_GAP;
+		const placed: L.Point[] = [];
+
+		for (const mark of [...groupMarks].sort((a, b) => b.weight - a.weight)) {
+			if (!bounds.contains(mark.position)) continue;
+			const at = mapInstance.latLngToContainerPoint(mark.position);
+			if (placed.some((taken) => Math.abs(taken.x - at.x) < room && Math.abs(taken.y - at.y) < room))
+				continue;
+			placed.push(at);
+
+			// Anchored at its middle, so the disc is centred on the point rather than hung
+			// off it — this is a mark ON a place, not a pin pointing at one, and it is dealt
+			// no room by the placement pass for the same reason.
+			const icon = Leaf.divIcon({
+				html: groupDiscElement(mark),
+				className: '',
+				iconSize: [GROUP_DISC_EXTENT, GROUP_DISC_EXTENT],
+				iconAnchor: [GROUP_DISC_EXTENT / 2, GROUP_DISC_EXTENT / 2]
+			});
+			Leaf.marker(mark.position, { icon, pane: GROUP_PANE, interactive: false }).addTo(
+				groupLayer
+			);
+		}
+	}
+
+	$effect(() => {
+		// Rebuild the discs whenever the parent swaps them — the zoom reaching another tier,
+		// a town changing hands, the glyphs landing. Gated on `ready` like every other layer,
+		// so a set handed over before the map mounts is still drawn once there is one.
+		void groupMarks;
+		if (ready) rebuildGroupMarks();
 	});
 
 	// How long the mask takes to arrive and to go, matched to the 250ms every polygon repaints
@@ -2635,6 +2727,14 @@
 		outlinePane.style.zIndex = '450';
 		outlinePane.style.pointerEvents = 'none';
 
+		// The pane the group discs stand in (see GROUP_PANE and the `groupMarks` prop), over
+		// the line they belong to at 450 and under every mark a reader acts on. It catches
+		// nothing either: a disc says what a stretch of country is flying, and the country
+		// under it goes on being pressed.
+		const groupPane = mapInstance.createPane(GROUP_PANE);
+		groupPane.style.zIndex = '460';
+		groupPane.style.pointerEvents = 'none';
+
 		// The pane the spotlight's cover is drawn in (see MASK_PANE), made before anything is
 		// added to it and made hidden: the mask is faded in by taking that class off, so a
 		// cover that lands with the map already spotlit still arrives rather than appearing.
@@ -2694,6 +2794,10 @@
 			syncView();
 			rebuildMarkers();
 			rebuildBoxes();
+			// The discs are re-culled and re-thinned here too, both of their answers being
+			// about the view: which are on screen, and which of them are standing on one
+			// another at this zoom (see rebuildGroupMarks).
+			rebuildGroupMarks();
 		});
 
 		// Keep Leaflet's cached viewport in sync with its container: when the parent
@@ -2706,6 +2810,7 @@
 			syncView();
 			rebuildMarkers();
 			rebuildBoxes();
+			rebuildGroupMarks();
 		});
 		resizeObserver.observe(mapContainer);
 
