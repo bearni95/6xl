@@ -422,20 +422,7 @@
 
 	function onBoardReady(engine: MugenBoardEngine): void {
 		board = engine;
-		engine.onOrder(giveOrder);
 		controller?.attachBoard(engine);
-	}
-
-	/**
-	 * A button beside a fighter was tapped. The board only reports which one; what an
-	 * order means is the controller's, as it is for every other input.
-	 *
-	 * There are only three orders and each button is one of them. What a fighter's
-	 * colour adds on top is never tapped for — it is passive, it comes off the back of
-	 * whatever order *was* given, and the border round a button is where it is read.
-	 */
-	function giveOrder(fighterId: string, orderId: string): void {
-		controller?.setAction(fighterId, orderId as CombatAction);
 	}
 
 	/**
@@ -462,12 +449,16 @@
 	}
 
 	/**
-	 * The column beside one of the player's fighters: the three orders it can be given. Every
-	 * one of the three is always drawn — an order out of reach is greyed rather than dropped,
-	 * so a fighter's column never changes shape under the cursor — and all of them lock while
-	 * a turn is playing out. What its colour does for it of its own accord is not a fourth
-	 * button: it is never tapped for, so it is not among the things that can be, and it is
-	 * said as a border round the order it is a gift of ({@link giftedOrders}).
+	 * The column beside one of the player's fighters: the three orders it can be given, as the
+	 * panel's own three buttons are. Every one of the three is always drawn — an order out of
+	 * reach is greyed rather than dropped, so a fighter's column never changes shape — and all
+	 * of them lock while a turn is playing out. What its colour does for it of its own accord
+	 * is not a fourth button: it is passive, so it is not among the things that can be given,
+	 * and it is said as a border round the order it is a gift of ({@link giftedOrders}).
+	 *
+	 * The same list is what the panel beside the board draws ({@link orderRows}), and the panel
+	 * is where an order is actually given: on the board this column is a reading, on the panel
+	 * it is the input, and being one list they cannot disagree about what may be pressed.
 	 */
 	function orderButtons(
 		fighter: FighterView,
@@ -508,7 +499,6 @@
 			icon: ACTION_ICONS[action],
 			selected: fighter.action === action,
 			disabled: false,
-			readonly: true,
 			color: fighter.color,
 			gift: gifts.has(action)
 		}));
@@ -532,8 +522,9 @@
 				engine.setOrders(fighter.id, []);
 				continue;
 			}
-			// Both sides wear a column; only the player's is a way of giving an order. The
-			// rival's is the same three glyphs read back to the player.
+			// Both sides wear a column and neither is a way of giving an order: the same three
+			// glyphs read back to the player, saying what each fighter has been told to do (or,
+			// on a rival, turned out to have done). The order itself is given on the panel.
 			//
 			// Each stands on the ground its own fighter holds, at the end of that cell
 			// nearest the board's edge — the player's at the right of its own, the rival's
@@ -558,11 +549,12 @@
 	/**
 	 * The player's own line, as rows of a list: who each fighter is, and the column of orders
 	 * the board hangs beside it — the very same list, off the very same call, so the two are
-	 * one set of buttons drawn twice and cannot come to disagree about what may be pressed.
+	 * one set of orders drawn twice and cannot come to disagree about what may be pressed.
 	 *
-	 * It is what the phone is given instead of aiming at the board (see the markup). Only the
-	 * player's own fighters are in it: a rival's column is a reading rather than an input, and
-	 * a reading belongs where the fighter it is about is standing.
+	 * These are the buttons — the only ones. The board's copy is a reading of the same list,
+	 * and every order in the fight is given here (see the markup). Only the player's own
+	 * fighters are in it: what a rival has done is read where that rival is standing, and
+	 * there is nothing to ask of it.
 	 *
 	 * A fighter that is out of the turn — down, or holding the ground its lane was played for
 	 * — is left with no orders at all, exactly as the board clears its column: it keeps its
@@ -640,8 +632,12 @@
 	}
 
 	/**
-	 * An order given on the phone's panel: the same order the board takes, and then the
-	 * panel moves on by itself.
+	 * An order given on the panel, which is where every order in this fight is given: the
+	 * controller is told, the board's column reads it back beside the fighter, and then the
+	 * panel moves on by itself. What an order *means* is the controller's, as it is for every
+	 * other input; there are only three and each button is one of them, and what a fighter's
+	 * colour adds on top is never pressed for — it is passive, it comes off the back of
+	 * whatever order *was* given, and the border round a button is where it is read.
 	 *
 	 * On to the next fighter that has not been ordered yet, not simply the next along —
 	 * planning a turn is answering for each of the three once, so the thing to be shown next
@@ -656,7 +652,7 @@
 	 * moved.
 	 */
 	function giveOrderFromPanel(fighterId: string, orderId: string): void {
-		giveOrder(fighterId, orderId);
+		controller?.setAction(fighterId, orderId as CombatAction);
 		const count = orderRows.length;
 		for (let step = 1; step <= count; step++) {
 			const at = (shownIndex + step) % count;

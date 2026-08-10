@@ -792,31 +792,25 @@ interface Spark {
 }
 
 /**
- * One order a fighter can be given, drawn as a button beside it. The board knows
- * nothing about what an order *means* — it draws what it is handed and reports which
- * one was tapped, by the caller's own id.
+ * One order a fighter can be given, drawn as a button beside it. The board knows nothing
+ * about what an order *means*, and nothing about it being given either: it draws what it
+ * is handed and takes no pointer. Orders are given on the panel beside the board.
  */
 export interface BoardOrder {
-	/** The caller's id for this order, handed back when the button is tapped. */
+	/** The caller's id for this order. */
 	id: string;
 	/** URL of the glyph drawn inside the button (an SVG under /assets). The artwork
 	 * must be white: it is tinted, and tinting only ever darkens. */
 	icon: string;
 	/** Drawn as the chosen one, filled with {@link color}. */
 	selected: boolean;
-	/** Drawn greyed, and taps on it are ignored. */
+	/** Drawn greyed. */
 	disabled: boolean;
-	/**
-	 * Drawn but never reported: no pointer, no cursor, taps pass through it. A column of
-	 * these is a reading of a fighter rather than a way of commanding one — which is what
-	 * a rival's orders are, since they are shown only once they have been carried out.
-	 */
-	readonly?: boolean;
 	/**
 	 * A slot rather than an order: an outline where a button would be, holding a place in
 	 * the column for something that may yet go in it. No glyph is loaded and nothing is
 	 * filled, so {@link icon} is not read and neither `selected` nor `disabled` says
-	 * anything. Never reported, whatever `readonly` says.
+	 * anything.
 	 */
 	empty?: boolean;
 	/**
@@ -1177,8 +1171,6 @@ export class MugenBoard {
 	 * {@link whenReady}, which is what holds a turn until it has landed.
 	 */
 	private warming: Promise<void> = Promise.resolve();
-	/** What to call when an order button is tapped; set by {@link onOrder}. */
-	private orderHandler: ((actorId: string, orderId: string) => void) | null = null;
 
 	constructor(options: MugenBoardOptions) {
 		this.options = { ...DEFAULTS, ...options };
@@ -1266,8 +1258,11 @@ export class MugenBoard {
 		// Sort stage children by zIndex so characters further down the screen (larger
 		// rows, larger screen-y) paint over those standing behind them.
 		app.stage.sortableChildren = true;
-		// Order buttons live on the board, so the stage has to be hit-tested for taps.
-		app.stage.eventMode = 'static';
+		// Nothing on this canvas is pressed — the orders are given on the panel beside it and
+		// the board only ever reads them back — so the stage is not hit-tested at all, rather
+		// than walked on every pointer move for targets that no longer exist. It costs the
+		// canvas element none of its own DOM events, which are the host's to listen for.
+		app.stage.eventMode = 'none';
 		// Render as a block so the canvas doesn't reserve inline-baseline descender space
 		// below it. Its size is stated once the crop has settled the framebuffer
 		// ({@link sizeToViewport}) — until then it is laid out at its own pixel size, and
@@ -3373,15 +3368,6 @@ export class MugenBoard {
 	// --- Order buttons --------------------------------------------------------
 
 	/**
-	 * Say what happens when an order button is tapped. The board reports the actor it
-	 * belongs to and the caller's own id for the order; it never decides anything
-	 * about what an order is or whether it was sensible.
-	 */
-	onOrder(handler: (actorId: string, orderId: string) => void): void {
-		this.orderHandler = handler;
-	}
-
-	/**
 	 * Give a fighter the orders it can be given, drawn as a column of square buttons that
 	 * fills one cell of the board ({@link ORDER_COLUMN_COUNT}), on the fighter's own row
 	 * and flush inside one of that cell's two ruled sides.
@@ -3471,19 +3457,13 @@ export class MugenBoard {
 				gift: order.gift ?? false
 			};
 			button.container.addChild(face, glyph);
-			// A reporting button is not an input, and neither is an empty slot: both are left
-			// with no event mode at all, so they take no pointer, show no cursor and cannot be
-			// hit-tested — rather than taking the tap and dropping it, which is a button that
-			// looks pressable and does nothing.
-			if (!order.readonly && !order.empty) {
-				// The button itself takes the tap, so the hit area is exactly its face.
-				button.container.eventMode = 'static';
-				button.container.cursor = 'pointer';
-				button.container.on('pointertap', () => {
-					if (button.disabled) return;
-					this.orderHandler?.(actor.id, button.id);
-				});
-			}
+			// Nothing in a column takes a pointer, on either half of the field. Every order in
+			// this fight is given on the panel beside the board, which draws the same three
+			// orders as real buttons in the document, so a canvas button that also took the tap
+			// was a second way of saying the same thing — and one whose hit area is a rectangle
+			// the reader cannot see the edges of. So the whole column is a reading now, the
+			// player's as much as the rival's: it says what a fighter has been given and what
+			// its colour hands it, and it is pressed nowhere.
 			container.addChild(button.container);
 
 			// An empty slot has no artwork to fetch and no glyph to show it in.
