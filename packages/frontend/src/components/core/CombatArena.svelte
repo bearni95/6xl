@@ -1373,7 +1373,7 @@
 								<button
 									type="button"
 									class={classNames(
-										'flex aspect-square w-full items-center justify-center rounded-box',
+										'relative flex aspect-square w-full items-center justify-center rounded-box',
 										orderFill(order),
 										{ 'opacity-40': order.disabled }
 									)}
@@ -1383,6 +1383,24 @@
 									on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
 								>
 									<img src={order.icon} alt="" class="w-3/5" />
+									{#if order.gift}
+										<!-- This is one of the orders the fighter's colour hands it free, said
+										     exactly where the board says it: a dot in the button's own top-right
+										     corner, in the fighter's colour, ringed white — the ring being the
+										     whole of what keeps it readable on the one button that is *filled*
+										     with that very colour, the order the fighter has been given.
+										     Small, and a mark on the button rather than anything the button is.
+										     It comes and goes with the board's own, both being drawn off the
+										     same `gift` flag on the same list of orders, so it is only ever on
+										     the opening turn — the turn a gift is in hand for. -->
+										<span
+											class={classNames(
+												'absolute top-1 right-1 size-[28%] rounded-full ring-2 ring-white',
+												SPAWN_FILL_CLASSES[order.color as SpawnColor]
+											)}
+											aria-hidden="true"
+										></span>
+									{/if}
 								</button>
 							{/each}
 							<button
