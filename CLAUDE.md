@@ -240,13 +240,26 @@ src/
 └── services/i18n/        # Internationalization
 ```
 
-Frontend routes: `/` (home), `/map` (Països Catalans map), `/roster` (the player's claimed
-cards). Neither claiming nor combat has a route of its own — the booster packs live on the
-map's right-hand panel (its Booster tab), and `CombatArena` is raised by the Challenge
-button on a municipality. The roster has no route either. All of them
-are full-view modals over the map, drawn on the shared `FullScreenModal` sheet — the roster
-raised from the panel's account row, combat from the town — so there is one
-kind of full-view surface in this app and not one per feature. Everything that is not the map
+Frontend routes: `/` (the Països Catalans map, which is the whole game), `/combat` (the
+fight) and `/profile/<id>` (any player's public page). Claiming has no route of its own —
+the booster packs are a full-view modal over the map, as are the roster, the album and the
+rest, all drawn on the shared `FullScreenModal` sheet, so there is one kind of full-view
+surface in this app and not one per feature.
+
+**Combat is the exception, and it is a page.** The Challenge button on a municipality
+stages the fight — the frozen rival line-up, the town it is over, the generation of its
+team, and the town's own plate as the map draws it — into `$services/combat` and navigates
+to `/combat`; leaving the arena navigates back. So the modal show/hide is a route change
+each way, and the rule that puts a player back into the fight they are already in is a
+**redirect**: the map loads the open battle and goes to the arena, once per battle (the
+marker is a store in that service, since the map is mounted afresh every time the arena is
+left). A visit that lands on `/combat` with nothing staged is bounced to the map, which
+stages the open battle back — which is what a reload in the middle of a fight does. The
+map is therefore not mounted behind a fight at all, which is why the town **spotlight**
+(the one town lit on black while a fight was up) is gone from `+page.svelte`; `WorldMap`
+still knows how to draw one, nothing asks it to. `RosterModal` is mounted in the root
+layout for the same reason: the arena's "no active team" card raises it from the other
+route. Everything that is not the map
 is behind the **burger menu** — the `<aside>` drawer summoned from the far end of the
 breadcrumb bar: the block of buttons that raise those sheets, the sign-in, and at its foot
 `MusicPlayer.svelte`. The plate draws nothing until a song is loaded, and the audio element

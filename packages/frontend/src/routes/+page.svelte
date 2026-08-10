@@ -22,11 +22,8 @@
 	import TownPin from '$components/core/TownPin.svelte';
 	import CharacterClaimPanel from '$components/core/CharacterClaimPanel.svelte';
 	import TeamLineup from '$components/core/TeamLineup.svelte';
-	import CombatArena from '$components/core/CombatArena.svelte';
 	import { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import Countdown from '$components/core/Countdown.svelte';
-	import FullScreenModal from '$components/core/FullScreenModal.svelte';
-	import RosterModal from '$components/core/RosterModal.svelte';
 	import CollectionModal from '$components/core/CollectionModal.svelte';
 	import LeaderboardModal from '$components/core/LeaderboardModal.svelte';
 	import FaqModal from '$components/core/FaqModal.svelte';
@@ -42,6 +39,7 @@
 	import { radarCooldownUntil, startRadarCooldown } from '$services/radarCooldown';
 	import { creditsModalOpen, openCredits } from '$services/creditsModal';
 	import { boosterModalOpen } from '$services/boosterModal';
+	import { openCombat, battleShown } from '$services/combat';
 	import type { OpenerPack } from '$components/core/pack/scene/opener-view.type';
 	import { preloadPackArt } from '$components/core/pack/scene/preload-pack-art';
 	import { spawnService } from '$services/spawn.service';
@@ -59,7 +57,6 @@
 		type MunicipalityHolder,
 		type MunicipalitySiege
 	} from '$types/territory.type';
-	import type { TerritoryResult } from '$types/combat.type';
 	import type { OpenBattle } from '$types/battle.type';
 	import { AuthStatus, type Profile } from '$types/profile.type';
 	import { TEAM_SIZE, teamService } from '$services/team.service';
@@ -283,9 +280,9 @@
 		// leaves every town on.
 		await reloadTerritory();
 
-		// And the fight this player is already in, if any — which opens the arena on
-		// top of the map they have just landed on. A battle is not this tab's, so it is
-		// waiting here however they left it and wherever they left it.
+		// And the fight this player is already in, if any — which takes them straight to the
+		// arena, off this page (see the resume rule below). A battle is not this tab's, so it
+		// is waiting here however they left it and wherever they left it.
 		await reloadBattle();
 	});
 
@@ -356,32 +353,28 @@
 		}
 	}
 
-	// A finished fight settled by the server: reload so the panel redraws the town
-	// with whatever it now holds (a capture rewrites its team, turnover and holder).
-	function onTerritory(_result: TerritoryResult): void {
-		void reloadTerritory();
-	}
-
-	// The arena is gone. Re-read the cooldowns, because the fight that just closed is
-	// what set this town's: reported, it starts the hour; taken by somebody else while
-	// it was open, it sets none at all (the slot is voided server-side). That applies
-	// to a fight walked away from as much as to a reported one — which is a fight
-	// `on:territory` never hears about.
-	function onFightClosed(): void {
-		fightOpen = false;
-		void reloadChallenges();
-	}
+	// A fight is a page of its own now (`/combat`), so what a settled fight did to a town and
+	// what a closed one did to that town's cooldown are both read again by this page simply
+	// being walked back onto: leaving the arena is a navigation home, and the mount above
+	// reloads the holders, the sieges and the cooldowns. There is nothing left here to listen
+	// to the arena with — it is not on this page to listen to — where there used to be an
+	// `on:territory` reloading the occupancy and an `on:close` re-reading the hour a reported
+	// fight starts on its town.
 
 	// Bring the player back to their open battle the moment the map knows about one —
-	// on load, and again after signing in. Closing the arena is not leaving the fight,
+	// on load, and again after signing in. Leaving the arena is not leaving the fight,
 	// so this deliberately fires once per battle: it puts them back in front of it, and
 	// the Challenge button is what walks back in after that.
-	let resumedBattle: string | null = null;
-	$: if ($openBattle && $openBattle.startedAt !== resumedBattle) {
-		resumedBattle = $openBattle.startedAt;
+	//
+	// The marker is a store out in $services/combat rather than a variable here, because this
+	// page is mounted afresh every time the arena is left — a marker held here would forget on
+	// exactly the visit it exists to remember, and the map would bounce the player straight
+	// back into the fight they just walked out of.
+	$: if ($openBattle && $openBattle.startedAt !== $battleShown) {
+		battleShown.set($openBattle.startedAt);
 		resumeBattle();
 	}
-	$: if (!$openBattle) resumedBattle = null;
+	$: if (!$openBattle) battleShown.set(null);
 
 	// The panel had three tabbed views and has none: it is the account, and the two views it
 	// used to hold beside it — every show's standing across the map, and the window's booster
@@ -585,15 +578,12 @@
 	// left that tier behind, and loses it where the map has gone inside it (see keptWash). So a
 	// picked town breathes at every zoom out to the whole country, and a comarca picked while
 	// the map is drawing municipalities has nothing painted to breathe.
-	// And never the town a fight is staged on — that one is being looked at rather than
-	// chosen, and its 80% wash is the whole of what the spotlight is.
 	function buildPulse(
 		picked: { tier: RegionType; key: string } | null,
 		colors: ByRegion<RegionColor>,
-		imaged: number,
-		spotlit: string | null
+		imaged: number
 	): { url: string; key: string; opacity: number } | null {
-		if (!picked || spotlit) return null;
+		if (!picked) return null;
 		if (tierRank[picked.tier] !== imaged && !keptWash(picked.tier, imaged)) return null;
 		const url = tierLayerUrls.get(tierRank[picked.tier]);
 		// The same fallback the paint takes: where a territory holds a single province, the
@@ -610,7 +600,7 @@
 		return { url, key: picked.key, opacity: PICKED_WASH };
 	}
 
-	$: pulse = buildPulse(pickedFeature, regionColors, hiddenRank, spotlitId);
+	$: pulse = buildPulse(pickedFeature, regionColors, hiddenRank);
 
 	// One tier's paint: a solid white line of this tier's weight, plus — on the tier
 	// the map is imaging — a wash of the region's own colour across the shape.
@@ -635,25 +625,22 @@
 	// and the map draws it over the imaged tier's own wash rather than under it (see the pulse
 	// in WorldMap), a fifth of an alpha beneath a half being a shape saying nothing.
 	//
-	// The spotlit town is the one exception to both halves of that, and for one reason: it is
-	// the only shape on the map (see `spotlitId`). It washes whatever tier the map thinks it
-	// is imaging, since the map has been taken to it and there is nothing else left drawn to
-	// bury; and it washes at 80% rather than at the 20% a picked shape reads the satellite
-	// through, since it stands on black and is the whole of what is being looked at.
+	// A fight used to make one town the exception to both halves of that — the only shape left
+	// on the map, washing whatever tier was imaged and washing at 80% because it stood on black.
+	// The fight is a page of its own now and this page is not behind it, so there is no spotlit
+	// town here to make an exception of (see the fight section further down).
 	function tierStyle(
 		tier: RegionType,
 		colors: ByRegion<RegionColor>,
 		imaged: number,
-		picked: { tier: RegionType; key: string } | null,
-		spotlit: string | null
+		picked: { tier: RegionType; key: string } | null
 	) {
 		return (feature?: GeoJSON.Feature) => {
 			const color = featureValue(tier, feature, colors);
 			const key = featureKey(tier, feature);
-			const isSpotlit = spotlit != null && tier === 'Municipality' && key === spotlit;
 			const isPicked = picked?.tier === tier && picked.key === key;
 			const washes =
-				color != null && (isSpotlit || tierRank[tier] === imaged || (isPicked && keptWash(tier, imaged)));
+				color != null && (tierRank[tier] === imaged || (isPicked && keptWash(tier, imaged)));
 			return {
 				color: lineColor,
 				weight: tierWeight[tier],
@@ -665,7 +652,7 @@
 				// it has no click to catch, and a fill it does not need would bury the tiers under it.
 				fill: washes || tier === 'Municipality',
 				fillColor: washes ? REGION_COLOR_CSS[color!] : lineColor,
-				fillOpacity: washes ? (isSpotlit ? 0.8 : isPicked ? PICKED_WASH : 0.5) : 0
+				fillOpacity: washes ? (isPicked ? PICKED_WASH : 0.5) : 0
 			};
 		};
 	}
@@ -700,22 +687,22 @@
 	$: overlays = [
 		{
 			url: municipalityLayer,
-			style: tierStyle('Municipality', regionColors, hiddenRank, pickedFeature, spotlitId),
+			style: tierStyle('Municipality', regionColors, hiddenRank, pickedFeature),
 			onClick: openFeature
 		},
 		{
 			url: '/data/geo/comarques.json',
-			style: tierStyle('Comarca', regionColors, hiddenRank, pickedFeature, spotlitId),
+			style: tierStyle('Comarca', regionColors, hiddenRank, pickedFeature),
 			interactive: false
 		},
 		{
 			url: '/data/geo/provincies.json',
-			style: tierStyle('Province', regionColors, hiddenRank, pickedFeature, spotlitId),
+			style: tierStyle('Province', regionColors, hiddenRank, pickedFeature),
 			interactive: false
 		},
 		{
 			url: territoryLines,
-			style: tierStyle('Territory', regionColors, hiddenRank, pickedFeature, spotlitId),
+			style: tierStyle('Territory', regionColors, hiddenRank, pickedFeature),
 			interactive: false
 		}
 	] satisfies MapOverlay[];
@@ -779,17 +766,11 @@
 
 	// The grouping line for the tier on screen: the outline of every run of neighbouring
 	// shapes that fly the same show.
-	//
-	// Nothing while a fight is staged, for the reason every other line goes then (see
-	// hiddenLineUrls): the spotlight is one town on black, and a line drawn round the
-	// group it belongs to would be reaching out across a map that has been put away.
 	function showGroups(
 		rank: number,
 		geometry: ReadonlyMap<string, GeoJSON.FeatureCollection>,
-		shows: ByRegion<number>,
-		spotlit: string | null
+		shows: ByRegion<number>
 	): Grouping {
-		if (spotlit) return NO_GROUPING;
 		const url = tierLayerUrls.get(rank);
 		const collection = url ? geometry.get(url) : undefined;
 		if (!collection) return NO_GROUPING;
@@ -805,7 +786,7 @@
 	// for nothing every time anything on this page moved.
 	const NO_GROUPING: Grouping = { chains: [], runs: [] };
 
-	$: grouping = showGroups(hiddenRank, tierGeometry, regionShows, spotlitId);
+	$: grouping = showGroups(hiddenRank, tierGeometry, regionShows);
 
 	// Drawn a little heavier than the borders it runs along, at that tier's own weight —
 	// where a group ends is a border of the level too, and the pink has to read as the
@@ -1802,85 +1783,20 @@
 	// here is the only thing this line was ever really about: whether there is a side to draw.
 	$: playerBlockShown = ready && (playerTeamLineup.length > 0 || !!$profile || signedOut);
 
-	// The open combat modal: the challenged town's sitting team (as synthetic spawns)
-	// plus everything the fight has to be reported against — the town's id and the
-	// turnover generation it was on — all frozen at click time. Null when the modal is
-	// closed. The player's own team is the other side, fielded by CombatArena —
-	// combat happens right here over the map, never navigating away.
-	let fightSpawns: CharacterSpawn[] = [];
-	let fightLocationId: string | null = null;
-	let fightTurnover = 0;
-	let fightOpen = false;
-	// True while the arena is handing a finished fight to the server. Bound out of it,
-	// because it is the one thing the sheet holding it cannot know for itself and the one
-	// moment the sheet must not let go of it: the report is what ends the battle.
-	let fightReporting = false;
-
-	// --- The town a fight is staged on, alone on the map ---------------------------
-	// The arena is the one full view that is ABOUT a place: the roster, the badges, the
-	// leaderboard and the boosters are pages laid over the map, and a fight is an event on a
-	// town — which is faintly through the foot of the sheet, where the page grades down to nine
-	// tenths, so what is under there has to be that town and nothing else. So
-	// while it is up, the map is the one town — brought to the middle of the canvas at the
-	// zoom it stands whole at, washed at 80% instead of the 20% a picked town reads the
-	// satellite through, and everything else covered in black with no border left anywhere
-	// (see `spotlight` in WorldMap, tierStyle and hiddenLineUrls).
+	// --- The town a fight is staged on -------------------------------------------------
+	// It used to be alone on the map. The arena was the one full view that is ABOUT a place —
+	// the roster, the badges, the leaderboard and the boosters are pages laid over the map, and
+	// a fight is an event on a town, which was faintly through the foot of the sheet where the
+	// page grades down to nine tenths — so while a fight was up the map was that one town:
+	// brought to the middle of the canvas at the zoom it stands whole at, washed at 80% instead
+	// of the 20% a picked town reads the satellite through, and everything else covered in
+	// black with no border left anywhere. That was the spotlight, and it reached into four
+	// things here (tierStyle, buildPulse, showGroups, hiddenLineUrls) and one prop of WorldMap.
 	//
-	// It is keyed off the fight and off nothing else — never off "a sheet is up", which is not
-	// something this page knows any more (see CHROME_BLUR and FullScreenModal). A modal changes
-	// nothing behind it; a *fight* changes the map, because a fight is about a town. That is the
-	// whole distinction, and it is why this is the one thing left on the page that a full view
-	// coincides with: the arena is raised by the same click that stages the battle, and it is
-	// the battle the map is answering.
-	//
-	// The town is the fight's own and never the open region: a battle resumed on the next
-	// visit puts the reader back in front of a fight without the map having opened anything
-	// (see resumeBattle), and it is that town the arena is about.
-	let spotlitId: string | null = null;
-	let spotlightExit: ReturnType<typeof setTimeout> | null = null;
-
-	// How long the arena takes to leave — FullScreenModal's own blur-out, 250ms. Written here as
-	// well because a page cannot ask a sheet how long it takes to go; keep the two in step.
-	const SHEET_EXIT = 250;
-
-	/**
-	 * Raise the spotlight with the fight, and lower it once the arena has finished leaving.
-	 *
-	 * The delay on the way out is the coordination, not a pause: a spotlight lowered the moment
-	 * Close was pressed would have the black clearing and the town letting go of its wash while
-	 * the arena was still blurring out over the top of it — the map putting itself back together
-	 * in full view of somebody still looking at the sheet. Held for that quarter second, the
-	 * arena goes, and what is behind it is the map exactly as the fight found it.
-	 *
-	 * On the way in there is nothing to hold: raising the sheet and raising the spotlight are
-	 * the same tick.
-	 */
-	function holdSpotlight(open: boolean, townId: string | null): void {
-		if (spotlightExit) {
-			clearTimeout(spotlightExit);
-			spotlightExit = null;
-		}
-		if (open) {
-			spotlitId = townId;
-			return;
-		}
-		if (spotlitId == null) return;
-		spotlightExit = setTimeout(() => {
-			spotlitId = null;
-			spotlightExit = null;
-		}, SHEET_EXIT);
-	}
-
-	$: holdSpotlight(fightOpen, fightLocationId);
-
-	// That town as the shape the map draws it with — the polygon the framing fits and the
-	// mask is cut around. Null until the geometry has landed, which leaves the map as it is
-	// rather than blacking it out around nothing.
-	$: spotlight =
-		spotlitId && municipalities
-			? (municipalities.features.find((feature) => String(feature.properties?.id) === spotlitId)
-					?.geometry ?? null)
-			: null;
+	// The fight has an address of its own now, so there is no map behind it to light: going to
+	// the arena leaves this page altogether. The spotlight has gone with the sheet — WorldMap
+	// still knows how to draw one, nothing on this page asks it to — and every reading here is
+	// back to the one answer it had before a fight could change it.
 
 	// True while the day's challenge is being claimed off the server, so a double
 	// click can't fire two `start_battle` calls (the second of which the server
@@ -1973,10 +1889,7 @@
 			if (openRegion !== townId) return;
 		}
 
-		fightSpawns = ogTeamSpawns(rivals, townId);
-		fightLocationId = townId;
-		fightTurnover = turnover;
-		fightOpen = true;
+		stageFight(ogTeamSpawns(rivals, townId), townId, turnover);
 	}
 
 	// Put the player back into the fight they are already in. The rival line-up was
@@ -1988,10 +1901,34 @@
 		if (!battle) return;
 		// The other door into the arena, warmed for the same reason as the one above.
 		void loadBoardEngine();
-		fightSpawns = ogTeamSpawns(battle.rivals, battle.locationId);
-		fightLocationId = battle.locationId;
-		fightTurnover = battle.turnover;
-		fightOpen = true;
+		stageFight(ogTeamSpawns(battle.rivals, battle.locationId), battle.locationId, battle.turnover);
+	}
+
+	/**
+	 * Hand the fight over to the arena and go there.
+	 *
+	 * Both doors into a fight end here, and this is the whole of what the two pages share: the
+	 * line-up being fought and the two things that key it, plus the town's own plate. The plate
+	 * is read *now*, off this page — the region tree, the sieges, the holders and the show
+	 * glyphs are all the map's, none of them are the arena's, and a card assembled a second
+	 * time over there could say something the map is not saying (see buildFightPlate).
+	 *
+	 * It is a snapshot and stays one: what a town is called, what it flies and who is sitting
+	 * on it are settled when the fight is staged, and a fight does not last long enough for
+	 * that to go stale. Where it used to be `$: fightPlate`, kept live under a sheet that had
+	 * this page still mounted behind it.
+	 */
+	function stageFight(
+		spawns: CharacterSpawn[],
+		locationId: string | null,
+		turnover: number
+	): void {
+		void openCombat({
+			spawns,
+			locationId,
+			turnover,
+			plate: buildFightPlate(locationId, regionNodes, regionSieges, holders, $showGlyphs)
+		});
 	}
 
 	// Per-municipality chain of region tiers, read by buildMarkers/focusBounds to
@@ -1999,8 +1936,7 @@
 	$: fillIndex = buildFillIndex(regionTree);
 
 	// The outermost outline of the lot — the one line overlay the tier rule never hides
-	// (rank 0), and so the one that has to be named where every line is to go (see the
-	// spotlight below).
+	// (rank 0), which is why it is not listed among the tiers that can be.
 	const territoryLines = '/data/geo/territoris.json';
 
 	// The town shapes, named because three things want the same file: the layer they are
@@ -2056,15 +1992,12 @@
 	// screen (and everything coarser) keeps its borders — the finer divisions inside
 	// would just clutter the pinned regions.
 	//
-	// A spotlit town takes every line off the map instead, its own included (see `spotlitId`).
-	// The black already covers every border outside it, and the one border left inside it is
-	// the town's own — a white line drawn along the edge of the only shape there is, which is
-	// a second statement of what the black is already saying. What is left is the wash on
-	// nothing.
+	// A staged fight used to take every line off the map, its own included, the spotlight
+	// having covered every border outside the town and the one left inside it being a line
+	// along the edge of the only shape there was. A fight is elsewhere now, so this is the
+	// zoom's answer and nothing else's.
 	$: hiddenLineUrls = new Set(
-		spotlitId
-			? [territoryLines, ...lineTiers.map(([url]) => url)]
-			: lineTiers.filter(([, rank]) => rank > hiddenRank).map(([url]) => url)
+		lineTiers.filter(([, rank]) => rank > hiddenRank).map(([url]) => url)
 	);
 
 	// The frontier of the WHOLE forest at a given depth: every node reached at
@@ -2922,7 +2855,9 @@
 		};
 	}
 
-	$: fightPlate = buildFightPlate(fightLocationId, regionNodes, regionSieges, holders, $showGlyphs);
+	// Called once, when the fight is staged (see stageFight), rather than kept live: the arena
+	// is not on this page any more, so there is no card standing over a board this page is
+	// behind — what it is handed is what the town was when the player walked into the fight.
 
 	// A pin's siege standing on its own: the counter this region carries, and nothing to
 	// press. Null where there is no counter to draw — a region with no towns under it, and
@@ -3171,9 +3106,10 @@
 	// tabs over the terrain, the side and the account, and every pin and box on the map with them.
 	// That is gone entire, and so is the store that drove it: a sheet covers the viewport, so
 	// there was nothing behind it to be read sharply in the first place, and the price was steep —
-	// three rows of the page moving, WorldMap's own panes moving, and the arena's spotlight held
-	// on a timer to keep in step with all of it. A modal now blurs in and blurs out and touches
-	// nothing outside itself (see FullScreenModal).
+	// three rows of the page moving, WorldMap's own panes moving, and the fight's own spotlight
+	// held on a timer to keep in step with all of it (that spotlight has since gone with the
+	// fight, which is a page of its own now). A modal blurs in and blurs out and touches nothing
+	// outside itself (see FullScreenModal).
 	const CHROME_BLUR = { amount: 8, duration: 250 };
 
 	// Nothing about the map has to be measured any more. The furniture that used to be positioned
@@ -3484,7 +3420,6 @@
 							{focusBounds}
 							{zoomBounds}
 							{zoomStops}
-							{spotlight}
 							bind:currentZoom
 							bind:activeLevel
 							bind:currentCenter
@@ -4363,75 +4298,25 @@
 	<CharacterClaimPanel {seededShowById} bind:packs={claimPacks} bind:claimError />
 </div>
 
-<!-- Challenge → the board's combat arena, on the same full-view sheet the roster, the
-	badges, the leaderboard and the boosters are drawn on, so a fight for a town plays out
-	without ever navigating away. This is the only place combat is mounted — there is no
-	standalone combat route any more. It used to be a fixed panel of its own over a 30%-white
-	wash, which was a second kind of full-view surface for no reason other than that combat
-	came later: FullScreenModal is the one this game has, and it brings the blur in and out, the
-	title bar, the ✕ and Escape with it.
-	CombatArena fields the team the battle is being fought with against the line-up it
-	was opened against, and handles all its own gating. Only the town rides along, to
-	key and label the fight: which town a battle is over and which generation of its
-	team it is against are the server's record, kept on the battle itself, so the fight
-	that is reported is the fight that was opened.
-	This sheet wears the page every other full view wears — base-100 at full strength at the top,
-	graded to nine tenths at the foot — as the booster window does. It asked for no page at all
-	for a while, the reasoning being that a fight is an event on a town the map is still showing
-	rather than a page laid over it, and what that bought was a board read off live terrain whose
-	ground moved with wherever the map happened to be scrolled to. The grade already says the
-	thing the transparency was for: the town is faintly there under the foot of the fight. What
-	clears the country behind it is the spotlight, which belongs to the fight and not to this
-	sheet (see holdSpotlight): the sheet itself does nothing to the map at all, as none of them do.
-	The arena's own fills stay as they are — the canvas is opaque and carries its own border, and
-	every word it says is on a card with its own base-100 (the result panel, the sign-in and
-	no-team cards) — since a card that letters something is a card wherever it stands.
-	The sheet's own way out is held shut while a finished fight is on its way to the server:
-	reporting is what ends the battle, so a player let out before it lands would walk away
-	from a fight the server still has open. That is the one thing the sheet cannot know for
-	itself, hence the binding.
-	Keyed so each new challenge remounts a clean fight. -->
-{#if fightOpen}
-	<!-- Bare: no title bar and no padding, so the sheet is the viewport and the board has all
-		of it. A row naming it "Combat" says nothing the board does not, and a margin round the
-		board is scale taken off it — the canvas is fitted to the box it is given, so every pixel
-		the sheet keeps for itself is a smaller fight. The arena carries its own way out — the
-		Close under the result, which is the one that waits on the fight reaching the server —
-		and Escape is bound to the sheet either way, `closeDisabled` and all. The title stays as
-		the sheet's name to a screen reader.
-		Nothing between the sheet and the arena, either: the arena fills it and centres the
-		canvas itself, and the canvas is capped to the viewport on both axes, so there is
-		nothing to scroll and no box to scroll it in. -->
-	<FullScreenModal
-		title="Combat"
-		bare
-		closeLabel="Close combat"
-		closeDisabled={fightReporting}
-		on:close={onFightClosed}
-	>
-		<!-- Keyed on the town and the generation as well as the line-up: challenging a
-			different town whose sitting team happens to field the same characters is
-			still a different fight, and must remount rather than reuse the last one. -->
-		{#key `${fightLocationId}:${fightTurnover}:${fightSpawns.map((spawn) => spawn.characterId).join(',')}`}
-			<CombatArena
-				ogTeam={fightSpawns}
-				ogLocationId={fightLocationId}
-				location={fightPlate}
-				bind:reporting={fightReporting}
-				on:territory={(event) => onTerritory(event.detail)}
-				on:close={onFightClosed}
-			/>
-		{/key}
-	</FullScreenModal>
-{/if}
+<!-- Combat is not drawn here. Challenge stages the fight and goes to `/combat`, which is the
+	arena's own page (see stageFight and $services/combat) — every other full view in this game
+	is a sheet raised over this page, and the fight is the one that is not.
+	It was a modal here for a long while, and before that a fixed panel of its own over a
+	30%-white wash. What took it out is that a fight is the whole of what the player is doing:
+	the sheet covered the viewport, so the map behind it was a Leaflet canvas nobody could see,
+	kept mounted and kept in step (the spotlight, the blurs, a timer to coordinate the two) for
+	the sake of a town faintly showing through the foot of a gradient. A fight has an address
+	now, so it can be linked to, reloaded into, and left by going back to the map — and this
+	page is not standing behind it doing anything at all.
+	What used to be raised and put away is a navigation each way, and the two things this page
+	still owes the arena are handed over with it: the frozen line-up and the town's own plate.
+	Everything a settled fight changes here is re-read by this page being walked back onto. -->
 
-<!-- The roster, over the map. Mounted only while it is open — it builds a card canvas
-	of its own, and every mount is a fresh WebGL context the browser hands out a limited
-	number of. Opened from the Roster button on the row above the panel's card grid, beside
-	Profile, and from the arena's "no active team" card, both through `rosterModalOpen`. -->
-{#if $rosterModalOpen}
-	<RosterModal />
-{/if}
+<!-- The roster is not here either: it went out to the layout when the fight left this page,
+	because the arena's "no active team" card is one of the two things that raise it and the
+	arena is no longer standing over this page to raise it with (see +layout.svelte). It is
+	still opened from the Roster button on the row above the panel's card grid, through the
+	same `rosterModalOpen`. -->
 
 <!-- The album, on the same sheet and over the map like the roster. Mounted only while it is
 	open, which is what keeps a cast of forty-odd sprites off every other page: the show
