@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { get } from 'svelte/store';
-import {
-	CombatController,
-	type CombatState,
-	type FighterSeed
-} from '$services/combat.controller';
+import { CombatController, type CombatState, type FighterSeed } from '$services/combat.controller';
 import type { CombatColor } from '$types/character-definition.type';
-import { narrationPlaceholders, type CombatNarrationCue } from '$types/combat-narration.type';
+import {
+	narrationPlaceholders,
+	pickNarrationLine,
+	type CombatNarrationCue
+} from '$types/combat-narration.type';
 
 /**
  * What the fight *says* while it plays a turn out: **one sentence per encounter**.
@@ -62,7 +62,9 @@ function silentBoard() {
 function record(controller: CombatController): CombatNarrationCue[] {
 	const said: CombatNarrationCue[] = [];
 	controller.subscribe((state: CombatState) => {
-		if (state.cue && state.cue.seq !== said[said.length - 1]?.seq) said.push(state.cue);
+		// By identity: a cue is a fresh object per announcement, and its `seq` counts that
+		// event's own cues, so two different events in a row can both be somebody's first.
+		if (state.cue && state.cue !== said[said.length - 1]) said.push(state.cue);
 	});
 	return said;
 }
@@ -280,10 +282,46 @@ describe('what the fight says while it plays a turn out', () => {
 		// Every cue hands over exactly the names its own event's lines may write in, and
 		// every one of them is a fighter's name — nothing here is a sentence.
 		for (const cue of said) {
-			expect(Object.keys(cue.values).sort()).toEqual(
-				[...narrationPlaceholders(cue.event)].sort()
-			);
+			expect(Object.keys(cue.values).sort()).toEqual([...narrationPlaceholders(cue.event)].sort());
 			expect(cue.seq).toBeGreaterThan(0);
 		}
+	});
+
+	it('counts each event’s own cues, so a fight does not repeat itself', async () => {
+		// A stand-off that goes nowhere: the player covers every turn, and the rival loads,
+		// fires into the guard, loads again. Two events, one row, over and over — which is
+		// the fight that used to say the same sentence half a dozen times.
+		const controller = new CombatController([
+			seed('r0', 'error', 'blue'),
+			seed('p0', 'info', 'blue')
+		]);
+		controller.attachBoard(silentBoard());
+		const said = record(controller);
+		for (let turn = 0; turn < 6; turn++) {
+			controller.setAction('p0', 'defend');
+			controller.commit();
+			await vi.runAllTimersAsync();
+		}
+
+		expect(events(said)).toEqual([
+			'loadAgainstCover',
+			'blocked',
+			'loadAgainstCover',
+			'blocked',
+			'loadAgainstCover',
+			'blocked'
+		]);
+		// Counted per event, not over the fight: each is on its own third announcement, which
+		// is what the deal reads to know it has been through that event's lines once.
+		expect(said.map((cue) => cue.seq)).toEqual([1, 1, 2, 2, 3, 3]);
+
+		// And with three ways of saying each, the fight says all three before it says any of
+		// them twice — the whole point of dealing the line rather than rolling it.
+		const collection = {
+			lines: { loadAgainstCover: ['un', 'dos', 'tres'], blocked: ['a', 'be', 'ce'] }
+		};
+		const words = said.map((cue) => pickNarrationLine(collection, cue));
+		expect(new Set(words.filter((_, index) => index % 2 === 0)).size).toBe(3);
+		expect(new Set(words.filter((_, index) => index % 2 === 1)).size).toBe(3);
 	});
 });

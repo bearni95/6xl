@@ -443,10 +443,14 @@ export class CombatController {
 	private log: string[] = [];
 	/** The encounter being played out, in words — see {@link CombatState.cue}. */
 	private cue: CombatNarrationCue | null = null;
-	/** Encounters announced so far this fight. It is what seeds which of an event's
-	 * authored lines is picked, so two identical blows are not narrated in identical
-	 * words. */
-	private cues = 0;
+	/** How many times each event has been announced this fight. It is the place in that
+	 * event's pile of authored lines, which is dealt rather than rolled — so a phrase is
+	 * not said again until every other way of saying that same thing has been said. */
+	private readonly cues = new Map<CombatNarrationEvent, number>();
+	/** Which fight this is, for the deal above: the line-up it is fought between, which
+	 * is the one thing about a fight that is settled before the first turn and outlives a
+	 * reload. Two fights shuffle differently; the same fight resumed shuffles the same. */
+	private readonly fight: string;
 	private outcome: CombatOutcome | null = null;
 	/** Which fighters are currently wearing an aura, so it is only redrawn when a
 	 * fighter's charges cross between empty and holding something. */
@@ -476,6 +480,7 @@ export class CombatController {
 	 * line-up is ignored and the fight simply starts (see {@link restore}).
 	 */
 	constructor(seed: FighterSeed[], resume: BattleBoardSnapshot | null = null) {
+		this.fight = seed.map((entry) => `${entry.side}:${entry.spawnId}`).join('|');
 		const slots = { error: 0, info: 0 };
 		this.fighters = seed.map((entry) => {
 			const slot = slots[entry.side]++;
@@ -1445,7 +1450,9 @@ export class CombatController {
 		status?: string
 	): void {
 		if (status !== undefined) this.status = status;
-		this.cue = { event, values, seq: ++this.cues };
+		const seq = (this.cues.get(event) ?? 0) + 1;
+		this.cues.set(event, seq);
+		this.cue = { event, values, seq, fight: this.fight };
 		this.emit();
 	}
 

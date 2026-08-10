@@ -151,17 +151,27 @@ export interface CombatNarrationCollection {
 
 /**
  * What the fight announced, as the fight announces it: which of the events it was, the
- * names it happened to, and a number that goes up with every cue.
+ * names it happened to, which fight it is, and how many times this fight has announced
+ * that same event.
  *
  * The count is what makes one cue different from the next: two identical blows in one
- * turn are two things that happened, and the line for the second is picked afresh (see
- * {@link pickNarrationLine}) rather than the same words simply staying on screen.
+ * fight are two things that happened, and the second is dealt the *next* of that event's
+ * authored lines rather than being handed the same words again (see
+ * {@link pickNarrationLine}). It is counted per event, because that is the only pile a
+ * line can be dealt off — a `hit` never takes a `blocked`'s sentence.
  */
 export interface CombatNarrationCue {
 	event: CombatNarrationEvent;
 	values: Partial<Record<NarrationPlaceholder, string>>;
-	/** 1-based, counted over the whole fight. */
+	/** 1-based, counted over this event's own announcements within this fight. */
 	seq: number;
+	/**
+	 * Which fight this is — any string, as long as it is the same one all fight and
+	 * different between fights, since it is what shuffles the pile. Two fights that
+	 * dealt in the same order would narrate the first blow of every one of them
+	 * identically.
+	 */
+	fight: string;
 }
 
 /** Whether `value` names one of the events the fight can announce. */
@@ -225,12 +235,55 @@ function hash(text: string): number {
 }
 
 /**
+ * An event's authored lines put in a shuffled order — the pile this fight deals that
+ * event off, for one round of it.
+ *
+ * Seeded, so the same fight always deals the same order however often it is asked, and
+ * shuffled afresh per round so a fight long enough to exhaust an event's lines does not
+ * simply repeat its first round back.
+ */
+function dealOrder(lines: string[], seed: string, round: number): string[] {
+	let order: string[] = [];
+	// Every round from the first, because each is only allowed to open on a line the one
+	// before it did not close on — so what the pile looks like at round N is a walk, not
+	// a lookup. A fight deals a handful of rounds at most.
+	for (let current = 0; current <= round; current++) {
+		const previous = order;
+		order = [...lines];
+		// An LCG walked once per swap, off the seed's hash: a Fisher–Yates that is a pure
+		// function of (fight, event, round) and nothing else, which is what makes the deal
+		// both stable and unrepeating.
+		let state = hash(`${seed}:${current}`);
+		for (let index = order.length - 1; index > 0; index--) {
+			state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+			// Off the top bits: the low ones of an LCG cycle far too short to shuffle with.
+			const swap = Math.floor((state / 0x100000000) * (index + 1));
+			[order[index], order[swap]] = [order[swap], order[index]];
+		}
+		// A round that opened on the line the round before it closed on would say the same
+		// thing twice running — the one repeat the dealing exists to prevent — so the pile
+		// is cut by one when that comes up.
+		if (previous.length > 1 && order[0] === previous[previous.length - 1]) {
+			[order[0], order[1]] = [order[1], order[0]];
+		}
+	}
+	return order;
+}
+
+/**
  * The words for one cue: one of the authored lines for its event, filled in.
  *
- * Which of them is **seeded** rather than rolled — off the cue's own count and the names
- * in it — so the same cue always says the same thing. A line re-rolled on every render
- * would flicker through the variants while the blow it describes was still being thrown,
- * and a fight replayed off the same board would narrate itself differently each time.
+ * The line is **dealt, not rolled**. Every event's lines are a pile, shuffled off the
+ * fight and the event, and each cue takes the next one — so a phrase is not said twice in
+ * a fight until every other way of saying that same thing has been said, and never twice
+ * running even across the shuffle that follows. Rolling one at random was the same
+ * sentence coming up over and over inside one battle, which reads as the game having only
+ * one thing to say about a blow when the author wrote five.
+ *
+ * It stays a pure function of the cue, which is the property everything here rests on: the
+ * same cue always says the same thing, so a line does not flicker through the variants
+ * while the blow it describes is still being thrown, and a fight replayed off the same
+ * board narrates itself the same way.
  *
  * Null when the event has nothing authored for it, which is how a collection that has not
  * loaded (or an event nobody has written a line for) stays quiet instead of guessing.
@@ -242,6 +295,9 @@ export function pickNarrationLine(
 	if (!collection || !cue) return null;
 	const lines = collection.lines?.[cue.event] ?? [];
 	if (lines.length === 0) return null;
-	const seed = hash(`${cue.event}:${cue.seq}:${Object.values(cue.values).join('|')}`);
-	return fillNarration(lines[seed % lines.length], cue.values);
+	// The cue counts from one; anything below that is read as the first of the fight.
+	const dealt = Math.max(0, cue.seq - 1);
+	const round = Math.floor(dealt / lines.length);
+	const place = dealt % lines.length;
+	return fillNarration(dealOrder(lines, `${cue.fight}:${cue.event}`, round)[place], cue.values);
 }

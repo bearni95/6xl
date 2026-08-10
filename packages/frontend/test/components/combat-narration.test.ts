@@ -25,7 +25,9 @@ vi.mock('$services/narration.service', () => ({
 describe('the narration over the panel', () => {
 	it('words the cue it is handed', () => {
 		const { getByText } = render(CombatNarration, {
-			props: { cue: { event: 'hit', values: { attacker: 'Goku', target: 'Bulma' }, seq: 1 } }
+			props: {
+				cue: { event: 'hit', values: { attacker: 'Goku', target: 'Bulma' }, seq: 1, fight: 'p0|r0' }
+			}
 		});
 		expect(getByText('El cop de Goku entra: Bulma cau.')).toBeTruthy();
 	});
@@ -39,14 +41,28 @@ describe('the narration over the panel', () => {
 		// A collection is allowed to be silent about one — what must never happen is a plate
 		// coming up with a placeholder, or an empty box, in the middle of a fight.
 		const { container } = render(CombatNarration, {
-			props: { cue: { event: 'exchange', values: { attacker: 'Goku', target: 'Bulma' }, seq: 2 } }
+			props: {
+				cue: {
+					event: 'exchange',
+					values: { attacker: 'Goku', target: 'Bulma' },
+					seq: 2,
+					fight: 'p0|r0'
+				}
+			}
 		});
 		expect(container.textContent?.trim()).toBe('');
 	});
 
 	it('is read out as it changes, so a fight can be followed by ear', () => {
 		const { container } = render(CombatNarration, {
-			props: { cue: { event: 'blocked', values: { attacker: 'Goku', target: 'Bulma' }, seq: 3 } }
+			props: {
+				cue: {
+					event: 'blocked',
+					values: { attacker: 'Goku', target: 'Bulma' },
+					seq: 3,
+					fight: 'p0|r0'
+				}
+			}
 		});
 		const live = container.querySelector('[aria-live="polite"]');
 		expect(live).toBeTruthy();
