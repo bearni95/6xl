@@ -166,6 +166,16 @@ interchangeable:
   path would have to come out first). Attribution for the set is
   `public/icons/license.txt`; keep it with the folders.
 
+**Ground tiles.** Artwork the combat board lays its cells with, vendored under
+`public/tiles/<artist>/` with the set's credit in `public/tiles/license.txt` — the same
+arrangement as the icons, and for the same reason: it is somebody's work, kept whole and
+unmodified beside the note saying whose. Today that is one sheet of 16px ground tiles, of
+which the board takes the top-left one (plain grass) for the red half's cells. It is cut
+out of the sheet as it loads (`createImageBitmap`'s own crop) rather than pointed at
+inside it, because a tile has to *wrap* to be tiled and a sub-rectangle of a larger bitmap
+has no edges of its own to wrap at. See `mugen-board.ts`'s ground section for how much of
+a cell one tile covers.
+
 Inlining a canvas glyph *untouched* would put white on white, which is why nothing
 reaches the document except through `inlineIconMarkup`. The admin's glyph picker is the
 one place a glyph is shown outside both a canvas and that rewrite — it stays `<img>`s by

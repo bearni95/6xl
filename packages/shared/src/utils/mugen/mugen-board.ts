@@ -4,9 +4,11 @@ import {
 	Container,
 	Graphics,
 	GraphicsContext,
+	ImageSource,
 	Sprite,
 	Text,
-	Texture
+	Texture,
+	TilingSprite
 } from 'pixi.js';
 import { destroyPixiApp } from '../pixi/release-context';
 import { combatColorHex, GRID_LINE } from '../color/combat-color';
@@ -178,6 +180,34 @@ const DEFAULTS = {
 // canvas's callouts, guards and sparks are tinted with, and is read off the one table
 // rather than written out again beside it: the lattice is not a side's marking, it is the
 // board itself, so it is one colour all the way across and that colour is combat's own red.
+
+// --- The ground the red half stands on ---------------------------------------------
+//
+// The red half's cells are laid with grass instead of being left as bare ruled squares:
+// one small tile off the sheet vendored in `@3xl/assets` (`public/tiles/`), repeated
+// across each of those cells. Only the sheet's **top-left** tile is taken — the plain
+// grass, the one square on a page of flowers, sand, water and shrubs that says nothing
+// but ground — and it is cut out of the sheet as it loads rather than pointed at inside
+// it: a sub-rectangle of a larger bitmap has no edges of its own to wrap at, and a tile
+// that cannot wrap is one tile with an empty cell around it.
+
+/** The vendored sheet the ground tile is cut from. */
+const GROUND_TILE_SHEET = '/assets/tiles/j-treecko252/assorted-ground.png';
+
+/** The sheet's pitch: it is ruled into squares this size from its top-left corner. */
+const GROUND_TILE_PX = 16;
+
+/**
+ * How many of those tiles a cell is laid with, across and down — which is what decides
+ * how large the artwork's own pixels are drawn, the cell being a fixed size.
+ *
+ * A whole number, so every cell's grass begins on a tile corner and a column of them reads
+ * as one field rather than as squares of turf laid side by side.
+ */
+const GROUND_TILES_PER_CELL = 4;
+
+/** Below the ruled lattice (0), and so below everything that stands on the board. */
+const GROUND_Z = -1;
 
 /**
  * The viewport the canvas is sized against, across and down.
@@ -828,6 +858,10 @@ export class MugenBoard {
 	private cellPaint = new Map<string, Graphics>();
 	/** Loaded aura frame textures, keyed by aura color name. */
 	private auraTextures = new Map<string, Texture[]>();
+	/** The single grass tile the red half is laid with, cut from the sheet on the way in
+	 * ({@link loadGround}). Held so it can be freed with the board: it is built here rather
+	 * than fetched through `Assets`, so nothing else is keeping it. */
+	private groundTexture: Texture | null = null;
 	private iconTextures = new Map<string, Texture>();
 	/**
 	 * A cycle's crown offset in the artwork's own pixels ({@link crownOffset}), keyed by
@@ -900,6 +934,9 @@ export class MugenBoard {
 		// each other, and were being taken one after the other for no reason beyond the
 		// order the lines were written in. Nothing here touches the app.
 		const standing = this.warmStanding(cast);
+		// And the ground with them, for the same reason and on the same terms: a file off
+		// the network, asked for before the context is built and taken in hand after it.
+		const ground = this.loadGround();
 
 		const app = new Application();
 		await app.init({
@@ -938,6 +975,12 @@ export class MugenBoard {
 		// Held back until the board is assembled — see the reveal at the end of this method.
 		app.canvas.style.visibility = 'hidden';
 		container.appendChild(app.canvas);
+
+		// The board is ruled once its ground is in hand, the grass being drawn with the
+		// cells rather than laid over them afterwards. Nothing is on screen to wait for it:
+		// the canvas is hidden until the whole board is standing either way.
+		this.groundTexture = await ground;
+		if (this.destroyed) return;
 
 		// One rectangular board: cells left of centre take the left leader's colour, right
 		// the right leader's, the shared centre column white.
@@ -1096,6 +1139,10 @@ export class MugenBoard {
 		// board built again builds its own.
 		this.sparkContext?.destroy();
 		this.sparkContext = null;
+		// The grass goes the same way, source and all: the tilings that drew it went with the
+		// stage, and this board cut the tile for itself out of the sheet.
+		this.groundTexture?.destroy(true);
+		this.groundTexture = null;
 		this.cellPaint.clear();
 		this.crownOffsets.clear();
 	}
@@ -1189,11 +1236,16 @@ export class MugenBoard {
 	 * {@link GRID_LINE}, so the lattice reads as one board rather than as two colours
 	 * meeting, and a cell's side is said by the ground inside it alone.
 	 *
-	 * The ground is drawn in nothing — alpha 0, so a half's colour is carried by what stands
-	 * on it rather than by a wash under it — and the lines are drawn: the cells are ruled
-	 * across the canvas and the fighters, the claimed cells' overlays, the guard rings and
-	 * the orders stand on a field that is there to be seen. The fill's alpha stays where the
-	 * line's was, which is how the ground comes back if it is ever wanted.
+	 * The colours themselves are drawn in nothing — alpha 0, so a half's colour is carried
+	 * by what stands on it rather than by a wash under it — and the lines are drawn: the
+	 * cells are ruled across the canvas and the fighters, the claimed cells' overlays, the
+	 * guard rings and the orders stand on a field that is there to be seen. The fill's alpha
+	 * stays where the line's was, which is how the colour comes back if it is ever wanted.
+	 *
+	 * The **red** half's cells are the ones with ground under them: each is laid with the
+	 * grass tile ({@link layGround}), drawn below the lattice so the ruling stays on top of
+	 * it. A board whose tile could not be fetched simply has none, and is the bare ruled
+	 * field it was before there was any.
 	 */
 	private drawBoard(leftColor: number, rightColor: number, centerColor: number): void {
 		if (!this.app) return;
@@ -1204,11 +1256,78 @@ export class MugenBoard {
 			const side = cellSide(q);
 			const color = side === 'red' ? leftColor : side === 'blue' ? rightColor : centerColor;
 
+			if (side === 'red') this.layGround(q, r);
+
 			graphics.poly(this.cellOutline(q, r));
 			graphics.fill({ color, alpha: 0 });
 			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 1 });
 		}
 		this.app.stage.addChild(graphics);
+	}
+
+	/**
+	 * Lay the grass over the cell at [q, r]: the tile repeated
+	 * {@link GROUND_TILES_PER_CELL} times across and down, filling the cell corner to
+	 * corner and no further.
+	 *
+	 * One tiling per cell rather than one sheet of grass under the whole half, because what
+	 * is being painted is cells — the ground stops exactly where the ruled square does, so a
+	 * cell nobody laid (the white column, the blue half) is bare board and reads as bare
+	 * board. The tile count being whole is what keeps that from showing: neighbouring cells
+	 * lay the same tiles in the same places, so the seam between two of them is a ruled line
+	 * over continuous grass rather than a break in it.
+	 */
+	private layGround(q: number, r: number): void {
+		if (!this.app || !this.groundTexture) return;
+		const [topLeft] = cellCorners(q, r);
+		const at = this.project(topLeft.x, topLeft.y);
+		const size = this.cellWidth();
+		const grass = new TilingSprite({ texture: this.groundTexture, width: size, height: size });
+		grass.position.set(at.x, at.y);
+		// The artwork's own pixels, blown up to the size a cell divided this many ways makes
+		// them. Square, like everything else on this board.
+		grass.tileScale.set(size / (GROUND_TILE_PX * GROUND_TILES_PER_CELL));
+		grass.zIndex = GROUND_Z;
+		this.app.stage.addChild(grass);
+	}
+
+	/**
+	 * Fetch the ground sheet and cut its top-left tile out as a texture of its own.
+	 *
+	 * `createImageBitmap` takes the crop rectangle itself, so the tile is the whole of the
+	 * bitmap that reaches the GPU and the rest of the sheet is never uploaded. That is what
+	 * lets the texture **wrap**: tiling samples past the edge of its texture, and an edge is
+	 * only an edge if the bitmap ends there. Sampled `nearest`, this being pixel art that is
+	 * then drawn several times its own size — the one place on this board where linear
+	 * filtering would turn artwork into a smear.
+	 *
+	 * Built by hand rather than through `Assets`, which is keyed on what it is given and
+	 * would hold a cache entry per board for a bitmap no other board can name. Nothing else
+	 * holds it, so the board frees it on the way out ({@link destroy}).
+	 *
+	 * Resolves to null if it cannot be had — a board with no grass on it, which is a board.
+	 */
+	private async loadGround(): Promise<Texture | null> {
+		try {
+			const response = await fetch(GROUND_TILE_SHEET);
+			if (!response.ok) return null;
+			const tile = await createImageBitmap(
+				await response.blob(),
+				0,
+				0,
+				GROUND_TILE_PX,
+				GROUND_TILE_PX
+			);
+			return new Texture({
+				source: new ImageSource({
+					resource: tile,
+					scaleMode: 'nearest',
+					addressMode: 'repeat'
+				})
+			});
+		} catch {
+			return null;
+		}
 	}
 
 	/**

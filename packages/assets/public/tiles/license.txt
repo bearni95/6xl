@@ -1,0 +1,5 @@
+Ground tiles, one sub-folder per artist — the same arrangement as ../icons.
+
+- j-treecko252, https://www.deviantart.com/j-treecko252
+  assorted-ground.png — "Assorted Ground Tiles" (deviation demrcnc), downloaded whole
+  and unmodified. A 256x480 sheet of 16x16 tiles; the board takes its top-left one.

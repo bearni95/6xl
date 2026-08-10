@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
-	"description": "Generated MUGEN sprite frames, manifests, auras, and game-icons.net + Noun Project UI icons. Written by @3xl/mugen, served by @3xl/frontend at /assets.",
+	"description": "Generated MUGEN sprite frames, manifests, auras, game-icons.net + Noun Project UI icons, and the combat board's ground tiles. Written by @3xl/mugen, served by @3xl/frontend at /assets.",
 	"files": [
 		"public"
 	],
