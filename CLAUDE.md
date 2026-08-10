@@ -169,13 +169,15 @@ interchangeable:
 **Ground tiles.** Artwork the combat board lays its cells with, vendored under
 `public/tiles/<artist>/` with the set's credit in `public/tiles/license.txt` — the same
 arrangement as the icons, and for the same reason: it is somebody's work, kept whole and
-unmodified beside the note saying whose. Today that is one sheet of 16px grass tiles, of
-which the board takes the first two of the left-hand column — the plain fill and the one
-with blades in it, the rest of the page being edges and tufts drawn to meet something that
-is not grass — and lays every cell of the field with them, nine squares to a cell,
-alternating like a checkerboard across the whole board. It is ground and not a marking, so
-both halves and the column between them stand on the same earth, and which cell is whose is
-said by the red lattice ruled over it. Each tile is cut out of the sheet as it loads
+unmodified beside the note saying whose. Today that is one sheet of 16px grass tiles, laid
+out as **blocks of three rows**, one green per block: the block's fills down its left-hand
+column and, beside them, a ring of edges and corners drawn to meet whatever the grass
+borders on. The board takes one block whole — the vivid green — so every tile on the field
+is the same grass: its three fills alternated over every cell, nine squares to a cell,
+and its upper and lower edges along the field's first and last rows. It is ground and not a
+marking, so both halves and the column between them stand on the same earth, and which cell
+is whose is said by the red lattice ruled over it. Each tile is cut out of the sheet as it
+loads
 (`createImageBitmap`'s own crop) rather than pointed at inside it: a magnified sample near
 the edge of a frame reaches past it, and inside a page of tiles what it reaches is the next
 tile. See `mugen-board.ts`'s ground section.

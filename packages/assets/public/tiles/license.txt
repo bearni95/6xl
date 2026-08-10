@@ -1,8 +1,9 @@
 Ground tiles the combat board lays its cells with.
 
-- grass-16x16.png — a 256x256 sheet of 16x16 tiles, dropped in whole and unmodified. The
-  board takes the first two of its left-hand column, the plain grass fills, and lays them
-  alternating. Author and licence unrecorded: fill them in here before the game ships,
+- grass-16x16.png — a 256x256 sheet of 16x16 tiles, dropped in whole and unmodified. It is
+  blocks of three rows, one green apiece; the board takes the vivid green one (rows 4-6)
+  and lays its three fills alternating, with its two grass edges along the top and bottom
+  of the field. Author and licence unrecorded: fill them in here before the game ships,
   the way ../icons/license.txt credits the sets it holds.
 
 Previously here, and no longer used by anything:

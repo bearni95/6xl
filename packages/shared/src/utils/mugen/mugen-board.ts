@@ -11,6 +11,17 @@ import {
 } from 'pixi.js';
 import { destroyPixiApp } from '../pixi/release-context';
 import { combatColorHex, GRID_LINE } from '../color/combat-color';
+import {
+	GROUND_BOTTOM_EDGE_TILE,
+	GROUND_EARTH_TILES,
+	GROUND_FILL_TILES,
+	GROUND_TILE_PX,
+	GROUND_TILE_SHEET,
+	GROUND_TILES_PER_CELL,
+	GROUND_TOP_EDGE_TILE,
+	groundTileAt,
+	type SheetTile
+} from './ground';
 import type { Manifest } from './mugen-player';
 import {
 	CHAR_HEIGHT_RATIO,
@@ -191,73 +202,14 @@ const DEFAULTS = {
 // --- The ground the fight is fought on ---------------------------------------------
 //
 // Every cell of the field is laid with grass instead of being left a bare ruled square:
-// one small tile off the sheet vendored in `@3xl/assets` (`public/tiles/`), repeated
-// across each of them. It is ground rather than a marking, so it is the same ground on
-// both halves and in the column between them — what a cell belongs to is said by the
-// lattice ruled over it and by what stands on it, and never by the earth.
+// small tiles off the sheet vendored in `@3xl/assets` (`public/tiles/`), which cell, edge
+// and earth all come out of. Which tiles those are and how the sheet is ruled is
+// `ground.ts` — facts about a picture, kept clear of the renderer so the document can lay
+// the same ground below the canvas without dragging Pixi in behind it.
 //
-// What is taken is the top of the sheet's **left-hand column**, which is where its plain
-// grass fills are — the rest of the page is edges, corners and tufts, tiles drawn to meet
-// something that is not grass, and this board has nothing for them to meet. The two are
-// laid alternating rather than one of them everywhere: they are the same green, one bare
-// and one with a few blades in it, so a board of them is grass that goes on rather than a
-// stamp repeated.
-
-/** The vendored sheet the ground tiles are cut from. */
-const GROUND_TILE_SHEET = '/assets/tiles/grass-16x16.png';
-
-/** The sheet's pitch: it is ruled into squares this size from its top-left corner. */
-const GROUND_TILE_PX = 16;
-
-/** A tile's place on the sheet, counted in tiles of {@link GROUND_TILE_PX} from its
- * top-left corner — which is how the sheet itself is read, and the only way any of these
- * are named. */
-interface SheetTile {
-	column: number;
-	row: number;
-}
-
-/**
- * The tiles the field is laid with, alternated over it in this order: the plain fill and
- * the one with blades in it, the top two of the left-hand column. The third down is a
- * flowered fill and the fourth changes palette — both grass, neither a thing to alternate
- * a plain fill with.
- */
-const GROUND_FILL_TILES: SheetTile[] = [
-	{ column: 0, row: 0 },
-	{ column: 0, row: 1 }
-];
-
-/**
- * The tiles the field's first and last rows of squares are drawn with instead: the
- * sheet's two grass edges, the upper one blades along the top with nothing above them and
- * the lower one its mirror, blades hanging off the bottom.
- *
- * They are boundary tiles — drawn to be laid where grass stops — so the field begins and
- * ends in a fringe rather than at a straight line nothing put there. Being boundaries, half
- * of each is not grass at all, and what shows through that half is **not** the same in both
- * places. The upper one has the sky row directly over it, so it is laid on a square of
- * {@link SKY_FILL} and its gaps are that same sky carried down to the blades. The lower one
- * has nothing over it and nothing under it: it is the last thing on the canvas, and its
- * gaps are left clear so what shows between those blades is the page the board is drawn on
- * — the canvas is transparent (`backgroundAlpha: 0`), so the board ends *into* whatever it
- * has been put on rather than onto a colour of its own that would have to be kept in step
- * with it.
- */
-const GROUND_TOP_EDGE_TILE: SheetTile = { column: 2, row: 2 };
-const GROUND_BOTTOM_EDGE_TILE: SheetTile = { column: 2, row: 0 };
-
-/**
- * How many of those tiles a cell is laid with, across and down — nine to a cell, three
- * each way. It is what decides how large the artwork's own pixels are drawn, the cell
- * being a fixed size, and it is a whole number so that every cell's grass begins on a tile
- * corner and the field reads as one ground rather than as squares of turf laid side by
- * side.
- *
- * It is also the subdivision the ground is *ruled* into ({@link ruleGround}): one tile per
- * bordered subcell, so the two can never say different things about where a tile ends.
- */
-const GROUND_TILES_PER_CELL = 3;
+// It is ground rather than a marking, so it is the same ground on both halves and in the
+// column between them: what a cell belongs to is said by the lattice ruled over it and by
+// what stands on it, and never by the earth.
 
 /**
  * The yellow the ground's own subdivision is ruled in — read off the same table the
@@ -318,19 +270,23 @@ const FIELD_BOTTOM_SQUARE_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL;
 /** Below the ruled lattice (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
 
-/** Below the grass itself: what the sky is filled at, so that the field's top row — whose
- * tile is blades with gaps between them — is laid *over* sky rather than over nothing. */
-const SKY_Z = -1.5;
+/** Below the grass itself: where whatever the grass is laid *on* is drawn — the sky the
+ * field's top fringe comes out of, and the earth its bottom fringe stops on. Both are under
+ * tiles that are blades with gaps between them, and neither may be drawn over its own
+ * fringe, so the ordering is a depth rather than the order things were added in. */
+const BACKING_Z = -1.5;
 
 /** Between the two: over the grass it rules, under the lattice that rules the cells. */
 const GROUND_LINE_Z = -0.5;
 
-/** The sheet's tiles as the board holds them: the fills it alternates over the field, and
- * the two fringes it finishes the top and the bottom of the field with. */
+/** The sheet's tiles as the board holds them: the fills it alternates over the field, the
+ * two fringes it finishes the top and the bottom of the field with, and the earths it lays
+ * behind the bottom one. */
 interface GroundTiles {
 	fills: Texture[];
 	topEdge: Texture | null;
 	bottomEdge: Texture | null;
+	earth: Texture[];
 }
 
 /** One of the squares a cell's ground is divided into, in screen px: a tile of grass and
@@ -1000,7 +956,7 @@ export class MugenBoard {
 	 * ({@link loadGround}) — empty if it could not be had. Held so they can be freed with
 	 * the board: they are built here rather than fetched through `Assets`, so nothing else
 	 * is keeping them. */
-	private groundTiles: GroundTiles = { fills: [], topEdge: null, bottomEdge: null };
+	private groundTiles: GroundTiles = { fills: [], topEdge: null, bottomEdge: null, earth: [] };
 	private iconTextures = new Map<string, Texture>();
 	/**
 	 * A cycle's crown offset in the artwork's own pixels ({@link crownOffset}), keyed by
@@ -1281,9 +1237,9 @@ export class MugenBoard {
 		this.sparkContext = null;
 		// The grass goes the same way, sources and all: the sprites that drew it went with the
 		// stage, and this board cut its tiles for itself out of the sheet.
-		const { fills, topEdge, bottomEdge } = this.groundTiles;
-		for (const tile of [...fills, topEdge, bottomEdge]) tile?.destroy(true);
-		this.groundTiles = { fills: [], topEdge: null, bottomEdge: null };
+		const { fills, topEdge, bottomEdge, earth } = this.groundTiles;
+		for (const tile of [...fills, ...earth, topEdge, bottomEdge]) tile?.destroy(true);
+		this.groundTiles = { fills: [], topEdge: null, bottomEdge: null, earth: [] };
 		this.cellPaint.clear();
 		this.crownOffsets.clear();
 	}
@@ -1429,7 +1385,7 @@ export class MugenBoard {
 			this.layGround(groundFill, apron);
 			this.ruleGround(groundLines, apron);
 		}
-		groundFill.zIndex = SKY_Z;
+		groundFill.zIndex = BACKING_Z;
 		groundLines.zIndex = GROUND_LINE_Z;
 		this.app.stage.addChild(groundFill);
 		this.app.stage.addChild(groundLines);
@@ -1486,27 +1442,26 @@ export class MugenBoard {
 	 * as long as the arithmetic does. Nine sprites is one answer. It costs nine quads a cell
 	 * — a hundred and eight on a board — which is nothing beside one MUGEN fighter.
 	 *
-	 * **Which** tile a square gets is its place on the board and nothing else: the tiles are
-	 * taken in turn along both axes, which with two of them lays them alternating like a
-	 * checkerboard, every square differing from the four it touches. Counted over the whole
-	 * field rather than per cell ({@link groundSquares}), so the alternation runs through
-	 * the cell borders instead of restarting at each. Nothing is drawn and nothing is
-	 * stored: the same board is the same field every time it is built, which is what a
-	 * pattern is and a scatter is not.
+	 * **Which** tile a square gets is its place on the board and nothing else
+	 * ({@link groundTileAt}), counted over the whole field rather than per cell
+	 * ({@link groundSquares}) so the alternation runs through the cell borders instead of
+	 * restarting at each — and so the ground the document lays on past the foot of the
+	 * canvas can carry the same pattern on by counting from the same corner.
 	 *
 	 * **The field's first and last rows of squares break that alternation** and take the
 	 * sheet's two grass edges along their whole width — those rows are where the grass
 	 * starts and where it stops, and those are the tiles the sheet draws for exactly that.
-	 * Both are blades with gaps between them, and only the top one is backed: its square is
-	 * filled sky first and the fringe laid over it, at a depth of its own below the grass
-	 * ({@link SKY_Z}) so the fill is behind the tile and not over it — the sky row is
-	 * directly above, and the blades have to come out of it. The bottom row is left clear
-	 * and shows the page through its gaps. The bottom row is also the apron and not a
-	 * cell's, which is what keeps every square a fighter stands over whole grass.
+	 * Both are blades with gaps between them, and each is laid on what the gaps ought to
+	 * show: the top one on a square of {@link SKY_FILL}, the sky row being directly above
+	 * it, and the bottom one on a square of the sheet's own earth
+	 * ({@link GROUND_EARTH_TILE}), so the grass is seen to stop and the bare ground under it
+	 * to carry on. Both backings go at {@link BACKING_Z}, behind the tile rather than over
+	 * it. The bottom row is also the apron and not a cell's, which is what keeps every
+	 * square a fighter stands over whole grass.
 	 */
 	private layGround(fill: Graphics, squares: GroundSquare[]): void {
 		if (!this.app) return;
-		const { fills, topEdge, bottomEdge } = this.groundTiles;
+		const { fills, topEdge, bottomEdge, earth } = this.groundTiles;
 		for (const square of squares) {
 			// Above the field: sky, and nothing laid on it.
 			if (square.row < FIELD_TOP_SQUARE_ROW) {
@@ -1516,27 +1471,32 @@ export class MugenBoard {
 			}
 			if (fills.length === 0) continue;
 			const atTop = square.row === FIELD_TOP_SQUARE_ROW;
-			const brink = atTop
-				? topEdge
-				: square.row === FIELD_BOTTOM_SQUARE_ROW
-					? bottomEdge
-					: null;
-			// The top fringe comes out of the sky above it and is laid on it; the bottom one
-			// is the end of the canvas and is laid on nothing.
+			const atBottom = square.row === FIELD_BOTTOM_SQUARE_ROW;
+			const brink = atTop ? topEdge : atBottom ? bottomEdge : null;
+			// What the fringe's gaps show: sky at the top of the field, earth at the foot of
+			// it. One is a colour and one is a tile, being what each of them is.
 			if (atTop && brink) {
 				fill.rect(square.x, square.y, square.width, square.height);
 				fill.fill({ color: SKY_FILL, alpha: 1 });
 			}
-			const tile = brink ?? fills[(square.column + square.row) % fills.length];
-			const grass = new Sprite(tile);
-			grass.position.set(square.x, square.y);
-			// The tile is 16px of artwork stretched over a ninth of a cell — sampled
-			// `nearest`, so what that magnifies is the artwork's own pixels.
-			grass.width = square.width;
-			grass.height = square.height;
-			grass.zIndex = GROUND_Z;
-			this.app.stage.addChild(grass);
+			if (atBottom && brink && earth.length > 0) {
+				this.layTile(groundTileAt(earth, square.column, square.row), square, BACKING_Z);
+			}
+			this.layTile(brink ?? groundTileAt(fills, square.column, square.row), square, GROUND_Z);
 		}
+	}
+
+	/** Draw one tile over one square of ground, stretched to it exactly and left at the given
+	 * depth. The tile is 16px of artwork over a ninth of a cell — sampled `nearest`, so what
+	 * that magnifies is the artwork's own pixels. */
+	private layTile(texture: Texture, square: GroundSquare, zIndex: number): void {
+		if (!this.app) return;
+		const sprite = new Sprite(texture);
+		sprite.position.set(square.x, square.y);
+		sprite.width = square.width;
+		sprite.height = square.height;
+		sprite.zIndex = zIndex;
+		this.app.stage.addChild(sprite);
 	}
 
 	/**
@@ -1584,8 +1544,10 @@ export class MugenBoard {
 
 	/**
 	 * Fetch the ground sheet and cut the board's tiles out of it: the fills it lays the
-	 * field with ({@link GROUND_FILL_TILES}) and the two fringes it finishes the field's
-	 * first and last rows with, each named by where it lies on the sheet.
+	 * field with ({@link GROUND_FILL_TILES}), the two fringes it finishes the field's first
+	 * and last rows with, and the earth behind the lower of those. Each is named by where it
+	 * lies on the sheet, and each comes back as the thing it is for rather than as an entry
+	 * in a list whose order somebody has to keep.
 	 *
 	 * One fetch and one blob, cut as many times as there are tiles — the sheet is a single
 	 * small file, and asking for it once per tile would be one request per rectangle of the
@@ -1610,38 +1572,32 @@ export class MugenBoard {
 	 * which is a board.
 	 */
 	private async loadGround(): Promise<GroundTiles> {
-		const nothing: GroundTiles = { fills: [], topEdge: null, bottomEdge: null };
+		const nothing: GroundTiles = { fills: [], topEdge: null, bottomEdge: null, earth: [] };
 		try {
 			const response = await fetch(GROUND_TILE_SHEET);
 			if (!response.ok) return nothing;
 			const sheet = await response.blob();
-			const wanted = [...GROUND_FILL_TILES, GROUND_TOP_EDGE_TILE, GROUND_BOTTOM_EDGE_TILE];
-			const cut = await Promise.all(
-				wanted.map((tile) =>
-					createImageBitmap(
-						sheet,
-						tile.column * GROUND_TILE_PX,
-						tile.row * GROUND_TILE_PX,
-						GROUND_TILE_PX,
-						GROUND_TILE_PX
-					)
-				)
-			);
-			const textures = cut.map(
-				(tile) =>
-					new Texture({
-						source: new ImageSource({
-							resource: tile,
-							scaleMode: 'nearest',
-							addressMode: 'repeat'
-						})
+			const cut = async (tile: SheetTile): Promise<Texture> =>
+				new Texture({
+					source: new ImageSource({
+						resource: await createImageBitmap(
+							sheet,
+							tile.column * GROUND_TILE_PX,
+							tile.row * GROUND_TILE_PX,
+							GROUND_TILE_PX,
+							GROUND_TILE_PX
+						),
+						scaleMode: 'nearest',
+						addressMode: 'repeat'
 					})
-			);
-			return {
-				fills: textures.slice(0, GROUND_FILL_TILES.length),
-				topEdge: textures[GROUND_FILL_TILES.length] ?? null,
-				bottomEdge: textures[GROUND_FILL_TILES.length + 1] ?? null
-			};
+				});
+			const [fills, topEdge, bottomEdge, earth] = await Promise.all([
+				Promise.all(GROUND_FILL_TILES.map(cut)),
+				cut(GROUND_TOP_EDGE_TILE),
+				cut(GROUND_BOTTOM_EDGE_TILE),
+				Promise.all(GROUND_EARTH_TILES.map(cut))
+			]);
+			return { fills, topEdge, bottomEdge, earth };
 		} catch {
 			return nothing;
 		}

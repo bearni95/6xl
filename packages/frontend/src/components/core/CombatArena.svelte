@@ -2,6 +2,7 @@
 	import classNames from 'classnames';
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
+	import CombatGround from '$components/core/CombatGround.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import TownPlate from '$components/core/TownPlate.svelte';
@@ -1321,7 +1322,12 @@
 			     spread end to end (above), so a block that arrived with the fight would have let
 			     the board settle at the bottom of the view first and then jump up as the orders
 			     came in. An empty one holds the place they are coming to. -->
-			<div class="min-h-0 w-full flex-1 p-3 sm:hidden">
+			<div class="relative min-h-0 w-full flex-1 p-3 sm:hidden">
+				<!-- What the band stands on: the board's own ground, carried on into the document
+				     past the last row the canvas had room to draw. It is laid under the whole of
+				     the panel, padding included, so the field runs out of the picture and into the
+				     page rather than stopping at a plate's edge. -->
+				<CombatGround />
 				{#if shownRow}
 					{@const row = shownRow}
 					<div
