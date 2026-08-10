@@ -203,12 +203,36 @@ const GROUND_TILE_SHEET = '/assets/tiles/grass-16x16.png';
 /** The sheet's pitch: it is ruled into squares this size from its top-left corner. */
 const GROUND_TILE_PX = 16;
 
+/** A tile's place on the sheet, counted in tiles of {@link GROUND_TILE_PX} from its
+ * top-left corner — which is how the sheet itself is read, and the only way any of these
+ * are named. */
+interface SheetTile {
+	column: number;
+	row: number;
+}
+
 /**
- * How many tiles are taken off the top of that column, in the order they lie on it: two,
- * the plain fill and the one with blades. The third is a flowered fill and the fourth
- * changes palette — both grass, neither a thing to alternate a plain fill with.
+ * The tiles the field is laid with, alternated over it in this order: the plain fill and
+ * the one with blades in it, the top two of the left-hand column. The third down is a
+ * flowered fill and the fourth changes palette — both grass, neither a thing to alternate
+ * a plain fill with.
  */
-const GROUND_TILE_CHOICES = 2;
+const GROUND_FILL_TILES: SheetTile[] = [
+	{ column: 0, row: 0 },
+	{ column: 0, row: 1 }
+];
+
+/**
+ * The tile the top row of the field is drawn with instead: the sheet's upper grass edge,
+ * blades along the top of it and nothing above them.
+ *
+ * It is a boundary tile — drawn to be laid where grass stops — so the field ends in a
+ * fringe against the sky over it rather than at a straight line nothing put there. Being a
+ * boundary, most of its top half is not grass at all: it is laid over a square of
+ * {@link SKY_FILL}, so what shows between the blades is the same sky as the row above and
+ * not whatever the canvas happens to be standing on.
+ */
+const GROUND_EDGE_TILE: SheetTile = { column: 2, row: 2 };
 
 /**
  * How many of those tiles a cell is laid with, across and down — nine to a cell, three
@@ -245,11 +269,29 @@ const GROUND_LINE = combatColorHex('yellow');
  */
 const SKY_FILL = 0x7dd3fc;
 
+/**
+ * The first row of squares the field is grassed from, counted in ground squares down from
+ * the top of the board: the top of the first row a lane opens on, which is where the sky
+ * stops. It is the row {@link GROUND_EDGE_TILE} is laid along.
+ */
+const FIELD_TOP_SQUARE_ROW = (FIRST_LANE_ROW - FIRST_ROW) * GROUND_TILES_PER_CELL;
+
 /** Below the ruled lattice (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
 
+/** Below the grass itself: what the sky is filled at, so that the field's top row — whose
+ * tile is blades with gaps between them — is laid *over* sky rather than over nothing. */
+const SKY_Z = -1.5;
+
 /** Between the two: over the grass it rules, under the lattice that rules the cells. */
 const GROUND_LINE_Z = -0.5;
+
+/** The sheet's tiles as the board holds them: the fills it alternates over the field, and
+ * the fringe it finishes the top of the field with. */
+interface GroundTiles {
+	fills: Texture[];
+	edge: Texture | null;
+}
 
 /** One of the squares a cell's ground is divided into, in screen px: a tile of grass and
  * the yellow border round it, which are the same rectangle ({@link MugenBoard.groundSquares}). */
@@ -914,11 +956,11 @@ export class MugenBoard {
 	private cellPaint = new Map<string, Graphics>();
 	/** Loaded aura frame textures, keyed by aura color name. */
 	private auraTextures = new Map<string, Texture[]>();
-	/** The grass tiles the ground is laid with, cut from the top of the sheet's first column
-	 * on the way in ({@link loadGround}) — empty if it could not be had. Held so they can be
-	 * freed with the board: they are built here rather than fetched through `Assets`, so
-	 * nothing else is keeping them. */
-	private groundTextures: Texture[] = [];
+	/** The tiles the ground is laid with, cut out of the sheet on the way in
+	 * ({@link loadGround}) — empty if it could not be had. Held so they can be freed with
+	 * the board: they are built here rather than fetched through `Assets`, so nothing else
+	 * is keeping them. */
+	private groundTiles: GroundTiles = { fills: [], edge: null };
 	private iconTextures = new Map<string, Texture>();
 	/**
 	 * A cycle's crown offset in the artwork's own pixels ({@link crownOffset}), keyed by
@@ -1036,7 +1078,7 @@ export class MugenBoard {
 		// The board is ruled once its ground is in hand, the grass being drawn with the
 		// cells rather than laid over them afterwards. Nothing is on screen to wait for it:
 		// the canvas is hidden until the whole board is standing either way.
-		this.groundTextures = await ground;
+		this.groundTiles = await ground;
 		if (this.destroyed) return;
 
 		// One rectangular board: cells left of centre take the left leader's colour, right
@@ -1198,8 +1240,8 @@ export class MugenBoard {
 		this.sparkContext = null;
 		// The grass goes the same way, sources and all: the sprites that drew it went with the
 		// stage, and this board cut its tiles for itself out of the sheet.
-		for (const tile of this.groundTextures) tile.destroy(true);
-		this.groundTextures = [];
+		for (const tile of [...this.groundTiles.fills, this.groundTiles.edge]) tile?.destroy(true);
+		this.groundTiles = { fills: [], edge: null };
 		this.cellPaint.clear();
 		this.crownOffsets.clear();
 	}
@@ -1329,7 +1371,7 @@ export class MugenBoard {
 			graphics.fill({ color, alpha: 0 });
 			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 1 });
 		}
-		groundFill.zIndex = GROUND_Z;
+		groundFill.zIndex = SKY_Z;
 		groundLines.zIndex = GROUND_LINE_Z;
 		this.app.stage.addChild(groundFill);
 		this.app.stage.addChild(groundLines);
@@ -1390,6 +1432,13 @@ export class MugenBoard {
 	 * the cell borders instead of restarting at each. Nothing is drawn and nothing is
 	 * stored: the same board is the same field every time it is built, which is what a
 	 * pattern is and a scatter is not.
+	 *
+	 * **The field's top row of squares breaks that alternation** and takes
+	 * {@link GROUND_EDGE_TILE}, the sheet's upper grass edge, along its whole width — the
+	 * field's first row of squares is where the grass starts, and this is the tile the
+	 * sheet draws for exactly that. It is blades with sky between them, so each of those
+	 * squares is filled sky first and the fringe laid over it, and the fill is at a depth
+	 * of its own below the grass ({@link SKY_Z}) so it is behind the tile and not over it.
 	 */
 	private layGround(fill: Graphics, q: number, r: number): void {
 		if (!this.app) return;
@@ -1400,9 +1449,15 @@ export class MugenBoard {
 			}
 			return;
 		}
-		if (this.groundTextures.length === 0) return;
+		const { fills, edge } = this.groundTiles;
+		if (fills.length === 0) return;
 		for (const square of this.groundSquares(q, r)) {
-			const tile = this.groundTextures[(square.column + square.row) % this.groundTextures.length];
+			const brink = square.row === FIELD_TOP_SQUARE_ROW && edge !== null;
+			if (brink) {
+				fill.rect(square.x, square.y, square.width, square.height);
+				fill.fill({ color: SKY_FILL, alpha: 1 });
+			}
+			const tile = brink ? edge : fills[(square.column + square.row) % fills.length];
 			const grass = new Sprite(tile);
 			grass.position.set(square.x, square.y);
 			// The tile is 16px of artwork stretched over a ninth of a cell — sampled
@@ -1455,8 +1510,9 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Fetch the ground sheet and cut the grass out of its left-hand column: one texture per
-	 * tile, top down, {@link GROUND_TILE_CHOICES} of them.
+	 * Fetch the ground sheet and cut the board's tiles out of it: the fills it lays the
+	 * field with ({@link GROUND_FILL_TILES}) and the fringe it finishes the field's top row
+	 * with ({@link GROUND_EDGE_TILE}), each named by where it lies on the sheet.
 	 *
 	 * One fetch and one blob, cut as many times as there are tiles — the sheet is a single
 	 * small file, and asking for it once per tile would be one request per rectangle of the
@@ -1477,20 +1533,28 @@ export class MugenBoard {
 	 * would hold a cache entry per board for bitmaps no other board can name. Nothing else
 	 * holds them, so the board frees them on the way out ({@link destroy}).
 	 *
-	 * Resolves to an empty list if the sheet cannot be had — a board with no grass on it,
+	 * Resolves to nothing at all if the sheet cannot be had — a board with no grass on it,
 	 * which is a board.
 	 */
-	private async loadGround(): Promise<Texture[]> {
+	private async loadGround(): Promise<GroundTiles> {
+		const nothing: GroundTiles = { fills: [], edge: null };
 		try {
 			const response = await fetch(GROUND_TILE_SHEET);
-			if (!response.ok) return [];
+			if (!response.ok) return nothing;
 			const sheet = await response.blob();
-			const tiles = await Promise.all(
-				Array.from({ length: GROUND_TILE_CHOICES }, (_, index) =>
-					createImageBitmap(sheet, 0, index * GROUND_TILE_PX, GROUND_TILE_PX, GROUND_TILE_PX)
+			const wanted = [...GROUND_FILL_TILES, GROUND_EDGE_TILE];
+			const cut = await Promise.all(
+				wanted.map((tile) =>
+					createImageBitmap(
+						sheet,
+						tile.column * GROUND_TILE_PX,
+						tile.row * GROUND_TILE_PX,
+						GROUND_TILE_PX,
+						GROUND_TILE_PX
+					)
 				)
 			);
-			return tiles.map(
+			const textures = cut.map(
 				(tile) =>
 					new Texture({
 						source: new ImageSource({
@@ -1500,8 +1564,12 @@ export class MugenBoard {
 						})
 					})
 			);
+			return {
+				fills: textures.slice(0, GROUND_FILL_TILES.length),
+				edge: textures[GROUND_FILL_TILES.length] ?? null
+			};
 		} catch {
-			return [];
+			return nothing;
 		}
 	}
 
