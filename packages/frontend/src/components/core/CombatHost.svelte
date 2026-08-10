@@ -37,10 +37,23 @@
 	$: initial = (name || '?').charAt(0).toUpperCase();
 </script>
 
-<!-- `min-w-0` on the reading is what lets a long username truncate inside the column
-	rather than push the whole head wider: a flex item's floor is its content otherwise. -->
+<!-- Read the other way round from the town's plate beside it: the reading first and the face
+	at the far end. This is the right-hand cell of the head, so the picture goes to the outer
+	edge of it and the type is set against the picture — the two cells then face each other
+	across the middle of the head, each with its portrait at its own end, rather than both
+	pointing the same way and leaving the head with a face in the middle of it.
+	`flex-1` on the reading is what pushes the avatar out there: the column takes whatever
+	width the cell has spare, so the face is at the end of the cell and not merely after the
+	name. `min-w-0` beside it is what lets a long username truncate rather than push the whole
+	head wider — a flex item's floor is its content otherwise. -->
 <div class={classNames(PLATE_FLUSH_CLASSES, classes)} title={$_('map.holder.title')}>
 	<div class="flex items-center gap-2">
+		<div class="flex min-w-0 flex-1 flex-col text-right leading-tight">
+			<span class="truncate text-sm font-semibold">{name}</span>
+			<span class="truncate text-xs font-medium text-white/70">
+				{$_('profile.levelBadge', { values: { level } })}
+			</span>
+		</div>
 		<PlayerAvatar
 			{characterId}
 			{color}
@@ -50,11 +63,5 @@
 			textClasses="text-base font-bold"
 			classes="flex-none"
 		/>
-		<div class="flex min-w-0 flex-col text-left leading-tight">
-			<span class="truncate text-sm font-semibold">{name}</span>
-			<span class="truncate text-xs font-medium text-white/70">
-				{$_('profile.levelBadge', { values: { level } })}
-			</span>
-		</div>
 	</div>
 </div>
