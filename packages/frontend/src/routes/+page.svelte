@@ -14,6 +14,7 @@
 	import RegionCurrentBadge from '$components/core/RegionCurrentBadge.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import MusicBanner from '$components/core/MusicBanner.svelte';
+	import BandMenu from '$components/core/BandMenu.svelte';
 	import RegionLocationList from '$components/core/RegionLocationList.svelte';
 	import ShowShareGrid from '$components/core/ShowShareGrid.svelte';
 	import LocationSearchBox from '$components/core/LocationSearchBox.svelte';
@@ -1272,6 +1273,25 @@
 	// A show is passed and not a node because that is the whole of what a station is: two
 	// different places flying the same show are not a reason to touch the dial.
 	$: musicService.follow(openShow?.id ?? mapPlurality.show?.id ?? null);
+
+	// What the game can be asked, which is what the dots at the far end of the band drop (see
+	// BandMenu). The list is here rather than in the menu because which sheets the game offers is
+	// the page's business and the shape they are offered in is the menu's — the same split every
+	// other list on this page is written under.
+	//
+	// The glyph is the very one each of them wore while it stood open on the row, so nothing a
+	// reader had learned to look for changed; what is added is the name beside it, which is the
+	// thing a square with a mark on it could never say. Both names are the sheet's own title
+	// rather than the label the square was reached by ("Obre els crèdits"): a line in a menu is
+	// the thing itself, and the press is said by its being a menu.
+	$: bandMenuItems = [
+		{ icon: '/assets/icons/sbed/help.svg', label: $_('faq.title'), onSelect: openFaq },
+		{
+			icon: '/assets/icons/delapouite/palette.svg',
+			label: $_('credits.title'),
+			onSelect: openCredits
+		}
+	];
 
 	/** One region as the bar letters it — the spelling the page's band and the list share. */
 	function crumbRow(node: RegionNode) {
@@ -3264,33 +3284,18 @@
 			neither end moves when the music stops. -->
 		<MusicBanner />
 
-		<!-- What the game gets asked, first of the far end, at every width — a question is as
-			worth answering on a desktop as on a phone.
-			A square in the name plate's own fill, drawn to the row's height (`self-stretch
-			aspect-square`), with a white game-icons glyph that needs no colour of its own on the
-			primary. -->
-		<button
-			type="button"
-			class="flex aspect-square flex-none cursor-pointer items-center justify-center self-stretch rounded-lg bg-primary shadow-xl"
-			aria-label={$_('faq.open')}
-			on:click={openFaq}
-		>
-			<img src="/assets/icons/sbed/help.svg" class="size-6" alt="" />
-		</button>
-
-		<!-- Who drew the fighters, last on the row. It stands beside the questions because it
-			answers one of the same kind — where all this came from — and because the people who
-			made these sprites are named on the game's own top row rather than three screens in. A
-			palette for a glyph: what the sheet holds is a table of artists. Same square, same fill,
-			same white artwork as the mark beside it. -->
-		<button
-			type="button"
-			class="flex aspect-square flex-none cursor-pointer items-center justify-center self-stretch rounded-lg bg-primary shadow-xl"
-			aria-label={$_('credits.open')}
-			on:click={openCredits}
-		>
-			<img src="/assets/icons/delapouite/palette.svg" class="size-6" alt="" />
-		</button>
+		<!-- What the game can be asked, at the far end and folded into one square: the dots, and
+			under them a line each for the questions and for who drew the fighters (see BandMenu,
+			and `bandMenuItems` for the two of them).
+			They stood open on this row, a square each carrying its glyph alone — and a glyph alone
+			is a thing a reader has to already know, a palette being no more obviously a table of
+			artists than any other mark. The column is where the names fit, and the marks go down
+			it unchanged at the head of their own names. What the row keeps is one square instead of
+			a mark per question, which is the far end holding still as more is asked of the game.
+			Both are the same kind of question — where all this came from — which is what makes them
+			one menu rather than two things that happen to share a corner, and they are on the
+			game's own top row rather than three screens in for the same reason they always were. -->
+		<BandMenu items={bandMenuItems} />
 	</div>
 
 	<!-- The three columns, and the three are the three things this game is made of:
