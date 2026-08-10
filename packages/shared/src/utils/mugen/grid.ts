@@ -258,6 +258,36 @@ export function cellFoot(q: number, r: number): GridPoint {
 	return { x: centre.x, y: centre.y + FOOT_DROP };
 }
 
+/**
+ * The drop from a cell's foot line to its **floor** — the bottom edge it is ruled by — in
+ * cell widths. Measured off a cell rather than spelled a second time, so it follows
+ * {@link FOOT_DROP} wherever that goes.
+ */
+export function footToFloor(): number {
+	return cellCorners(0, 0)[2].y - cellFoot(0, 0).y;
+}
+
+/**
+ * How far below its cell's foot line a figure drawn `drawnHeight` cell widths tall stands,
+ * in cell widths — nothing at all for a figure that fits inside its cell, and the whole
+ * {@link footToFloor} for one that does not.
+ *
+ * The foot line is a quarter of a cell up from the floor so that the width of the figure's
+ * own cell is under it and it plainly reads as standing in that row rather than on the line
+ * between two ({@link FOOT_DROP}). That holds while the figure is inside the square ruled
+ * round it. A figure taller than its cell is not inside it whatever line it is put on — it
+ * is over the row behind as well — so what the quarter cell of its own ground left under it
+ * reads as is the figure floating above the line it is standing on. Those go on the floor
+ * instead, where the ruled line under their feet is the line they are standing on.
+ *
+ * A cell is square, so its width is its height and one figure of drawn height 1 is exactly a
+ * cell tall; the drawn height is the character's art at the size it is finally rendered,
+ * every correction of its own included.
+ */
+export function figureFootDrop(drawnHeight: number): number {
+	return drawnHeight > 1 ? footToFloor() : 0;
+}
+
 /** The four corners of the cell at [q, r], from the top left clockwise. */
 export function cellCorners(q: number, r: number): GridPoint[] {
 	const { x, y } = cellCenter(q, r);

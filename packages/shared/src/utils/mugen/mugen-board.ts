@@ -46,9 +46,11 @@ import {
 	FIRST_COLUMN,
 	FIRST_LANE_ROW,
 	FIRST_ROW,
+	figureFootDrop,
 	findClosestApproach,
 	findMeleeMeeting,
 	findPath,
+	footToFloor,
 	isBoardCell,
 	LAST_COLUMN,
 	LAST_ROW,
@@ -264,14 +266,17 @@ const APRON_ROW = LAST_ROW + 1;
  * picture that is scaled to whatever room it is given, which is scale taken off the fight
  * for nothing.
  *
- * **It costs the tallest fighters the top of their heads, and that is the trade.** What the
- * row above the lanes was for is headroom for the line standing on the first lane row: a
- * fighter is drawn {@link CHAR_HEIGHT_RATIO} cells tall standing three quarters of the way
- * down its own cell, so the tallest reaches 0.55 of a cell over that cell's top edge, and
- * one third of a cell is what is left up there. The overhang is cut at the canvas edge, as
- * a limb sweeping past an outer column already is. The first cut (one row) cleared every
- * head; this one does not, and it is the size of the board on the screen that is bought
- * with it — every row taken off the picture is the rest of it drawn larger.
+ * **The tallest fighters clear it, and only just.** What the row above the lanes was for is
+ * headroom for the line standing on the first lane row: a fighter is drawn no more than
+ * {@link CHAR_HEIGHT_RATIO} cells tall, and one taller than its cell stands on that cell's
+ * floor rather than on the foot line three quarters down it ({@link figureFootDrop}), so the
+ * tallest reaches 0.3 of a cell over its cell's top edge where one third of a cell is left up
+ * there. It was 0.55 while every fighter stood on the foot line, and the top of those heads
+ * was the price of this row — the drop is what bought them back. Whatever still reaches higher
+ * (a pose taller than the cycle it belongs to, an aura enveloping the sprite) is cut at the
+ * canvas edge, as a limb sweeping past an outer column already is. What the row buys is the
+ * size of the board on the screen: every row taken off the picture is the rest of it drawn
+ * larger.
  */
 const BROW_DEPTH = 2 / GROUND_TILES_PER_CELL;
 
@@ -354,7 +359,8 @@ const VIEWPORT_HEIGHT = '100dvh';
 // half of one hanging off the edge of the view would be half a duel.
 
 // --- The room over the fighters' heads ---------------------------------------
-// A character plants its feet on its cell's foot line and stands taller than the cell
+// A character plants its feet on its cell's foot line — or on the cell's floor, where it is
+// drawn taller than the cell ({@link figureFootDrop}) — and stands taller than the cell
 // ({@link CHAR_HEIGHT_RATIO}), so a fighter on the topmost lane reaches up out of the row
 // it stands on — and the things that reach highest are not even drawn when the canvas is
 // sized: a pose is not the height of the cycle it belongs to, an aura envelops the whole
@@ -796,6 +802,17 @@ interface Actor {
 	 * added to a cell's standing mark ({@link MugenBoard.standPoint}).
 	 */
 	crownShift: number;
+	/**
+	 * Screen px this fighter stands *below* the foot line of whatever cell it is on
+	 * ({@link figureFootDrop}): the drop onto the cell's floor for a fighter drawn taller
+	 * than its cell, and zero for one that fits inside it.
+	 *
+	 * The vertical twin of {@link crownShift}, and held for the same reason — it is settled
+	 * once, off the size the character ends up drawn at, and then added to every cell mark
+	 * this fighter is ever put on ({@link MugenBoard.standPoint}), so it stands on the same
+	 * line whether it is placed there, walks there or is stood back up there.
+	 */
+	footDrop: number;
 	/** Raw manifest anim key of the hurt flinch (movement animation), or `''`. */
 	hurtAnim: string;
 	currentName: string;
@@ -1309,10 +1326,17 @@ export class MugenBoard {
 	 * **A fighter that has been taken down stands half a cell further out** — its middle
 	 * on the outer edge of whatever cell it holds rather than over the centre of it, so
 	 * half of it is beyond that edge ({@link fallenDrift}).
+	 *
+	 * **A fighter drawn taller than its cell stands a quarter of a cell lower** — on the
+	 * cell's floor rather than on its foot line ({@link Actor.footDrop}), the foot line
+	 * being a place to stand only for a figure the cell has room for.
 	 */
 	private standPoint(actor: Actor, q: number, r: number): Point {
 		const mark = this.cellMark(q, r);
-		return { x: mark.x + actor.crownShift + this.fallenDrift(actor), y: mark.y };
+		return {
+			x: mark.x + actor.crownShift + this.fallenDrift(actor),
+			y: mark.y + actor.footDrop
+		};
 	}
 
 	/**
@@ -1713,7 +1737,18 @@ export class MugenBoard {
 		const crownShift = readCrownAlign(definition)
 			? crownDrift(this.crownOf(character.basePath, startName, baseFrames), fitScale, flip)
 			: 0;
-		const stand = { x: mark.x + crownShift, y: mark.y };
+
+		// Nominal on-screen size: the base cycle's widest and tallest frame at fit scale —
+		// stable across poses, unlike the live sprite whose size tracks the current frame's
+		// texture. Taken over the whole cycle (as the fit is), so an aura or a label sits by
+		// the character's full reach rather than by frame one's.
+		const displayWidth = Math.max(...baseFrames.map((frame) => frame.width)) * fitScale;
+		const displayHeight = Math.max(...baseFrames.map((frame) => frame.height)) * fitScale;
+		// And which line of its cell that height leaves it standing on ({@link figureFootDrop}):
+		// the floor for a fighter taller than the cell, the foot line for one that fits in it.
+		// A cell is square, so the box the fit was given its width is also the cell's height.
+		const footDrop = figureFootDrop(displayHeight / box) * box;
+		const stand = { x: mark.x + crownShift, y: mark.y + footDrop };
 
 		const sprite = new Sprite();
 		// A negative x-scale mirrors the sprite around its anchor (in place).
@@ -1751,13 +1786,10 @@ export class MugenBoard {
 			ring: null,
 			label: null,
 			orders: null,
-			// Nominal size: the base cycle's widest and tallest frame at fit scale —
-			// stable across poses, unlike the live sprite whose size tracks the current
-			// frame's texture. Taken over the whole cycle (as the fit is), so an aura or
-			// a label sits by the character's full reach rather than by frame one's.
-			displayWidth: Math.max(...baseFrames.map((frame) => frame.width)) * fitScale,
-			displayHeight: Math.max(...baseFrames.map((frame) => frame.height)) * fitScale,
+			displayWidth,
+			displayHeight,
 			crownShift,
+			footDrop,
 			x: stand.x,
 			y: stand.y,
 			targetX: stand.x,
@@ -2190,16 +2222,23 @@ export class MugenBoard {
 		// as standing on the cell it walked to); only the final step's landing point is
 		// offset — and the crown correction is not applied to it either, because two
 		// fighters brought edge to edge against a line are placed by their edges.
-		// The pair stands on the meeting cell's own foot line, as everybody else does.
-		const mid = {
-			x: this.project(BOARD_WIDTH / 2, 0).x,
-			y: this.cellMark(meeting.red.destination.q, meeting.red.destination.r).y
-		};
+		// The pair stands on the meeting cell's own mark, as everybody else does — each on
+		// the line its own height puts it on ({@link Actor.footDrop}), so a fighter that has
+		// walked the whole board on its cells' floors does not step up onto the foot line for
+		// the duel and back down again after it.
+		const midX = this.project(BOARD_WIDTH / 2, 0).x;
+		const line = this.cellMark(meeting.red.destination.q, meeting.red.destination.r).y;
 		const redLead = (1 - red.sprite.anchor.x) * Math.abs(red.sprite.width);
 		const blueLead = (1 - blue.sprite.anchor.x) * Math.abs(blue.sprite.width);
 		await Promise.all([
-			this.walkCells(red, meeting.red.path.slice(1), { x: mid.x - redLead, y: mid.y }),
-			this.walkCells(blue, meeting.blue.path.slice(1), { x: mid.x + blueLead, y: mid.y })
+			this.walkCells(red, meeting.red.path.slice(1), {
+				x: midX - redLead,
+				y: line + red.footDrop
+			}),
+			this.walkCells(blue, meeting.blue.path.slice(1), {
+				x: midX + blueLead,
+				y: line + blue.footDrop
+			})
 		]);
 	}
 
@@ -2420,16 +2459,22 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Where an attacker stands to strike `target`: level with it, on its foot line,
-	 * with the two sprites' leading edges flush — face to face and touching, without
-	 * overlapping. The extents are read off each sprite's current frame (anchor
-	 * fraction × scaled width); the blue half is mirrored, so for both of them the
-	 * leading edge is the frame's far side.
+	 * Where an attacker stands to strike `target`: level with it, on its row, with the two
+	 * sprites' leading edges flush — face to face and touching, without overlapping. The
+	 * extents are read off each sprite's current frame (anchor fraction × scaled width); the
+	 * blue half is mirrored, so for both of them the leading edge is the frame's far side.
+	 *
+	 * Level with it means the row's own line and not the target's feet: what the two share is
+	 * the ground, and each of them stands on the line its own height puts it on
+	 * ({@link Actor.footDrop}). So the target's drop comes off and the attacker's goes on.
 	 */
 	private strikeMark(attacker: Actor, target: Actor): Point {
 		const lead = (actor: Actor) => (1 - actor.sprite.anchor.x) * Math.abs(actor.sprite.width);
 		const gap = lead(attacker) + lead(target);
-		return { x: attacker.side === 'blue' ? target.x + gap : target.x - gap, y: target.y };
+		return {
+			x: attacker.side === 'blue' ? target.x + gap : target.x - gap,
+			y: target.y - target.footDrop + attacker.footDrop
+		};
 	}
 
 	/**
@@ -3183,7 +3228,9 @@ export class MugenBoard {
 	 * The drop from the one to the other is measured off the grid itself — a cell's bottom
 	 * corner against its own foot line — so nothing here has to know what fraction of a
 	 * cell a figure stands at. Taking it off `actor.y` rather than off the row keeps it
-	 * with a fighter that is mid-step, whose feet are between two rows.
+	 * with a fighter that is mid-step, whose feet are between two rows — and the fighter's
+	 * own drop comes off first, since a fighter tall enough to be standing on that floor
+	 * already ({@link Actor.footDrop}) is not a quarter of a cell above it.
 	 *
 	 * The x is the board's, so a strip is on a ruled line rather than wherever its sprite
 	 * happens to have got to: for a `center` placement that line never moves, and for a
@@ -3197,10 +3244,10 @@ export class MugenBoard {
 		const { cell, side } = strip.placement;
 		const edges = this.columnEdges(cell === 'fighter' ? actor.column : 0);
 		const pad = this.cellWidth() * ORDER_PAD_RATIO;
-		const footToFloor = (cellCorners(0, 0)[2].y - cellFoot(0, 0).y) * this.cellWidth();
+		const floor = actor.y - actor.footDrop + footToFloor() * this.cellWidth();
 		const reach = pad + width / 2;
 		strip.container.x = side === 'left' ? edges.left + reach : edges.right - reach;
-		strip.container.y = actor.y + footToFloor - pad;
+		strip.container.y = floor - pad;
 		// Above the board, below the callouts and the sparks — but which side of its own
 		// fighter it goes depends on whose cell it is standing in. Orders laid on the middle
 		// column are on ground nobody is standing on, so they go over everything on the

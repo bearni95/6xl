@@ -15,8 +15,10 @@ import {
 	FIRST_COLUMN,
 	FIRST_LANE_ROW,
 	FIRST_ROW,
+	figureFootDrop,
 	findMeleeMeeting,
 	findPath,
+	footToFloor,
 	isBoardCell,
 	LAST_COLUMN,
 	LAST_ROW,
@@ -226,6 +228,23 @@ describe('the shape of a cell', () => {
 		// bottom edge, which is the line it shares with the row below.
 		expect(foot.y).toBeGreaterThan(centre.y);
 		expect(foot.y).toBeLessThan(centre.y + 0.5);
+	});
+
+	it('drops a fighter taller than its cell onto the cell floor, and nobody else', () => {
+		// A figure the cell has room for stands on the foot line, where the width of its own
+		// cell is under it. One drawn taller than the cell is over the row behind it whatever
+		// line it is on, so the quarter cell left under it only reads as floating: it goes on
+		// the floor, feet on the line the cell is ruled by.
+		expect(figureFootDrop(0.5)).toBe(0);
+		expect(figureFootDrop(1)).toBe(0);
+		expect(figureFootDrop(1.3)).toBeCloseTo(footToFloor());
+
+		// And the drop is exactly the distance between those two lines, so a dropped fighter
+		// stands on the cell's bottom edge and not past it.
+		const foot = cellFoot(0, FIRST_ROW);
+		const floor = cellCorners(0, FIRST_ROW)[2].y;
+		expect(foot.y + figureFootDrop(1.3)).toBeCloseTo(floor);
+		expect(foot.y + figureFootDrop(1)).toBeCloseTo(foot.y);
 	});
 });
 
