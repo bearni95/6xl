@@ -1,0 +1,69 @@
+{
+	"lines": {
+		"orders": [
+			"Torn {turn} — les ordres es descobreixen.",
+			"S'aixequen les cartes del torn {turn}.",
+			"Torn {turn}: tothom ensenya el que ha triat.",
+			"Es desvelen les ordres del torn {turn}.",
+			"Torn {turn}. Que comenci el ball."
+		],
+		"advance": [
+			"{attacker} surt de la seva casella cap a {target}.",
+			"{attacker} se'n va a buscar {target}.",
+			"{attacker} travessa el carrer per plantar-se davant de {target}.",
+			"{attacker} arrenca contra {target}.",
+			"{attacker} no s'espera més i va a per {target}."
+		],
+		"exchange": [
+			"{attacker} i {target} es llancen alhora i els cops es maten al mig.",
+			"Surten els dos a la vegada: {attacker} i {target} es troben al mig del carrer.",
+			"{attacker} i {target} piquen alhora — no hi passa ni un dels dos cops.",
+			"Xoc al mig del carrer: {attacker} i {target} es queden en no res."
+		],
+		"blocked": [
+			"{target} aguanta la guàrdia i el cop de {attacker} rellisca.",
+			"{target} s'havia cobert: el cop de {attacker} no hi entra.",
+			"{attacker} pica i {target} ho para de ple.",
+			"La guàrdia de {target} atura {attacker} en sec."
+		],
+		"freeGuard": [
+			"El color de {target} li regala la parada justa contra {attacker}.",
+			"{target} para de franc el cop de {attacker}.",
+			"{attacker} hi va de cara, però {target} tenia una guàrdia regalada.",
+			"Sort del color: {target} desvia {attacker} sense haver-ho triat."
+		],
+		"hit": [
+			"El cop de {attacker} entra: {target} cau.",
+			"{attacker} encerta de ple i {target} se'n va a terra.",
+			"{target} no ho ha vist venir — {attacker} el tomba.",
+			"Res no atura {attacker}: {target} queda fora de combat.",
+			"{attacker} obre la guàrdia de {target} i l'abat."
+		],
+		"spent": [
+			"{attacker} pica sobre {target}, que ja anava a terra.",
+			"El cop de {attacker} arriba tard: {target} ja queia.",
+			"{target} ja estava tocat quan {attacker} hi ha arribat."
+		],
+		"ground": [
+			"{winner} es queda el terreny; {loser} recula a la seva banda.",
+			"El carrer és de {winner}. {loser} se'n torna enrere.",
+			"{winner} planta els peus al mig i {loser} s'aparta.",
+			"{loser} cedeix el pas: {winner} pren la casella."
+		],
+		"win": [
+			"Has guanyat el combat, {wins} a {losses}.",
+			"{wins}–{losses}: el poble és teu.",
+			"S'ha acabat. Te'l quedes {wins} a {losses}."
+		],
+		"lose": [
+			"Has perdut el combat, {wins} a {losses}.",
+			"{losses}–{wins} per als rivals. Serà un altre dia.",
+			"S'ha acabat: els rivals aguanten {losses} a {wins}."
+		],
+		"draw": [
+			"Taules: {wins} a {losses} i cap dels dos s'endú res.",
+			"Empat a {wins}. Ningú no mou el poble.",
+			"{wins}–{losses}. Honors repartits."
+		]
+	}
+}

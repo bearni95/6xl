@@ -270,6 +270,29 @@ map is therefore not mounted behind a fight at all, which is why the town **spot
 (the one town lit on black while a fight was up) is gone from `+page.svelte`; `WorldMap`
 still knows how to draw one, nothing asks it to.
 
+**A turn being played out is narrated, and the fight does not word a syllable of it.** The
+board prints no word over any fighter — a callout at the reveal gives the turn away, one
+after the fact only letters a picture that has just been drawn — so the words stand on the
+player's own orders panel instead (`CombatNarration.svelte`, laid across the middle of it,
+over the card and outside the fade the card wears while a turn runs). What the controller
+emits is a **cue** and never a sentence: an event id out of the fixed catalogue in
+`@3xl/shared/types/combat-narration.type`, plus the fighters it happened to
+(`{attacker}`, `{winner}`, …), on `CombatState.cue`. The wording is authored data —
+`@3xl/data`'s `public/combat-narration.json`, written on the admin `/narration` screen,
+read once by `narration.service.ts` — so a line can be rewritten without touching a rule
+and no rule can be changed by rewriting a line. It is Catalan text like `shows.json`'s
+titles, not an i18n key; an event with nothing authored is simply silent, which is also
+what an unread collection is, since a placeholder sentence on screen mid-fight is worse
+than none. Several ways of saying one thing may be authored and the pick is **seeded** off
+the cue, so the words hold still while the blow they describe is thrown and two identical
+blows are not narrated identically. Every event in the catalogue is a beat with a moment of
+its own on the board; what is deliberately *not* in it is anything simultaneous — the
+charges all flare at the reveal, so a line per loader would be three sentences in one
+frame. The cue comes off with the turn (`finishTurn`), the last one of a fight being the
+result, which stands under the panel the fight is reported on. The controller's own
+`status`/`log` are untouched by any of this: they are its English record of the same turn,
+and nothing draws them.
+
 **The roster is the second, and it is a page for the same reasons.** The player's cards
 take the whole viewport too, and they are reached from two different routes — the side
 standing in the map's corner, and the arena's "no active team" card — which is what had
@@ -397,7 +420,9 @@ leading to that character's own pages (`dashboard/<id>/{definition,stats,faces,f
 so a character is authored in one place and there are no per-topic screens over the
 whole roster —
 `/shows` (TMDB browser), `/music`
-(what each vendored song is called and which show it opens) and `/posters` — the whole
+(what each vendored song is called and which show it opens), `/narration` (what the game
+says over each move a fight plays out — one section per beat of a turn, each line
+previewed against a made-up lane) and `/posters` — the whole
 roster idling at once on one PixiJS canvas (`@3xl/shared`'s `mugen-poster-grid`), each
 character drawn at the size the **combat board** draws it. Not a resemblance: the wall
 calls the board's own `characterFitScale` over a box of `CHAR_HEIGHT_RATIO` cell widths,
@@ -503,6 +528,15 @@ to `http://localhost:2002`; CORS allows only the admin origin (`http://localhost
   `public/music/`, which is the list the admin `/music` screen is built from — a
   definition answers a file, so a save naming a file that is not there is refused, as is
   a link to a show `public/shows.json` does not hold.
+- `GET/POST /api/combat-narration` — read/upsert **one event's** lines in `@3xl/data`'s
+  `public/combat-narration.json`, the words said over a fight while it is played out (see
+  the combat section above). `GET /api/combat-narration/events` is the catalogue the admin
+  `/narration` screen draws its sections from: the very `NARRATION_EVENTS` the fight
+  announces from and the API validates against, so the screen can never offer an event —
+  or a `{placeholder}` — a save would be refused for. A line naming something its event
+  cannot fill *is* that refusal, since what it would be on screen is a sentence with a hole
+  in it, mid-fight. The file is rewritten whole in the catalogue's order, so it stays
+  readable however it was edited.
 - `GET/POST /api/shows` + `POST /api/shows/refresh` — read/upsert the saved-show collection in
   `@3xl/data`'s `public/shows.json` (a show, every image TMDB holds for it, the author's
   enabled selection per section, and the **glyph** that stands for the show), and re-read

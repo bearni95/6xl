@@ -75,6 +75,11 @@ import { type Cell, cellSide, isBoardCell } from '$utils/mugen/grid';
 import type { MugenBoard } from '$utils/mugen/mugen-board';
 import { findMove, type CharacterMove, type CombatColor } from '$types/character-definition.type';
 import type { CombatOutcome, CombatReport } from '$types/combat.type';
+import type {
+	CombatNarrationCue,
+	CombatNarrationEvent,
+	NarrationPlaceholder
+} from '$types/combat-narration.type';
 import type { BattleBoardSnapshot, BattleFighterSnapshot } from '$types/battle.type';
 import { colorPassives, type PassiveOrder } from '$utils/color/traits';
 import { pickWeighted } from '$utils/dice/roll';
@@ -370,6 +375,16 @@ export interface CombatState {
 	status: string;
 	/** What the turn being resolved amounted to, one line per event. */
 	log: string[];
+	/**
+	 * What the fight is announcing at this very moment, or null between turns.
+	 *
+	 * The fight names the *event* and the fighters it happened to; the words for it are
+	 * authored elsewhere entirely (`public/combat-narration.json`, via the admin
+	 * `/narration` screen) and looked up by the page that draws them. So this is a cue,
+	 * not a caption: nothing in here is a sentence, and nothing in the rules ever reads
+	 * a sentence back. See `$types/combat-narration.type`.
+	 */
+	cue: CombatNarrationCue | null;
 	/** True when every player fighter still standing has a complete order. */
 	ready: boolean;
 	/**
@@ -415,6 +430,11 @@ export class CombatController {
 	private turn = 1;
 	private status = '';
 	private log: string[] = [];
+	/** What is being said over the turn right now — see {@link CombatState.cue}. */
+	private cue: CombatNarrationCue | null = null;
+	/** Cues announced so far this fight. It is what seeds which of an event's authored
+	 * lines is picked, so two identical blows are not narrated in identical words. */
+	private cues = 0;
 	private outcome: CombatOutcome | null = null;
 	/** Which fighters are currently wearing an aura, so it is only redrawn when a
 	 * fighter's charges cross between empty and holding something. */
@@ -426,6 +446,7 @@ export class CombatController {
 		turn: 1,
 		status: '',
 		log: [],
+		cue: null,
 		ready: false,
 		wins: { info: 0, error: 0 },
 		outcome: null
@@ -709,7 +730,7 @@ export class CombatController {
 		// sooner: the running order is the board's, not a rating's. The one exception is a
 		// lane that attacked both ways, whose two blows are one event (see groupShots).
 
-		this.setStatus('Orders are revealed.');
+		this.announce('orders', { turn: String(this.turn) }, 'Orders are revealed.');
 		this.showOrders(acting);
 		await pause(REVEAL_MS);
 
@@ -816,7 +837,11 @@ export class CombatController {
 	private async playExchange(one: Shot, two: Shot): Promise<void> {
 		const named = (shot: Shot) =>
 			shot.extra ? `${shot.shooter.name}'s free shot` : `${shot.shooter.name}'s shot`;
-		this.setStatus(`${one.shooter.name} and ${two.shooter.name} go at each other at once.`);
+		this.announce(
+			'exchange',
+			{ attacker: one.shooter.name, target: two.shooter.name },
+			`${one.shooter.name} and ${two.shooter.name} go at each other at once.`
+		);
 		this.log.push(`${named(one)} and ${named(two)} meet in the lane — both come to nothing.`);
 		// Out to the middle together — neither is walked onto the other, because neither
 		// of them got there first — and then both strike at the one moment.
@@ -866,7 +891,11 @@ export class CombatController {
 	private async playShot(shot: Shot): Promise<void> {
 		const { shooter, target, extra } = shot;
 		const from = extra ? `${shooter.name}'s free shot` : `${shooter.name} shoots`;
-		this.setStatus(`${shooter.name} goes at ${target.name}.`);
+		// Said as the attacker sets off, so the line is up for the length of the walk and
+		// the blow at the end of it — and is replaced by what the blow amounted to, below,
+		// only once the blow has actually been thrown.
+		const lane = { attacker: shooter.name, target: target.name };
+		this.announce('advance', lane, `${shooter.name} goes at ${target.name}.`);
 
 		// The fighter opposite braces first, if covering is what it chose.
 		//
@@ -922,10 +951,12 @@ export class CombatController {
 
 		if (target.down) {
 			this.log.push(`${from} — ${target.name} was already falling.`);
+			this.announce('spent', lane);
 		} else if (covering) {
 			// The brace is already up, and it is the whole of what the board says: a fighter
 			// stood in its guard with the blow coming off it is the block, drawn.
 			this.log.push(`${from} at ${target.name}, who blocked it.`);
+			this.announce('blocked', lane);
 		} else if (this.passiveReady(target, 'defend')) {
 			// Blue's free guard. It is only had on a turn the fighter wasn't covering
 			// anyway (the branch above), and only spent on a shot it actually turns
@@ -933,9 +964,14 @@ export class CombatController {
 			// same reason an ordered one is: it went up when this blow was thrown.
 			this.spend(target, 'defend', true);
 			this.log.push(`${from} at ${target.name} — turned aside by its free guard.`);
+			this.announce('freeGuard', lane);
 		} else {
 			target.down = true;
 			this.log.push(`${from} — ${target.name} is down.`);
+			// Before the fall is played, not after it: the words and the picture are the one
+			// blow landing, and a line that arrived once the fighter was already on the floor
+			// would be lettering something over.
+			this.announce('hit', lane);
 			// Sparks come off it in the colour of whoever's blow got through, and are all that
 			// is said about it: the spray, the fighter reeling and then falling out of the lane
 			// are the hit — a word over the head of somebody visibly going down added nothing.
@@ -1012,7 +1048,11 @@ export class CombatController {
 		const ground: Cell = { q: WON_COLUMN, r: row };
 		const back: Cell = { q: fallenColumn(loser.side, row), r: row };
 		if (!isBoardCell(ground.q, ground.r) || !isBoardCell(back.q, back.r)) return;
-		this.setStatus(`${winner.name} takes the ground; ${loser.name} falls back.`);
+		this.announce(
+			'ground',
+			{ winner: winner.name, loser: loser.name },
+			`${winner.name} takes the ground; ${loser.name} falls back.`
+		);
 		winner.cell = ground;
 		loser.cell = back;
 		// Together: one fighter withdrawing as the other comes forward is a single thing
@@ -1148,6 +1188,10 @@ export class CombatController {
 		for (const fighter of this.fighters) fighter.action = null;
 		this.planRivals();
 		this.phase = 'planning';
+		// Nothing is being carried out any more, so nothing is being narrated: the line that
+		// closed the last turn comes off with it rather than standing over a board that is
+		// waiting to be told what to do next.
+		this.cue = null;
 		this.setStatus(`Turn ${this.turn} — give your orders.`);
 	}
 
@@ -1157,7 +1201,15 @@ export class CombatController {
 		this.outcome = outcome;
 		this.board?.clearAuras();
 		this.aura.clear();
-		this.setStatus(detail);
+		// The last thing said over the fight, and the one cue that outlives the turn it was
+		// announced on: the result panel says how it ended in the game's own words, and this
+		// says it in the author's. Both counts are the player's way round — the score above
+		// the board is counted like that too — whichever side took it.
+		this.announce(
+			outcome,
+			{ wins: String(this.lanesWon('info')), losses: String(this.lanesWon('error')) },
+			detail
+		);
 	}
 
 	// --- The rival side -------------------------------------------------------
@@ -1247,6 +1299,7 @@ export class CombatController {
 			turn: this.turn,
 			status: this.status,
 			log: [...this.log],
+			cue: this.cue,
 			ready: this.isReady(),
 			wins: { info: this.lanesWon('info'), error: this.lanesWon('error') },
 			outcome: this.outcome
@@ -1287,6 +1340,29 @@ export class CombatController {
 
 	private setStatus(status: string): void {
 		this.status = status;
+		this.emit();
+	}
+
+	/**
+	 * Announce a beat of the turn being carried out, and put it on the store.
+	 *
+	 * Every call is one moment on the board — an attacker setting off, a blow answered, a
+	 * lane walked out — and the cue stands until the next one replaces it, so what is on
+	 * screen is always the thing the canvas is doing. The fight never words any of it: it
+	 * names the event and the fighters, and the sentence is looked up against the authored
+	 * collection where the page draws it.
+	 *
+	 * `status` is the fight's own English record of the same moment, unchanged and
+	 * unrelated: it is passed here only so a beat is one store write rather than two.
+	 * Beats with nothing to add to it leave it standing.
+	 */
+	private announce(
+		event: CombatNarrationEvent,
+		values: Partial<Record<NarrationPlaceholder, string>> = {},
+		status?: string
+	): void {
+		if (status !== undefined) this.status = status;
+		this.cue = { event, values, seq: ++this.cues };
 		this.emit();
 	}
 

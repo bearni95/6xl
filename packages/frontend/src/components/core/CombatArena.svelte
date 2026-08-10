@@ -6,6 +6,7 @@
 	import CombatGround from '$components/core/CombatGround.svelte';
 	import CombatHead from '$components/core/CombatHead.svelte';
 	import CombatHost from '$components/core/CombatHost.svelte';
+	import CombatNarration from '$components/core/CombatNarration.svelte';
 	import GameGlyph from '$components/core/GameGlyph.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
@@ -1769,6 +1770,24 @@
 						</div>
 					</div>
 				{/if}
+				<!-- What the fight is saying about the move being played out, laid across the middle
+				     of this panel while a turn is being carried out (see CombatNarration, which is
+				     the whole block). The board prints no word over any fighter, so this is where
+				     the fight is put into words: over the one plate the player is already reading,
+				     one line at a time, each replaced as the canvas moves on.
+				     A sibling of the fighter's card rather than something inside it, for one
+				     reason: the card is faded out for as long as the turn is being played
+				     (`panelLocked`), and the narration is the thing to read at exactly that moment.
+				     It is laid over the card and takes nothing from it — no room, no pointer and
+				     none of its opacity. Written after it, so it stands on it.
+				     The middle of the panel is the one band of it that is never anything else: the
+				     account is at the top corner and the orders are along the foot, so a line here
+				     covers the fighter's own picture and nothing that is read or pressed. It is
+				     gone between turns, since the cue is (see the controller's `finishTurn`). -->
+				<CombatNarration
+					cue={state?.cue ?? null}
+					classes="absolute inset-x-3 top-1/2 -translate-y-1/2"
+				/>
 			</div>
 			<!-- The head of the fight: what it is over, who it is with, the way out of it, and how
 			     it stands (see CombatHead, which is the whole block). It is drawn here on a screen
