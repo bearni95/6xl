@@ -289,28 +289,25 @@ const crownFrames = (frames: LoadedFrame[]): CrownFrame[] =>
 // --- Order buttons (drawn on the board, in the column between the two lines) -----
 /**
  * What a button in a column is *sized* by: a cell split this many ways. Not how many a
- * column holds — a fighter is given the three orders there are (charge, defend, shoot),
- * and the column runs as long as the list it is handed.
+ * column holds — the column runs as long as the list it is handed — but it is the same
+ * three now, a fighter being given the three orders there are (charge, defend, shoot),
+ * and the size says so: three buttons and the two gaps between them are exactly one cell
+ * tall, so a column of orders fills the cell of the central column it stands in and the
+ * ruled lines either side of it are the column's own top and bottom.
  *
- * Four, because four is what a cell was being split into when this button size was
- * settled: the three orders and, over them, a slot for what the fighter's colour did of
- * its own accord. What a colour grants is said on the orders themselves now — a dot in
- * the corner of each one it hands over free ({@link BoardOrder.gift}) — and a button is
- * the size it is regardless, because how big an order reads on this board is not a thing
- * that ought to change under the player when something *else* moves off the column. So
- * the three of them come to three quarters of the cell rather than the whole of it, and
- * the quarter they leave at the top is the room the fourth used to take.
+ * It was four — the three orders and, over them, a slot for what the fighter's colour did
+ * of its own accord, which left the three at three quarters of a cell and a quarter of it
+ * empty at the top once that slot came off (what a colour grants is said in the corner of
+ * the order it hands over free, {@link BoardOrder.gift}). Nothing is held there now, so
+ * nothing is kept for it.
  */
-const ORDER_COLUMN_COUNT = 4;
+const ORDER_COLUMN_COUNT = 3;
 /** Gap between buttons in a column, as a fraction of a button's height. */
 const ORDER_SPACING_RATIO = 0.12;
 /** A button's height as a fraction of a cell's side: the count and the gaps above,
  * solved so that many buttons and the gaps between them span one whole cell. */
 const ORDER_HEIGHT_RATIO =
 	1 / (ORDER_COLUMN_COUNT + (ORDER_COLUMN_COUNT - 1) * ORDER_SPACING_RATIO);
-/** A button's width as a fraction of its own height, which is all that is left to say
- * about its size once {@link ORDER_HEIGHT_RATIO} has set the height. */
-const ORDER_WIDTH_RATIO = 1.11;
 /** The glyph's size inside a button, as a fraction of the button's height. */
 const ORDER_ICON_RATIO = 0.62;
 /** Corner rounding, as a fraction of a button's height. */
@@ -2478,14 +2475,14 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Give a fighter the orders it can be given, drawn as a column of buttons standing up
-	 * from the fighter's own feet line through three quarters of a cell
-	 * ({@link ORDER_COLUMN_COUNT}) — but in the board's **central column** rather than
-	 * beside the fighter: flush inside one of the two lines that column is ruled between
+	 * Give a fighter the orders it can be given, drawn as a column of square buttons that
+	 * fills one whole cell of the board's **central column** — the three of them and their
+	 * gaps are a cell tall ({@link ORDER_COLUMN_COUNT}), stood on the row the fighter is on
+	 * and flush inside one of the two lines that column is ruled between
 	 * ({@link centerColumnEdges}). So the orders belonging to one lane are the two strips
-	 * on that lane's own line, one against each border, and a side's three are a straight
-	 * run down the middle of the board instead of a set of columns that drift with whatever
-	 * their fighters are doing.
+	 * in that lane's own cell of the middle column, one against each border, and a side's
+	 * three are a straight run down the middle of the board instead of a set of columns
+	 * that drift with whatever their fighters are doing.
 	 *
 	 * `side` says which end of that column this fighter's strip stands at, and is the
 	 * caller's to decide because it is about the fight and not about the board: the two
@@ -2656,8 +2653,8 @@ export class MugenBoard {
 		// everything on this board that says something about one fighter is — and ringed in
 		// white, because a chosen order fills its whole face with that very colour and a bare
 		// dot would disappear into it. Inside the face rather than straddling its corner: a
-		// column stands off a fighter's shoulder, and a mark that overhung would be the one
-		// thing on the button reaching for the sprite beside it.
+		// column fills its cell of the board exactly, and a mark that overhung would be the
+		// one thing on the button crossing the ruled line the column is drawn up to.
 		const dot = height * GIFT_DOT_RATIO;
 		const inset = dot + GIFT_DOT_RING;
 		mark.face.circle(width / 2 - inset, -height / 2 + inset, dot);
@@ -2680,14 +2677,18 @@ export class MugenBoard {
 
 	/**
 	 * A button's drawn size: a cell's side split {@link ORDER_COLUMN_COUNT} ways with the
-	 * gaps taken out of it, and as wide as that height allows. One size for every fighter,
-	 * because one size is what a cell is, so a fighter that walks carries the same column
-	 * of buttons with it — and one size for the whole fight, whatever else comes and goes
-	 * from the column.
+	 * gaps taken out of it, and **square** — a cell is square, the three of them fill one
+	 * end to end, so a button is as wide as its share of that side is tall. One size for
+	 * every fighter, because one size is what a cell is, and one size for the whole fight,
+	 * whatever else comes and goes from the column.
+	 *
+	 * A square this size is under a third of a cell wide, so the two strips a lane hangs
+	 * inside the central column ({@link centerColumnEdges}) take about three fifths of it
+	 * between them and the ground they are fought over still shows down the middle.
 	 */
 	private orderSize(): MarkSize {
 		const height = this.cellWidth() * ORDER_HEIGHT_RATIO;
-		return { width: height * ORDER_WIDTH_RATIO, height, gap: height * ORDER_SPACING_RATIO };
+		return { width: height, height, gap: height * ORDER_SPACING_RATIO };
 	}
 
 	/**
@@ -2706,9 +2707,11 @@ export class MugenBoard {
 
 	/**
 	 * Stack the buttons in a column and size their glyphs to fit. The column is laid out
-	 * upward from its own origin — the fighter's feet — so the bottom button sits on the
-	 * ground the fighter stands on and the rest rise from it, while the list still reads
-	 * top to bottom in the order it was handed in.
+	 * upward from its own origin — the bottom edge of the cell it stands in
+	 * ({@link updateOrders}) — so the bottom button sits on the line under that cell and
+	 * the rest rise from it, while the list still reads top to bottom in the order it was
+	 * handed in. Three buttons and their gaps are a cell tall ({@link ORDER_COLUMN_COUNT}),
+	 * so the top one finishes on the line over it and the column is the cell.
 	 */
 	private layOutOrders(actor: Actor): void {
 		const strip = actor.orders;
@@ -2726,20 +2729,27 @@ export class MugenBoard {
 		});
 	}
 
-	/** Keep a fighter's column standing at the end of the central column it was given.
-	 * Its **height** is the fighter's — the strip rises off whatever line the fighter's
-	 * feet are on, so which lane a column of orders belongs to is read off the row it is
-	 * standing in — but its x is the board's and not the fighter's: flush inside one of the
-	 * two ruled lines the central column is drawn between, so a side's orders are on one
-	 * vertical line whatever their fighters are doing. A fighter walking (or standing half
-	 * off the cell it lost) therefore no longer drags its orders across the board with it. */
+	/** Keep a fighter's column standing in the cell of the central column it was given:
+	 * one of that column's two ruled sides, and the row its fighter is on.
+	 *
+	 * The x is the board's and not the fighter's — flush inside the left or the right line
+	 * ({@link centerColumnEdges}) — so a side's orders are on one vertical line whatever
+	 * their fighters are doing, and a fighter walking to a duel no longer drags its orders
+	 * across the board with it. The y is the fighter's, so which lane a column speaks for
+	 * is read off the row it is standing in, but it is taken to the **bottom edge of the
+	 * cell** rather than to the feet line inside it: the buttons stack upward from here and
+	 * come to exactly a cell, so anchoring them where a fighter stands would hang the whole
+	 * column a quarter of a cell high, straddling the line into the row above. The drop is
+	 * measured off the grid itself, the bottom-right corner of a cell against its own foot
+	 * line, so nothing here has to know what fraction of a cell a fighter stands at. */
 	private updateOrders(actor: Actor): void {
 		const strip = actor.orders;
 		if (!strip) return;
 		const { width } = this.orderSize();
 		const edges = this.centerColumnEdges();
+		const footToFloor = (cellCorners(0, 0)[2].y - cellFoot(0, 0).y) * this.cellWidth();
 		strip.container.x = strip.side === 'left' ? edges.left + width / 2 : edges.right - width / 2;
-		strip.container.y = actor.y;
+		strip.container.y = actor.y + footToFloor;
 		// Above the board and its own fighter, below the callouts and the sparks.
 		strip.container.zIndex = actor.y + 5000;
 	}
