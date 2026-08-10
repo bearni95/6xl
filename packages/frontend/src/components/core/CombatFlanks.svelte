@@ -39,12 +39,13 @@
 	 * square there.
 	 */
 	import classNames from 'classnames';
-	import { BOARD_HEIGHT, FIRST_LANE_ROW, FIRST_ROW } from '$utils/mugen/grid';
+	import { BOARD_HEIGHT } from '$utils/mugen/grid';
 	import {
 		GROUND_BOTTOM_EDGE_TILE,
 		GROUND_BROW_SQUARES,
 		GROUND_EARTH_TILES,
 		GROUND_FIELD_COLUMNS,
+		GROUND_FIELD_TOP_SQUARE_ROW,
 		GROUND_FILL_TILES,
 		GROUND_TILES_PER_CELL,
 		GROUND_TOP_EDGE_TILE,
@@ -57,11 +58,13 @@
 	 * a literal.) */
 	const COLUMNS = GROUND_FIELD_COLUMNS;
 
-	/** The square row the field's grass begins on — the top of the first row a lane opens on,
-	 * which is where the sky stops — and the row it ends on, which is the apron below the last
-	 * cell. Both are counted in squares from the board's own top-left corner, like every other
-	 * row here, and both are the rows the sheet's two fringe tiles are laid along. */
-	const FIELD_TOP_ROW = (FIRST_LANE_ROW - FIRST_ROW) * GROUND_TILES_PER_CELL;
+	/** The square row the field's grass begins on — where the sky stops, taken from the
+	 * picture's own figures ({@link GROUND_FIELD_TOP_SQUARE_ROW}) rather than worked out again
+	 * here, since a band whose fringe sat a row off the canvas's would show the join at the
+	 * edge of the picture — and the row it ends on, which is the apron below the last cell.
+	 * Both are counted in squares from the board's own top-left corner, like every other row
+	 * here, and both are the rows the sheet's two fringe tiles are laid along. */
+	const FIELD_TOP_ROW = GROUND_FIELD_TOP_SQUARE_ROW;
 	const APRON_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL;
 
 	/**

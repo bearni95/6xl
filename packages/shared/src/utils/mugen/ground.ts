@@ -15,7 +15,7 @@
  * panel's own rules repeat these figures in `calc()`. Keep the two in step.
  */
 
-import { BOARD_WIDTH } from './grid';
+import { BOARD_WIDTH, FIRST_LANE_ROW, FIRST_ROW } from './grid';
 
 /** The vendored sheet the ground tiles are cut from. */
 export const GROUND_TILE_SHEET = '/assets/tiles/grass-16x16.png';
@@ -49,6 +49,25 @@ export const GROUND_TILES_PER_CELL = 3;
  * more fact about the shape of the picture, like the tiles it is laid with.
  */
 export const GROUND_BROW_SQUARES = 2;
+
+/**
+ * The row of squares the field's grass begins on — the row its upper fringe is laid along —
+ * counted from the board's own top-left corner. Everything above it is sky: nothing is drawn
+ * on those squares at all, and what shows through them is the page the canvas stands on
+ * (`CombatArena`'s own blue), which is also what shows through the gaps in the fringe itself.
+ *
+ * It is the top of the first row a lane opens on, **plus one square**. The row above the
+ * lanes was already sky, and the top third of the first lane row is sky now too, so the
+ * grass starts a square lower and the blue reaches a square further down the picture.
+ * Nothing about the fight moves for it: that row is walked and fought over like any other,
+ * and the line standing on it stands on its floor, three quarters of a cell below this.
+ *
+ * Read from here by both the canvas and the ground the document lays beside it
+ * (`CombatFlanks`), since a fringe drawn on two different rows either side of the edge of
+ * the picture is a join.
+ */
+export const GROUND_FIELD_TOP_SQUARE_ROW =
+	(FIRST_LANE_ROW - FIRST_ROW) * GROUND_TILES_PER_CELL + 1;
 
 /**
  * The **cut**: the one square-column the board is drawn without, counted in squares from

@@ -17,6 +17,7 @@ import {
 	GROUND_CUT_COLUMN,
 	GROUND_EARTH_TILES,
 	GROUND_FIELD_COLUMNS,
+	GROUND_FIELD_TOP_SQUARE_ROW,
 	GROUND_FILL_TILES,
 	GROUND_TILE_PX,
 	GROUND_TILE_SHEET,
@@ -273,16 +274,18 @@ const CUT_AT = GROUND_CUT_COLUMN * SQUARE_WIDTH;
 const closeCut = (col: number): number =>
 	col <= CUT_AT ? col : Math.max(CUT_AT, col - SQUARE_WIDTH);
 
-// **The sky is not the canvas's.** The board's top row is the one no line opens on
+// **The sky is not the canvas's.** It runs from the top of the board down to
+// {@link GROUND_FIELD_TOP_SQUARE_ROW}: the whole of the row no line opens on
 // ({@link FIRST_LANE_ROW}) — board the lanes have over them, walked over and measured
-// across but never fought for — and the field's top fringe is blades with gaps in it.
-// Neither is drawn on anything: the squares of that row are left empty and the gaps
+// across but never fought for — and the first square row of the lanes themselves under it.
+// The field's top fringe is then blades with gaps in it. None of that is drawn on
+// anything: those squares are left empty and the gaps
 // between the blades are left clear, so what shows through both is the page the canvas is
 // standing on, which is painted the sky (`CombatArena`'s own background). The canvas held
 // that colour itself until the document needed the same sky above the picture as in it —
 // two things painting one sky is two values to keep in step, and the one that can cover
-// the whole view is the page. The row keeps its yellow ruling: what the squares are is the
-// board's, only what fills them is not.
+// the whole view is the page. Those rows keep their yellow ruling: what the squares are is
+// the board's, only what fills them is not.
 
 /**
  * The **apron**: one row of ground squares below the last cell of the board, a third of a
@@ -338,11 +341,12 @@ const BROW_DEPTH = GROUND_BROW_SQUARES / GROUND_TILES_PER_CELL;
 
 /**
  * The field's first and last rows of squares, counted in ground squares down from the top
- * of the board: the top of the first row a lane opens on, which is where the sky stops,
- * and the apron, which is where the board stops. They are the rows the two edge tiles are
- * laid along, and everything between them is whole grass.
+ * of the board: where the sky stops ({@link GROUND_FIELD_TOP_SQUARE_ROW}, which is a fact
+ * about the picture and is kept with the rest of them, the document laying the same fringe
+ * beside this board), and the apron, which is where the board stops. They are the rows the
+ * two edge tiles are laid along, and everything between them is whole grass.
  */
-const FIELD_TOP_SQUARE_ROW = (FIRST_LANE_ROW - FIRST_ROW) * GROUND_TILES_PER_CELL;
+const FIELD_TOP_SQUARE_ROW = GROUND_FIELD_TOP_SQUARE_ROW;
 const FIELD_BOTTOM_SQUARE_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL;
 
 /** Below the ruling (0), and so below everything that stands on the board. */
@@ -1761,11 +1765,14 @@ export class MugenBoard {
 	 * the ground the fight is fought on and not a marking, so it stops at the outer edge of
 	 * the board and nowhere inside it.
 	 *
-	 * **The board's top row is not fought on and is not grassed.** No line opens there
-	 * ({@link FIRST_LANE_ROW}) — it is the board the lanes have over them — so nothing is
-	 * laid on it at all: it is left clear and the sky the page is painted shows through it.
-	 * The row is still ruled into its squares a cell like every other, the ruling being
-	 * the board's whatever fills them.
+	 * **The board's top row is not fought on and is not grassed**, and neither is the first
+	 * square row under it ({@link GROUND_FIELD_TOP_SQUARE_ROW}). No line opens on that top
+	 * row ({@link FIRST_LANE_ROW}) — it is the board the lanes have over them — and the
+	 * square row below it is the top third of the first lane row, whose line stands three
+	 * quarters of a cell lower and is nowhere near it. So nothing is laid on either: they
+	 * are left clear and the sky the page is painted shows through them. Both are still
+	 * ruled into their squares like every other row, the ruling being the board's whatever
+	 * fills them.
 	 *
 	 * **One sprite per square, off the same list the ruling is drawn from** ({@link
 	 * groundSquares}) — so a square of grass and the yellow border round it are the same
