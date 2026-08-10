@@ -29,25 +29,45 @@
 /**
  * How an encounter went — which is the whole of what the fight announces.
  *
- * Five ways a row can be played out, and every one of them is one attack answered: the two
- * of them firing at once, a blow a guard turned (ordered or owed), a blow that got through,
- * and a blow thrown at somebody already falling. A row where nobody attacked is a row where
- * nothing happened, and it says nothing.
+ * **Every** row of the board that is still being fought gets one of these, whether or not a
+ * blow was thrown down it. Five of them are an attack answered: the two firing at once, a
+ * blow a guard turned (ordered or owed), a blow that got through, and a blow thrown at
+ * somebody already falling. The other three are the rows where nothing was thrown at all —
+ * both loading, both covering, or one of each — because two fighters standing off across a
+ * lane is a thing that happened in it, and a row that went by in silence read as a row the
+ * game had forgotten to play.
  *
  * Nothing else is in here on purpose. The reveal, the charges banking and the fight's own
  * result are not encounters — the first two happen at one instant for everybody at once, and
  * the last is read off the panel in the middle of the board, where the fight puts what it
  * has to say about itself.
  */
-export type CombatNarrationEvent = 'exchange' | 'blocked' | 'freeGuard' | 'hit' | 'spent';
+export type CombatNarrationEvent =
+	| 'exchange'
+	| 'blocked'
+	| 'freeGuard'
+	| 'hit'
+	| 'spent'
+	| 'bothLoad'
+	| 'bothCover'
+	| 'loadAgainstCover';
 
 /**
  * A name a line may write into itself, spelled `{like}` `{this}`.
  *
- * Two, because an encounter is two fighters: the one that threw the blow and the one it was
- * thrown at. Which of them came out of it standing is what the event itself says.
+ * Always two of them, because an encounter is two fighters — but which two names depends on
+ * what they were to each other. A blow has an `{attacker}` and a `{target}`; a lane where
+ * one loaded and the other covered has a `{loader}` and a `{guard}`; and a lane where both
+ * did the same thing has no roles to tell them apart at all, so they are `{one}` and
+ * `{other}` — the player's own fighter first, so a line reads from the reader's side.
  */
-export type NarrationPlaceholder = 'attacker' | 'target';
+export type NarrationPlaceholder =
+	| 'attacker'
+	| 'target'
+	| 'loader'
+	| 'guard'
+	| 'one'
+	| 'other';
 
 /** One event, what it is, and the names a line about it may use. */
 export interface NarrationEventSpec {
@@ -91,6 +111,24 @@ export const NARRATION_EVENTS: readonly NarrationEventSpec[] = [
 		id: 'spent',
 		summary: 'The blow lands on somebody already falling from an earlier encounter this turn.',
 		placeholders: ['attacker', 'target']
+	},
+	{
+		id: 'bothLoad',
+		summary:
+			'Nothing was thrown down the row: both fighters spent the turn loading, and both end it armed.',
+		placeholders: ['one', 'other']
+	},
+	{
+		id: 'bothCover',
+		summary:
+			'Nothing was thrown down the row: both fighters covered against a blow neither of them threw.',
+		placeholders: ['one', 'other']
+	},
+	{
+		id: 'loadAgainstCover',
+		summary:
+			'Nothing was thrown down the row: one fighter loaded while the other covered against it.',
+		placeholders: ['loader', 'guard']
 	}
 ];
 

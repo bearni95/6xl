@@ -421,6 +421,15 @@ const REVEAL_MS = 600;
 /** The beat held after each shot has been answered, before the next is taken. */
 const SHOT_BEAT_MS = 320;
 
+/**
+ * How long a row nothing was thrown down is left standing before the next row is taken.
+ *
+ * Longer than a shot's beat because it is the whole of that encounter: a blow has a walk
+ * out and a strike to be read over, and a lane where both sides only loaded has the aura and
+ * nothing else — so the line it is narrated in needs the time to be read on its own.
+ */
+const QUIET_LANE_MS = 900;
+
 /** 'charge' → 'Charge', for the pickers' labels and the status lines. */
 export const actionLabel = (action: CombatAction): string =>
 	action.charAt(0).toUpperCase() + action.slice(1);
@@ -737,6 +746,12 @@ export class CombatController {
 		this.showOrders(acting);
 		await pause(REVEAL_MS);
 
+		// The rows nothing was thrown down, said before the shooting starts: they are settled
+		// at the reveal — a charge is banked before the volley and a guard nobody fires at is
+		// a stance held through it — so by here they are already over, and what is on the
+		// board for the rest of the turn is the shooting.
+		await this.playQuietLanes(shots);
+
 		for (const group of this.groupShots(shots)) {
 			if (group.length === 2) await this.playExchange(group[0], group[1]);
 			else await this.playShot(group[0]);
@@ -786,6 +801,69 @@ export class CombatController {
 				this.log.push(`${fighter.name} banks a free charge.`);
 			}
 		}
+	}
+
+	/**
+	 * Say what happened in every row nothing was thrown down.
+	 *
+	 * A row is an encounter whether or not a blow was thrown in it: two fighters stood across
+	 * a lane and each did something — loaded, or covered against a blow that never came, or
+	 * one of each. Left out, those rows went by in silence while the noisy ones were narrated,
+	 * which read as the game having forgotten to play them; and a turn where *nobody*
+	 * attacked said nothing at all, which is the turn a player is most likely to wonder about.
+	 *
+	 * Unlike a shot there is nothing on the canvas to hang the words on — the aura came up at
+	 * the reveal and that is the whole of the picture — so each of these gets a beat of its
+	 * own to be read in ({@link QUIET_LANE_MS}). It is the one place the narration lengthens a
+	 * turn, and it lengthens the turns that had nothing in them.
+	 *
+	 * Read down the player's own line, which is the board's top→bottom row order, and a row is
+	 * skipped unless **both** its fighters were in the turn with an order: one that is down, or
+	 * standing on the ground its lane was played for, is a row already decided, and a decided
+	 * row is not an encounter any more.
+	 */
+	private async playQuietLanes(shots: Shot[]): Promise<void> {
+		const fired = new Set<Fighter>();
+		for (const shot of shots) {
+			fired.add(shot.shooter);
+			fired.add(shot.target);
+		}
+		for (const player of this.players()) {
+			const rival = this.counterpart(player);
+			if (!rival) continue;
+			if (fired.has(player) || fired.has(rival)) continue;
+			if (player.down || rival.down || !player.action || !rival.action) continue;
+			await this.playQuietLane(player, rival);
+		}
+	}
+
+	/**
+	 * One such row: which of the three it was, and the two names its line is written about.
+	 *
+	 * The player's own fighter is named first wherever the two did the same thing — there are
+	 * no roles to tell them apart then, so the reader's own is the one to lead with. Where they
+	 * did different things the names are the roles instead, and which side each is on does not
+	 * come into it.
+	 */
+	private async playQuietLane(player: Fighter, rival: Fighter): Promise<void> {
+		const both = (event: CombatNarrationEvent, said: string): void => {
+			this.log.push(said);
+			this.announce(event, { one: player.name, other: rival.name }, said);
+		};
+		if (player.action === 'charge' && rival.action === 'charge') {
+			both('bothLoad', `${player.name} and ${rival.name} both spend the turn loading.`);
+		} else if (player.action === 'defend' && rival.action === 'defend') {
+			both('bothCover', `${player.name} and ${rival.name} both cover, and nothing comes.`);
+		} else {
+			// One of each, in whichever order the lane happens to hold them: the only two
+			// orders left are a charge and a guard, a shot being what put a row in the volley.
+			const loader = player.action === 'charge' ? player : rival;
+			const guard = loader === player ? rival : player;
+			const said = `${loader.name} loads while ${guard.name} covers.`;
+			this.log.push(said);
+			this.announce('loadAgainstCover', { loader: loader.name, guard: guard.name }, said);
+		}
+		await pause(QUIET_LANE_MS);
 	}
 
 	/**

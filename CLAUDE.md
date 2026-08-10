@@ -272,9 +272,12 @@ still knows how to draw one, nothing asks it to.
 
 **A turn being played out is narrated one sentence per encounter, and the fight does not
 word a syllable of it.** An **encounter** is a row of the board — the duel between the two
-fighters standing in it — and it is one thing that happened however many frames it takes to
-show: the walk out, the blow, the guard it came off or the fall it caused, and the ground
-that changes hands are all the same event, so they get the one line. The board prints no
+fighters standing in it — and *every* row still being fought gets a line, whether or not a
+blow was thrown down it: two fighters standing off across a lane is a thing that happened in
+it, and a row narrated in silence read as a row the game had forgotten to play. It is one
+thing that happened however many frames it takes to show: the walk out, the blow, the guard
+it came off or the fall it caused, and the ground that changes hands are all the same event,
+so they get the one line. The board prints no
 word over any fighter (a callout at the reveal gives the turn away; one after the fact only
 letters a picture that has just been drawn), so the words stand on the player's own orders
 panel instead — `CombatNarration.svelte`, laid across the middle of it, over the card and
@@ -282,13 +285,24 @@ outside the fade the card wears while a turn runs. The line goes up as the blow 
 row and stands until the next row has something of its own to say.
 
 What the controller emits is a **cue** and never a sentence: `CombatState.cue`, carrying one
-of the five ways an encounter can go (`exchange`, `blocked`, `freeGuard`, `hit`, `spent` —
-the fixed catalogue in `@3xl/shared/types/combat-narration.type`) and the two fighters it
-was between. There are exactly two places it is announced from — `playExchange`, and
-`playShot`'s four branches — and everything else a turn does is silent: the reveal and the
-charges happen at one instant for everybody at once, and how the fight *ended* is read off
-the panel in the middle of the board, not narrated. The cue comes off when the next turn is
-handed back (`finishTurn`); a fight that ends keeps the encounter that decided it.
+of the eight ways an encounter can go (the fixed catalogue in
+`@3xl/shared/types/combat-narration.type`) and the two fighters it was between. Five of them
+are a blow answered — `exchange`, `blocked`, `freeGuard`, `hit`, `spent` — announced from
+`playExchange` and `playShot`'s four branches. The other three are the rows where **nothing
+was thrown**: `bothLoad`, `bothCover`, `loadAgainstCover`, announced by `playQuietLanes`
+after the reveal and before the shooting, since a lane that only loaded is settled the
+moment the orders are read. Those are the one place the narration costs a turn any time —
+there is no animation to hang the words on, so each holds `QUIET_LANE_MS` to be read in —
+and it is the turns that had nothing in them that pay it. Which two names a line gets
+depends on what the pair were to each other: `{attacker}`/`{target}` for a blow,
+`{loader}`/`{guard}` where one loaded and one covered, and `{one}`/`{other}` where both did
+the same thing (the player's own fighter first, so a line reads from the reader's side).
+
+A row that is already decided — either fighter down, or one standing on the ground its lane
+was played for — is not an encounter and says nothing. Neither is the reveal, the charges
+banking (one instant, everybody at once) or the fight's own result, which is read off the
+panel in the middle of the board. The cue comes off when the next turn is handed back
+(`finishTurn`); a fight that ends keeps the encounter that decided it.
 
 The wording is authored data — `@3xl/data`'s `public/combat-narration.json`, written on the
 admin `/narration` screen, read once by `narration.service.ts` — so a line can be rewritten

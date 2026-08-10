@@ -51,7 +51,11 @@
 	 */
 	const SAMPLE: Record<NarrationPlaceholder, string> = {
 		attacker: 'Son Goku',
-		target: 'Bulma'
+		target: 'Bulma',
+		loader: 'Son Goku',
+		guard: 'Bulma',
+		one: 'Son Goku',
+		other: 'Bulma'
 	};
 
 	onMount(load);
@@ -214,9 +218,10 @@
 			</p>
 			<p class="text-sm opacity-70">
 				A section per way an encounter can go — that is the whole of what the fight
-				announces. Write as many ways of saying each as you like: the fight picks one per
-				encounter, seeded off the encounter itself, so two identical blows are not narrated
-				in identical words. Save writes that section into
+				announces, and every row that is still being fought gets one of them, including the
+				three where nothing was thrown at all. Write as many ways of saying each as you
+				like: the fight picks one per encounter, seeded off the encounter itself, so two
+				identical blows are not narrated in identical words. Save writes that section into
 				<code class="font-mono">@3xl/data</code>'s
 				<code class="font-mono">public/combat-narration.json</code>, which is what the arena
 				reads. The game is Catalan — these lines are the text a player sees, not a key.

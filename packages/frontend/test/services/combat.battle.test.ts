@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import {
 	boardFitsLineup,
@@ -33,6 +33,17 @@ function seeds(colors: CombatColor[]): FighterSeed[] {
 
 const COLORS: CombatColor[] = ['red', 'yellow', 'blue', 'red', 'yellow', 'blue'];
 
+/**
+ * A turn is timed — the beats between its blows, and the one it holds on each row nothing
+ * was thrown down — so these run the clock rather than waiting on it, as the rest of the
+ * combat suite does. Waiting in real time made the length of a fight the length of the test.
+ */
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
+/** Everything the turn in flight still has to do, done at once. */
+const settleTurn = (): Promise<void> => vi.runAllTimersAsync().then(() => undefined);
+
 /** Play `turns` turns out, every standing player fighter shooting when it can and
  * charging when it can't — enough to bank charges, spend guards and fell fighters. */
 async function playTurns(controller: CombatController, turns: number): Promise<void> {
@@ -44,9 +55,7 @@ async function playTurns(controller: CombatController, turns: number): Promise<v
 		}
 		if (!get(controller).ready) return;
 		controller.commit();
-		while (get(controller).phase === 'resolving') {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		}
+		await settleTurn();
 	}
 }
 
@@ -136,9 +145,7 @@ describe('CombatController — leaving a fight and coming back to it', () => {
 		expect(after.ready).toBe(true);
 
 		resumed.commit();
-		while (get(resumed).phase === 'resolving') {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		}
+		await settleTurn();
 		// And it lands where the turn would have left it: the next turn, or the end of the
 		// fight if that turn settled it.
 		expect(get(resumed).turn > given.turn || !!get(resumed).outcome).toBe(true);

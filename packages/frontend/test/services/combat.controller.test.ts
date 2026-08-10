@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import {
 	CombatController,
@@ -60,12 +60,22 @@ function recordingBoard(): { calls: string[]; board: MugenBoard } {
 	return { calls, board: board as MugenBoard };
 }
 
+/**
+ * A turn is timed — the beats it holds between its blows, and the one it holds on each row
+ * nothing was thrown down — so every test here runs the clock rather than waiting on it, as
+ * the rest of the combat suite does. Polling in real time made the length of a turn the
+ * length of the test: a turn where all three rows stand off is several seconds of nothing.
+ */
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
+/** Everything the turn in flight still has to do, done at once. */
+const settleTurn = (): Promise<void> => vi.runAllTimersAsync().then(() => undefined);
+
 /** Play one turn out, however the fighters were ordered. */
 async function playTurn(controller: CombatController): Promise<void> {
 	controller.commit();
-	while (get(controller).phase === 'resolving') {
-		await new Promise((resolve) => setTimeout(resolve, 20));
-	}
+	await settleTurn();
 }
 
 describe('CombatController — giving orders', () => {
@@ -176,9 +186,7 @@ describe('CombatController — the fight as it thins', () => {
 			for (const fighter of playerFighters(controller)) tap(controller, fighter, pick(fighter));
 			expect(get(controller).ready).toBe(true);
 			controller.commit();
-			while (get(controller).phase === 'resolving') {
-				await new Promise((resolve) => setTimeout(resolve, 20));
-			}
+			await settleTurn();
 		}
 		return sawLoss;
 	}
@@ -253,9 +261,7 @@ describe('CombatController — giving the fight up', () => {
 		controller.concede();
 		expect(get(controller).outcome).toBeNull();
 
-		while (get(controller).phase === 'resolving') {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		}
+		await settleTurn();
 		controller.concede();
 		expect(get(controller).outcome).toBe('lose');
 		// A fight already over stays as it was called.
@@ -274,11 +280,7 @@ describe('CombatController — the rivals fight the way their colour does', () =
 			.fighters.filter((fighter) => fighter.side === 'error')
 			.map((fighter) => fighter.action);
 
-	const settle = async (controller: CombatController): Promise<void> => {
-		while (get(controller).phase === 'resolving') {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		}
-	};
+	const settle = (_controller: CombatController): Promise<void> => settleTurn();
 
 	/**
 	 * What three rivals of `rivals` order on a turn where each is loaded, faces somebody
@@ -380,9 +382,7 @@ describe('CombatController — what the board is left showing', () => {
 
 		for (const fighter of playerFighters(controller)) tap(controller, fighter, 'charge');
 		controller.commit();
-		while (get(controller).phase === 'resolving') {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		}
+		await settleTurn();
 
 		// The turn played out in pictures alone: the brace, the walk, the blow, the slash.
 		expect(get(controller).phase).toBe('planning');

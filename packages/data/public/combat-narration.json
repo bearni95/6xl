@@ -31,6 +31,24 @@
 			"{attacker} pica sobre {target}, que ja anava a terra.",
 			"El cop de {attacker} arriba tard: {target} ja queia.",
 			"{target} ja estava tocat quan {attacker} hi ha arribat."
+		],
+		"bothLoad": [
+			"{one} i {other} es miren i carreguen tots dos.",
+			"Ningú no es mou: {one} i {other} passen el torn carregant.",
+			"{one} i {other} guarden el cop per al torn que ve.",
+			"Cap dels dos té pressa — {one} i {other} carreguen."
+		],
+		"bothCover": [
+			"{one} i {other} es cobreixen tots dos i no passa res.",
+			"Dues guàrdies i cap cop: {one} i {other} s'esperen.",
+			"{one} i {other} no es refien l'un de l'altre, i el carrer queda quiet.",
+			"Torn en blanc: {one} i {other} aguanten la guàrdia per no res."
+		],
+		"loadAgainstCover": [
+			"{loader} carrega mentre {guard} es cobreix d'un cop que no arriba.",
+			"{guard} es tanca en guàrdia i {loader} n'aprofita per carregar.",
+			"{loader} es prepara tranquil·lament; {guard} no es mou de darrere la guàrdia.",
+			"{guard} espera el cop i {loader} li dona temps: carrega."
 		]
 	}
 }
