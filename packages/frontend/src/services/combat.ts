@@ -38,7 +38,17 @@ export interface StagedFight {
 	locationId: string | null;
 	/** The generation of that town's team this fight is against, which keys it. */
 	turnover: number;
-	/** The town's plate, drawn over the board. Null for a fight over no town. */
+	/**
+	 * The town's plate, drawn over the board. Null for a fight over no town.
+	 *
+	 * What is on it is the map's reading and the arena has no way to make it — except for
+	 * the two halves of it that are a *ledger* rather than a reading of the terrain: who is
+	 * sitting on the town and how far this player has got towards shifting them. The arena's
+	 * page re-reads those off Supabase for itself (see `/combat`'s livePlate), because this
+	 * plate is staged the moment the fight is, which on the resume path can be before the map
+	 * has finished loading the holders — and a plate built then names no occupant and counts
+	 * the bar against the untouched OG team.
+	 */
 	plate: TownPlateCard | null;
 }
 
