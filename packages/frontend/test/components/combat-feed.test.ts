@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { fireEvent, render } from '@testing-library/svelte';
 import { addMessages, init, waitLocale } from 'svelte-i18n';
 import CombatFeedModal from '$components/core/CombatFeedModal.svelte';
 import { combatFeedService } from '$services/combatFeed.service';
@@ -80,5 +80,52 @@ describe('the sheet of other fights', () => {
 		// Better than a blank: a fight did happen somewhere, and this is everything anybody
 		// knows about where.
 		expect(await findByText('ES_99999')).toBeTruthy();
+	});
+
+	/**
+	 * Pressing a line opens the whole announcement under it.
+	 *
+	 * A line says who, what and where; the record carries what it paid, how much of the team
+	 * came through, how many stood against them and whether the town changed hands, none of
+	 * which is on the line. So what is pinned here is that the press yields the *entry* and
+	 * not a tidier version of the line — the town down there is the geojson id it arrived as,
+	 * because this is the record and not the sentence.
+	 */
+	it('drops the fight’s whole record out under the line it is pressed on', async () => {
+		// Its own player, because the fights the tests above left in the feed are still in it —
+		// the service is the one the page holds — and the town is not what tells them apart.
+		combatFeedService.receive({
+			...fight('opened', 'ES_08101'),
+			player: { id: 'p2', name: 'Ermessenda', character_id: null, color: 'blue', level: 7 }
+		});
+		const { container, findByText } = render(CombatFeedModal);
+
+		// Closed until it is asked for: a sheet that opened every fight it holds would be a
+		// wall of JSON where a feed was wanted.
+		expect(container.querySelector('pre')).toBeNull();
+
+		const line = (await findByText('Ermessenda')).closest('button');
+		expect(line).toBeTruthy();
+		await fireEvent.click(line!);
+
+		const record = container.querySelector('pre');
+		expect(record).toBeTruthy();
+		// Parsed rather than matched as text: what has to be true is that the whole entry is
+		// down there, field for field, and not that some string happens to appear in it.
+		expect(JSON.parse(record!.textContent ?? '{}')).toMatchObject({
+			id: 'opened',
+			locationId: 'ES_08101',
+			outcome: 'win',
+			exp: 300,
+			survivors: 3,
+			fielded: 3,
+			captured: false,
+			stale: false,
+			player: { name: 'Ermessenda', level: 7 }
+		});
+
+		// And it is a toggle: the same press puts it away again.
+		await fireEvent.click(line!);
+		expect(container.querySelector('pre')).toBeNull();
 	});
 });

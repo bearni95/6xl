@@ -32,6 +32,30 @@
 	const entries = combatFeedService.entries;
 	const townNames = combatFeedService.townNamesById;
 
+	/**
+	 * Which lines have been opened onto the whole of what arrived with them.
+	 *
+	 * A line says three things about a fight — who, what, and where — and the announcement
+	 * carries a good deal more than that: what it paid, how much of the team came through,
+	 * how many stood against them, whether the town changed hands, whether it was fought
+	 * against a generation that had already been superseded, and the id behind every one of
+	 * those readings. None of it belongs on the line, and all of it is worth being able to
+	 * see, so the line is the press and the record drops out underneath it.
+	 *
+	 * A set rather than one open id: two fights opened at once are two fights being compared,
+	 * which is the reason to be reading the record at all, and an accordion would shut the
+	 * first the moment the second was asked for. It is rebuilt rather than mutated on every
+	 * press, because Svelte's legacy reactive tracking follows assignments and a `Set` that
+	 * is only added to never re-renders anything.
+	 */
+	let opened: ReadonlySet<string> = new Set();
+
+	function toggle(id: string): void {
+		const next = new Set(opened);
+		if (!next.delete(id)) next.add(id);
+		opened = next;
+	}
+
 	// The clock only: a feed is about what is happening now, and a date over every line of it
 	// would be the same date on all of them.
 	const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
@@ -77,33 +101,64 @@
 	     table does: the title bar stays put however far down the feed a fight sits. -->
 	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-box bg-base-200/50">
 		{#each lines as { entry, town } (entry.id)}
-			<!-- One fight, read the way the game says one: whoever fought it on the left, wearing
-			     the avatar they wear everywhere else, then what they did and where, then the hour
-			     it happened at. -->
-			<div class="flex items-center gap-3 border-b border-base-300/50 px-4 py-3 last:border-0">
-				<PlayerAvatar
-					characterId={entry.player.characterId}
-					color={entry.player.color}
-					initial={(entry.player.name ?? '?').slice(0, 1).toUpperCase()}
-					size="w-10"
-					textClasses="text-base"
-					ownColors={false}
-				/>
-				<div class="flex min-w-0 flex-1 flex-col">
-					<span class="truncate font-semibold">
-						{entry.player.name ?? $_('combat.feed.anonymous')}
-						<span class="ml-1 text-xs font-normal opacity-60">
-							{$_('profile.levelBadge', { values: { level: entry.player.level } })}
+			<!-- One fight: the line it is read as, and under it the whole of what was announced
+			     about it, while it is open. The rule the row carried moves out here, so a fight
+			     is one block however much of it is showing and the record is inside the same
+			     division as the line it belongs to. -->
+			<div class="flex flex-col border-b border-base-300/50 last:border-0">
+				<!-- One fight, read the way the game says one: whoever fought it on the left, wearing
+				     the avatar they wear everywhere else, then what they did and where, then the hour
+				     it happened at.
+				     The whole line is the press, as the map's own rows are: there is one thing to do
+				     with a fight here and the line is the thing to press. It names itself in its own
+				     words — the player, the outcome, the town and the hour are what a screen reader
+				     reads out — so it carries no label of its own, only `aria-expanded`, which is the
+				     one thing about it the words do not say. -->
+				<button
+					type="button"
+					class="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-base-300/40"
+					aria-expanded={opened.has(entry.id)}
+					on:click={() => toggle(entry.id)}
+				>
+					<PlayerAvatar
+						characterId={entry.player.characterId}
+						color={entry.player.color}
+						initial={(entry.player.name ?? '?').slice(0, 1).toUpperCase()}
+						size="w-10"
+						textClasses="text-base"
+						ownColors={false}
+					/>
+					<div class="flex min-w-0 flex-1 flex-col">
+						<span class="truncate font-semibold">
+							{entry.player.name ?? $_('combat.feed.anonymous')}
+							<span class="ml-1 text-xs font-normal opacity-60">
+								{$_('profile.levelBadge', { values: { level: entry.player.level } })}
+							</span>
 						</span>
-					</span>
-					<span class="truncate text-sm">
-						<span class={classNames('font-semibold', outcomeClasses[entry.outcome])}>
-							{outcomeLabel(entry)}
+						<span class="truncate text-sm">
+							<span class={classNames('font-semibold', outcomeClasses[entry.outcome])}>
+								{outcomeLabel(entry)}
+							</span>
+							<span class="opacity-70">{town}</span>
 						</span>
-						<span class="opacity-70">{town}</span>
-					</span>
-				</div>
-				<span class="flex-none text-xs opacity-60">{timeFormat.format(new Date(entry.at))}</span>
+					</div>
+					<span class="flex-none text-xs opacity-60">{timeFormat.format(new Date(entry.at))}</span>
+				</button>
+				{#if opened.has(entry.id)}
+					<!-- The announcement itself, as the app holds it: the entry the adapter read off
+					     the channel, every field of it, in the order the type declares them. Not the
+					     line's own reading of it — the town is its geojson id down here, because that
+					     is what arrived and this is the record rather than the sentence.
+					     It scrolls on its own axis rather than wrapping (`overflow-x-auto` on a `pre`,
+					     which is what keeps the indentation meaning something), so a long id runs
+					     inside this box and never widens the sheet the list is drawn on. -->
+					<pre
+						class="mx-4 mb-3 overflow-x-auto rounded-box bg-base-300/60 p-3 font-mono text-xs">{JSON.stringify(
+							entry,
+							null,
+							2
+						)}</pre>
+				{/if}
 			</div>
 		{:else}
 			<!-- Nothing has finished yet. The sheet is only reachable once something has, so this
