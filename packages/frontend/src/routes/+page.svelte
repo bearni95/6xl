@@ -379,7 +379,24 @@
 	// page is mounted afresh every time the arena is left — a marker held here would forget on
 	// exactly the visit it exists to remember, and the map would bounce the player straight
 	// back into the fight they just walked out of.
-	$: if ($openBattle && $openBattle.startedAt !== $battleShown) {
+	//
+	// **Not before the region tree is in hand** (`regionNodes.length`), and that is the whole
+	// difference between a resumed fight that knows what it is over and one that does not. The
+	// staging carries the town's own plate, and the plate is built off this tree
+	// (`buildFightPlate`) — the town's name, the show it flies and the colour it is drawn in
+	// are all readings off it and none of them are the arena's to work out. An open battle is
+	// one small row from Supabase and the tree is four GeoJSON layers, so on a reload the
+	// battle lands first every time: resuming the moment it did handed the arena a plate of
+	// `null`, and the head of the fight stood there with nothing printed on it — no town, no
+	// holder, no standing. Named in the condition so this statement re-runs when the tree
+	// lands, which is what turns the gate into a wait rather than a refusal: the fight is
+	// resumed a beat later, off a map that can say what it is over.
+	//
+	// The holders and the sieges are deliberately *not* waited on. They are the other half of
+	// the same snapshot, and the arena's own page re-reads both for itself precisely because
+	// they can land late (see /combat's `livePlate`) — where what the tree says cannot be read
+	// anywhere but here.
+	$: if (regionNodes.length && $openBattle && $openBattle.startedAt !== $battleShown) {
 		battleShown.set($openBattle.startedAt);
 		resumeBattle();
 	}
