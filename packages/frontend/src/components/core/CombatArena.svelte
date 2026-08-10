@@ -177,6 +177,25 @@
 	// order is the whole of the difference between the two: same squares, same rule.
 	const RIVAL_LANES = [...LANES].reverse();
 
+	// How deep the banner is, and with it the legs of the two wings at its ends. One number
+	// and not three: a wing is a right triangle whose legs are the plate's own height (see
+	// the score's markup), so a plate that grew without them would be a shape with a notch
+	// bitten out of each end.
+	//
+	// Two rows deep wherever there is a standing to draw — the counts across the top and the
+	// town's bar across the whole foot — and one row where there is not, which is a fight
+	// over no town at all. The bar is `h-6` under an `h-8` row, so the two come to `h-14`
+	// exactly and the bar runs edge to edge along the shorter of the banner's two parallel
+	// sides, which is the whole of what the wings leave uncut.
+	$: banded = Boolean(location?.challenge);
+	$: bannerDepth = banded ? 'h-14' : 'h-8';
+	$: leftWing = banded
+		? 'border-t-[3.5rem] border-l-[3.5rem]'
+		: 'border-t-[2rem] border-l-[2rem]';
+	$: rightWing = banded
+		? 'border-t-[3.5rem] border-r-[3.5rem]'
+		: 'border-t-[2rem] border-r-[2rem]';
+
 	const characterById = new Map(availableCharacters.map((option) => [option.id, option]));
 
 	// The blue side is the player's team; the red side (the CPU) either mirrors it or,
@@ -1617,9 +1636,11 @@
 					     cells of a board rather than a length being filled, which is what the
 					     thing being counted is. Each side's three sit over the half of the board
 					     that side holds — the rivals' to the left, the player's to the right.
-					     Between them, how far the town itself has been taken, which is the count
-					     this fight is one of and belongs between the two counts of the fight
-					     rather than beside one of them.
+					     Between them the room the way out is reached for in, and under the
+					     two of them, across the whole width of the plate, how far the town
+					     itself has been taken — the count this one fight is one of, which is
+					     why it is read with the score rather than up with the two things the
+					     fight is about.
 					     Both counts grow outwards from that middle, so the rivals' three are laid
 					     out backwards and fill from the right: it is the same count read either
 					     way round, and the two then mirror each other across the middle rather
@@ -1649,127 +1670,138 @@
 						     CSS: a box with no size at all, one side of it coloured and the side it
 						     leans on transparent, so the coloured side is cut off at 45°. Both legs
 						     are the plate's own height, which is what makes the other two angles 45
-						     apiece and butts the wing flush against the plate's full depth. -->
+						     apiece and butts the wing flush against the plate's full depth — so the
+						     legs follow that depth rather than being written down twice (see
+						     `leftWing`). -->
 						<span
-							class="h-0 w-0 border-t-[2rem] border-l-[2rem] border-t-base-100/80 border-l-transparent"
+							class={classNames(
+								'h-0 w-0 border-t-base-100/80 border-l-transparent',
+								leftWing
+							)}
 							aria-hidden="true"
 						></span>
 						<div
-							class="group pointer-events-auto flex h-8 items-stretch gap-4 bg-base-100/80 text-white shadow-xl"
+							class={classNames(
+								'group pointer-events-auto flex flex-col bg-base-100/80 text-white shadow-xl',
+								bannerDepth
+							)}
 						>
-							<!-- Each side's count is three cells in a row, laid out as cells of the
-							     board because that is what is being counted: the plate is `h-8` and a
-							     block is three of that across (`w-24`), over three equal columns, so
-							     the plate's own depth sets the cell's width and the two figures are
-							     read together — a taller plate wants a wider block.
-							     Nothing is ruled between them. The cells were divided by a line down each
-							     of their sides, and what the lines were dividing is three discs in a row
-							     with a plate's own width of air around them — a thing already read as
-							     three from across the room, since a count of three is what a disc apart
-							     from another disc says. So the rules were drawing a grid over a figure
-							     that did not need one, and the busiest mark on the banner was the one
-							     carrying the least. The grid still sets the spacing; it simply is not
-							     drawn any more.
-							     A lane taken is a disc in its cell rather than the cell painted in: the
-							     ground a lane is played for is one white cell of the middle column, and
-							     a mark set in a cell reads as something standing on that ground where a
-							     filled cell reads as the ground itself having changed. The disc is
-							     always drawn and simply carries no colour until the lane is won, so the
-							     three cells hold their spacing whatever the score is. -->
-							<div
-								class="grid h-full w-24 grid-cols-3 py-1"
-								role="progressbar"
-								aria-label={$_('combat.rivalWins')}
-								aria-valuemin={0}
-								aria-valuemax={TEAM_SIZE}
-								aria-valuenow={state.wins.error}
-							>
-								{#each RIVAL_LANES as lane}
-									<span class="flex items-center justify-center">
-										<span
-											class={classNames(
-												'size-4 rounded-full',
-												lane <= state.wins.error && 'bg-white'
-											)}
-										></span>
-									</span>
-								{/each}
-							</div>
-							<!-- How far the town has been taken, and over it the way out of the fight —
-							     one slot in the middle of the banner holding both, because they are the
-							     same place read at two moments: what this fight is one of, and the one
-							     thing that can be done about the fight as a whole.
-							     The standing is what stands there now, where the turn number used to.
-							     A turn is a thing the board says by itself — whose orders are open and
-							     what has just been played out — and counting it added a figure to the
-							     middle of the score that nothing on the screen was waiting for. What a
-							     player actually wants over the board is what winning this one is worth:
-							     the wins banked against the wins the town costs, which is the only
-							     reading here that reaches past the fight in front of them. It fills the
-							     slot end to end (TownChallenge's bar is `w-full`, and with no control
-							     beside it takes the whole row), so the picture runs the full width the
-							     wings cut in to, and the slot keeps the width it was given for the
-							     button — the banner cannot change shape under the hand reaching for it.
-							     The way out is the only one there is: a battle is ended by a result,
-							     never by walking off, so giving it up reports the loss it is and closes
-							     the arena exactly as being wiped out would. Between turns only — a turn
-							     already being carried out settles itself.
-							     Out of sight until the plate is under the pointer, because it is the one
-							     control here that is not part of playing: a fight is played with the
-							     buttons beside the fighters, and what stands over the board at all times
-							     should be what is true of the fight. Reached for rather than offered.
-							     It is laid over the slot rather than put beside the turn, and the slot is
-							     as wide as the wider of the two whichever is showing: a control that took
-							     room of its own pushed both counts outwards the moment the pointer
-							     touched the banner, so the whole thing changed shape under the hand
-							     reaching for it. The turn goes invisible as the button arrives — the
-							     button is see-through, and the two of them stacked would be a line of type
-							     over a bar with its own figures written across it.
-							     Reaching for it is a thing a pointer does, so this is the pointer's copy
-							     and it is scoped to `sm:` outright: below that the slot is the standing
-							     and nothing else — a touch screen has no hover to hide a control behind,
-							     and the emulated one a tap leaves behind would swap the bar for a button
-							     and leave it swapped. The phone is given the same control as a row of its
-							     own, at the foot of the orders (above), where it can be seen to be
-							     there. -->
-							<div class="relative flex w-28 items-center justify-center">
-								{#if location?.challenge}
-									<TownChallenge
-										siege={location.challenge.siege}
-										button={location.challenge.button}
-										unlocksAt={location.challenge.unlocksAt}
-										onUnlock={location.challenge.onUnlock}
-										classes="w-full sm:group-hover:invisible"
-									/>
-								{/if}
-								<button
-									type="button"
-									class="btn absolute inset-0 hidden btn-ghost btn-sm text-error sm:group-hover:inline-flex"
-									disabled={state.phase !== 'planning'}
-									on:click={() => controller?.concede()}
+							<!-- The counts, across the top of the plate: one side's three, the room the way
+							     out is reached for in, and the other side's three. -->
+							<div class="flex h-8 items-stretch gap-2">
+								<!-- Each side's count is three cells in a row, laid out as cells of the
+								     board because that is what is being counted: the row is `h-8` and a
+								     block is three of that across (`w-24`), over three equal columns, so
+								     the row's own depth sets the cell's width and the two figures are
+								     read together — a taller row wants a wider block.
+								     Nothing is ruled between them. The cells were divided by a line down each
+								     of their sides, and what the lines were dividing is three discs in a row
+								     with a plate's own width of air around them — a thing already read as
+								     three from across the room, since a count of three is what a disc apart
+								     from another disc says. So the rules were drawing a grid over a figure
+								     that did not need one, and the busiest mark on the banner was the one
+								     carrying the least. The grid still sets the spacing; it simply is not
+								     drawn any more.
+								     A lane taken is a disc in its cell rather than the cell painted in: the
+								     ground a lane is played for is one white cell of the middle column, and
+								     a mark set in a cell reads as something standing on that ground where a
+								     filled cell reads as the ground itself having changed. The disc is
+								     always drawn and simply carries no colour until the lane is won, so the
+								     three cells hold their spacing whatever the score is. -->
+								<div
+									class="grid h-full w-24 grid-cols-3 py-1"
+									role="progressbar"
+									aria-label={$_('combat.rivalWins')}
+									aria-valuemin={0}
+									aria-valuemax={TEAM_SIZE}
+									aria-valuenow={state.wins.error}
 								>
-									{$_('combat.concede')}
-								</button>
+									{#each RIVAL_LANES as lane}
+										<span class="flex items-center justify-center">
+											<span
+												class={classNames(
+													'size-4 rounded-full',
+													lane <= state.wins.error && 'bg-white'
+												)}
+											></span>
+										</span>
+									{/each}
+								</div>
+								<!-- The room between the two counts, and the way out of the fight standing in
+								     it. It is the middle of the score and it is deliberately empty: the turn
+								     number that used to fill it was a figure nothing on the screen was
+								     waiting for, and what the middle is actually for is the one control here
+								     that is not part of playing.
+								     The way out is the only one there is: a battle is ended by a result,
+								     never by walking off, so giving it up reports the loss it is and closes
+								     the arena exactly as being wiped out would. Between turns only — a turn
+								     already being carried out settles itself.
+								     Out of sight until the plate is under the pointer: a fight is played with
+								     the buttons beside the fighters, and what stands over the board at all
+								     times should be what is true of the fight. Reached for rather than
+								     offered. The slot holds its width whether or not the button is showing,
+								     so a hand reaching for it never changes the shape of the thing it is
+								     reaching into — which is why the room is kept rather than closed up now
+								     there is nothing standing in it.
+								     Reaching for it is a thing a pointer does, so this is the pointer's copy
+								     and it is scoped to `sm:` outright — a touch screen has no hover to hide
+								     a control behind, and the emulated one a tap leaves behind would leave it
+								     showing for good. The phone is given the same control as a row of its
+								     own, at the foot of the orders (above), where it can be seen to be
+								     there. -->
+								<div class="relative flex w-24 items-center justify-center">
+									<button
+										type="button"
+										class="btn absolute inset-0 hidden btn-ghost btn-sm text-error sm:group-hover:inline-flex"
+										disabled={state.phase !== 'planning'}
+										on:click={() => controller?.concede()}
+									>
+										{$_('combat.concede')}
+									</button>
+								</div>
+								<div
+									class="grid h-full w-24 grid-cols-3 py-1"
+									role="progressbar"
+									aria-label={$_('combat.yourWins')}
+									aria-valuemin={0}
+									aria-valuemax={TEAM_SIZE}
+									aria-valuenow={state.wins.info}
+								>
+									{#each LANES as lane}
+										<span class="flex items-center justify-center">
+											<span
+												class={classNames('size-4 rounded-full', lane <= state.wins.info && 'bg-white')}
+											></span>
+										</span>
+									{/each}
+								</div>
 							</div>
-							<div
-								class="grid h-full w-24 grid-cols-3 py-1"
-								role="progressbar"
-								aria-label={$_('combat.yourWins')}
-								aria-valuemin={0}
-								aria-valuemax={TEAM_SIZE}
-								aria-valuenow={state.wins.info}
-							>
-								{#each LANES as lane}
-									<span class="flex items-center justify-center">
-										<span
-											class={classNames('size-4 rounded-full', lane <= state.wins.info && 'bg-white')}
-										></span>
-									</span>
-								{/each}
-							</div>
+							<!-- How far the town itself has been taken, across the whole foot of the
+							     plate: the wins banked against the wins the town costs, which is the one
+							     reading up here that reaches past the fight in front of the player — what
+							     winning this one is worth.
+							     It runs the plate's full width because that is what a bar is. Set in the
+							     middle slot it was as wide as the room kept for a button, a picture of a
+							     quantity drawn at a fifth of the room the quantity had; the plate's own
+							     width is the shorter of the banner's two parallel sides — everything the
+							     wings do not cut away — and the bar takes the whole of it, ends included.
+							     Which is what makes the banner two rows deep, and the wings two rows'
+							     worth of leg with it (see `bannerDepth`). -->
+							{#if location?.challenge}
+								<TownChallenge
+									siege={location.challenge.siege}
+									button={location.challenge.button}
+									unlocksAt={location.challenge.unlocksAt}
+									onUnlock={location.challenge.onUnlock}
+									classes="w-full"
+								/>
+							{/if}
 						</div>
 						<span
-							class="h-0 w-0 border-t-[2rem] border-r-[2rem] border-t-base-100/80 border-r-transparent"
+							class={classNames(
+								'h-0 w-0 border-t-base-100/80 border-r-transparent',
+								rightWing
+							)}
 							aria-hidden="true"
 						></span>
 					</div>
