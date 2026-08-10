@@ -302,6 +302,8 @@
 		"saving": "S'està desant el torn {turn}",
 		"saveAgain": "Torna a desar el torn {turn}",
 		"saveRefused": "Aquest torn no s'ha pogut desar — el combat hi està esperant.",
+		"previousFighter": "Lluitador anterior",
+		"nextFighter": "Lluitador següent",
 		"orders": {
 			"charge": "Carrega",
 			"defend": "Defensa",

@@ -582,10 +582,15 @@
 	 */
 	$: orderRows = state ? playerRows(state, badges) : [];
 
-	function playerRows(
-		current: CombatState,
-		roster: Badge[]
-	): { fighter: FighterView; basePath: string | null; orders: BoardOrder[] }[] {
+	/** One of the player's fighters as the phone's panel needs it: who it is, the art it is
+	 * drawn from, and the very orders the board is handed for it. */
+	interface PlayerRow {
+		fighter: FighterView;
+		basePath: string | null;
+		orders: BoardOrder[];
+	}
+
+	function playerRows(current: CombatState, roster: Badge[]): PlayerRow[] {
 		const art = new Map(roster.map((badge) => [badge.id, badge.basePath]));
 		return current.fighters
 			.filter((fighter) => fighter.side === 'info')
@@ -598,6 +603,90 @@
 						: orderButtons(fighter, current.phase, current.turn)
 			}));
 	}
+
+	// --- The phone's panel, which shows one of those fighters at a time ------------------
+
+	/**
+	 * Which of the player's three the phone's panel is turned to. An index into
+	 * `orderRows` rather than an id: the list is the same three in the same order for the
+	 * whole fight, and what the arrows do is move along it.
+	 */
+	let shownIndex = 0;
+	/** The turn the panel was last turned to the front of, so it is done once a turn. */
+	let openedTurn = 0;
+
+	// Open each turn on the fighter it is going to be planned from. Every name is spelled
+	// out so Svelte's legacy reactive tracking sees `state` and `orderRows` both — the rows
+	// especially, since they are what is being pointed into and they settle in the same
+	// flush the turn does.
+	$: openPanel(state, orderRows);
+
+	/**
+	 * Turn the panel to the first fighter with an order still to give, which on a fresh turn
+	 * is the leader: the rows are in the board's own top-to-bottom order and the lead fills
+	 * the top row. Only on a change of turn — inside a turn the panel is where the player
+	 * left it, and being carried back to the top mid-plan would undo the arrows.
+	 */
+	function openPanel(current: CombatState | null, rows: PlayerRow[]): void {
+		if (!current || current.turn === openedTurn) return;
+		openedTurn = current.turn;
+		shownIndex = Math.max(
+			0,
+			rows.findIndex((row) => row.orders.length > 0)
+		);
+	}
+
+	// The row on show, whatever the arrows have been doing: the index is taken modulo the
+	// line, which is what makes the slider endless in both directions and also what keeps it
+	// pointing at somebody if the line is ever shorter than it was.
+	$: shownRow = orderRows.length > 0 ? orderRows[shownIndex % orderRows.length] : null;
+
+	/** Turn the panel one fighter along, wrapping at either end — there is no first or last
+	 * fighter here, only the next one round. */
+	function stepFighter(delta: number): void {
+		const count = orderRows.length;
+		if (count === 0) return;
+		shownIndex = (((shownIndex + delta) % count) + count) % count;
+	}
+
+	/**
+	 * An order given on the phone's panel: the same order the board takes, and then the
+	 * panel moves on by itself.
+	 *
+	 * On to the next fighter that has not been ordered yet, not simply the next along —
+	 * planning a turn is answering for each of the three once, so the thing to be shown next
+	 * is one of them that is still unanswered. Which also means the panel skips a fighter
+	 * that is down or has taken its lane, having nothing to be asked; and that when the last
+	 * one is answered there is nowhere to go, so it stays where it is and the turn plays
+	 * itself out under a panel that has just gone quiet ({@link commitWhenReady}).
+	 *
+	 * The rows it is looking at are the ones from before this very order — the store has
+	 * been written but Svelte has not re-run anything yet — which is exactly right: the
+	 * fighter just ordered is the one being stepped off, and nothing about the others has
+	 * moved.
+	 */
+	function giveOrderFromPanel(fighterId: string, orderId: string): void {
+		giveOrder(fighterId, orderId);
+		const count = orderRows.length;
+		for (let step = 1; step <= count; step++) {
+			const at = (shownIndex + step) % count;
+			const row = orderRows[at];
+			if (row.orders.length > 0 && !row.fighter.action) {
+				shownIndex = at;
+				return;
+			}
+		}
+	}
+
+	/**
+	 * Whether the panel is closed to input: there is nothing to plan. Either the turn is
+	 * being carried out, or every standing fighter has been ordered and it is about to be
+	 * ({@link commitWhenReady}), or the fight is decided. It is not emptied or taken away —
+	 * the fighter on show stays on show, faded, because a panel that vanished the moment
+	 * the last order was given would take the plan off the screen at the moment it is being
+	 * played out.
+	 */
+	$: panelLocked = !state || state.phase !== 'planning' || state.ready || !!state.outcome;
 
 	// What each of the three orders is called, for a button that is otherwise a picture. The
 	// board never needs them — a glyph on a canvas has nobody to say itself to — so they are
@@ -1191,72 +1280,102 @@
 			     On a phone the same three buttons are a fraction of the canvas — the board there is
 			     limited by the width and the columns are drawn at whatever scale is left over — so
 			     they are also the one part of the picture that has to be hit rather than looked at.
-			     Here they are the document's own: the player's line drawn across the screen the
-			     way it stands on the board — a column per fighter, the character on the top row
-			     and the three orders it can be given directly under it — so a column is one
-			     fighter and reading down it is reading that fighter's own plan.
-			     Nothing about the fight is decided here that is not decided there. The columns
-			     carry the very list the board is handed (`orderRows`), press the very handler a
-			     tap on the canvas presses, and a fighter with nothing left to be asked keeps its
-			     column and loses its buttons exactly as its strip is cleared. So the board is
-			     still the fight; this is a second way of reaching the same three orders, and both
-			     are live at once — an order given on either is drawn on both.
-			     One grid rather than three: the three fighters are on one row and their nine
-			     buttons on the row under it, which is what keeps every fighter the same width and
-			     every order the same size whatever is drawn above it. Nine buttons across a phone
-			     is what three fighters' orders cost when they are all reachable at once, so a
-			     button is as wide as a third of a third of the block and square.
+			     Here they are the document's own, and one fighter at a time: the character on
+			     show with the three orders it can be given under it, and an arrow either side to
+			     turn to the next of the player's three. A phone is a screen with room for one
+			     thing, so it is given one thing, at the size a thing that has to be hit wants to
+			     be — where laying all three out at once meant nine buttons over the width of a
+			     phone, each a third of a third of it.
+			     Nothing about the fight is decided here that is not decided there. The panel
+			     carries the very list the board is handed (`orderRows`), presses the very handler
+			     a tap on the canvas presses, and a fighter with nothing left to be asked shows
+			     with no buttons under it exactly as its strip on the board is cleared. So the
+			     board is still the fight; this is a second way of reaching the same three orders,
+			     and both are live at once — an order given on either is drawn on both.
+			     It is turned by both of its controls. The arrows step it one fighter along and
+			     wrap at either end — there is no first or last here, only the next one round —
+			     and giving an order turns it to the next fighter still waiting for one, because
+			     planning a turn is answering for each of the three once and the panel's job is to
+			     put the next unanswered one in front of the player. Answer the last and there is
+			     nowhere to go: the turn commits itself and the panel closes to input, faded but
+			     still showing the fighter it was left on, since the plan is the thing being
+			     played out and taking it off the screen at that moment is exactly wrong.
 			     On its own fill: it is the foot of the sheet, where the page is graded down to
 			     nine tenths and the town is faintly through it, so the orders read off their own
 			     ground rather than off whatever is under there.
-			     Drawn whether there are rows in it yet or not: it is the foot of a column spread
-			     end to end (above), so a block that arrived with the fight would have let the board
-			     settle at the bottom of the view first and then jump up as the orders came in. An
-			     empty one holds the place they are coming to. -->
+			     Drawn whether there is a fighter in it yet or not: it is the foot of a column
+			     spread end to end (above), so a block that arrived with the fight would have let
+			     the board settle at the bottom of the view first and then jump up as the orders
+			     came in. An empty one holds the place they are coming to. -->
 			<div class="flex w-full flex-col gap-2 p-3 sm:hidden">
-				{#if orderRows.length > 0}
-					<div class="grid grid-cols-3 gap-2 rounded-box bg-base-100/80 p-2 shadow-xl">
-						<!-- The top row: who each column is about, told the way the fight tells it —
-						     the character standing there, idling, as they are on the board. No veil —
-						     the reveal is a thing a card does when a player first meets it, and by
-						     here they are three fighters in a battle already under way. -->
-						{#each orderRows as row (row.fighter.id)}
-							<div class="h-16 w-full">
+				{#if shownRow}
+					{@const row = shownRow}
+					<div
+						class={classNames(
+							'flex items-center gap-2 rounded-box bg-base-100/80 p-2 shadow-xl',
+							{ 'pointer-events-none opacity-50': panelLocked }
+						)}
+					>
+						<!-- The way back round the line. A ghost button and an inline triangle: this
+						     one is drawn in the document rather than onto the canvas, so it takes its
+						     colour from the text around it like every other mark in a page. -->
+						<button
+							type="button"
+							class="btn btn-ghost btn-sm flex-none px-1"
+							disabled={panelLocked}
+							aria-label={$_('combat.previousFighter')}
+							on:click={() => stepFighter(-1)}
+						>
+							<svg viewBox="0 0 24 24" fill="currentColor" class="size-6" aria-hidden="true">
+								<path d="M14 7l-5 5 5 5z" />
+							</svg>
+						</button>
+						<div class="flex min-w-0 flex-1 flex-col items-center gap-2">
+							<!-- Who the panel is turned to, told the way the fight tells it: the
+							     character standing there, idling, as they are on the board. No veil —
+							     the reveal is a thing a card does when a player first meets it, and by
+							     here they are three fighters in a battle already under way. -->
+							<div class="h-20 w-full">
 								<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
 							</div>
-						{/each}
-						<!-- The row under it: each fighter's three, in its own column, so a button is
-						     under the fighter it is an order to.
-						     A plain button rather than a `btn`: the glyphs are the canvas's own white
-						     artwork, so what they need is a dark tile under them in *every* state
-						     (see the icon note in CLAUDE.md), and daisyUI repaints a disabled button's face. So the
-						     tile stays and the states are said over it — the chosen order in the
-						     fighter's own colour, the rest dark, and one out of reach faded rather
-						     than dropped, as the board's own column greys it.
-						     A fighter that is down or has taken its cell is handed no orders at all,
-						     which leaves its cell of this row empty — the column stays, because the
-						     fighter is still one of the player's three, and there is nothing under it
-						     because there is nothing left to ask of it. -->
-						{#each orderRows as row (row.fighter.id)}
-							<div class="flex gap-1">
+							<!-- This fighter's three.
+							     A plain button rather than a `btn`: the glyphs are the canvas's own white
+							     artwork, so what they need is a dark tile under them in *every* state
+							     (see the icon note in CLAUDE.md), and daisyUI repaints a disabled button's face. So the
+							     tile stays and the states are said over it — the chosen order in the
+							     fighter's own colour, the rest dark, and one out of reach faded rather
+							     than dropped, as the board's own column greys it. -->
+							<div class="flex gap-2">
 								{#each row.orders as order (order.id)}
 									<button
 										type="button"
 										class={classNames(
-											'flex aspect-square flex-1 items-center justify-center rounded-box',
+											'flex size-14 items-center justify-center rounded-box',
 											orderFill(order),
 											{ 'opacity-40': order.disabled }
 										)}
 										disabled={order.disabled}
 										aria-label={ORDER_LABELS[order.id as CombatAction]}
 										aria-pressed={order.selected}
-										on:click={() => giveOrder(row.fighter.id, order.id)}
+										on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
 									>
-										<img src={order.icon} alt="" class="w-3/5" />
+										<img src={order.icon} alt="" class="size-8" />
 									</button>
 								{/each}
 							</div>
-						{/each}
+						</div>
+						<!-- And the way on round it. -->
+						<button
+							type="button"
+							class="btn btn-ghost btn-sm flex-none px-1"
+							disabled={panelLocked}
+							aria-label={$_('combat.nextFighter')}
+							on:click={() => stepFighter(1)}
+						>
+							<svg viewBox="0 0 24 24" fill="currentColor" class="size-6" aria-hidden="true">
+								<path d="M10 7l5 5-5 5z" />
+							</svg>
+						</button>
 					</div>
 				{/if}
 				<!-- Giving up, which on a phone exists nowhere else. On the banner it is reached

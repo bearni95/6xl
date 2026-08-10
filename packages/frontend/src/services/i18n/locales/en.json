@@ -306,6 +306,8 @@
 		"saving": "Saving turn {turn}",
 		"saveAgain": "Save turn {turn} again",
 		"saveRefused": "This turn could not be saved — the fight is waiting on it.",
+		"previousFighter": "Previous fighter",
+		"nextFighter": "Next fighter",
 		"orders": {
 			"charge": "Charge",
 			"defend": "Defend",
