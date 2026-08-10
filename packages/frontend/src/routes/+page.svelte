@@ -1989,7 +1989,13 @@
 			spawns,
 			locationId,
 			turnover,
-			plate: buildFightPlate(locationId, regionNodes, regionSieges, holders, $showGlyphs)
+			plate: buildFightPlate(locationId, regionNodes, regionSieges, holders, $showGlyphs),
+			// Which fight this staging is a reading of. Both doors here have the battle in hand
+			// by now — `challenge` because `start` puts what it opened straight into the service,
+			// `resumeBattle` because it is the battle it is resuming — and the staging outlives
+			// this page now, so `/combat` has to be able to ask whether it still stands (see
+			// $services/combat).
+			battleId: $openBattle?.startedAt ?? null
 		});
 	}
 

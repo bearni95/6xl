@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import CombatArena from '$components/core/CombatArena.svelte';
-	import { stagedFight, leaveCombat, MAP_ROUTE } from '$services/combat';
+	import { stagedFight, leaveCombat } from '$services/combat';
 	import { territoryService } from '$services/territory.service';
 	import {
 		siegeProgress,
@@ -37,18 +36,11 @@
 	// lands would walk away from a fight the server still has open.
 	let reporting = false;
 
-	// Nothing staged: this page was opened directly, or reloaded, or come back to by the
-	// browser's Back after a fight was left. The map is where a fight comes from — it is what
-	// loads the open battle and knows the town — so go there and let it stage the fight back
-	// if there is one to stage. `replaceState` so the bounce leaves no step of its own in the
-	// history for Back to land on again.
-	onMount(() => {
-		if (!$stagedFight) {
-			void goto(MAP_ROUTE, { replaceState: true });
-			return;
-		}
-		void readTerritory();
-	});
+	// There is a fight to draw, and it is the one the server has open: `+page.ts` has settled
+	// both before this component was created — that is what a load is for, and why it is not
+	// asked here. A visit with nothing staged never reaches this page, and neither does one
+	// carrying a staging left over from a fight that has since been reported.
+	onMount(() => void readTerritory());
 
 	// --- Whose town this is, read here rather than taken on trust ------------------------
 	//
