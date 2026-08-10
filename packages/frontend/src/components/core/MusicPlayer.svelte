@@ -13,8 +13,8 @@
 	//
 	// It stood in the map's top-left corner, which is a corner of the map: a plate that
 	// is always up is a plate that is always in the way, and the one thing on it a
-	// player reaches for often is the pause — which is on the plate at the map's bottom edge
-	// now, at the end of the line naming the song (see TownRadio). What is left
+	// player reaches for often is the pause — which is in the middle of the band across the top
+	// of the page now, at the head of the line naming the song (see MusicBanner). What is left
 	// here is what is only wanted when it is wanted: which station, and what is on it. The
 	// menu is where everything that is not the map already lives.
 	//

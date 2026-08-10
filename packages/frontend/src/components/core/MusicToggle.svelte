@@ -5,9 +5,9 @@
 
 	// The radio's play/pause drawn as a bare button, which is what a play/pause standing among
 	// other controls wants to be: the plate in the burger menu is the one such place left. The
-	// radio on the map's bottom edge is a cell that is entirely its own press and draws the mark
-	// alone inside it (see TownRadio, MusicGlyph) — same store, same name for the press, no
-	// button in it to nest. The shape is the caller's, the reading is not.
+	// radio in the middle of the band across the top of the page is a slot that is entirely its
+	// own press and draws the mark alone inside it (see MusicBanner, MusicGlyph) — same store, same
+	// name for the press, no button in it to nest. The shape is the caller's, the reading is not.
 	//
 	// It says what the element is really doing rather than what it was last told to do, and
 	// says it wherever the radio is pressable, because every one of those reads the one service

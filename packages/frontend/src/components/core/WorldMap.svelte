@@ -1163,11 +1163,12 @@
 		// second line is that show, on a tile in the place's own colour — so the plate carried
 		// everything about the radio except what is on and whether it is running.
 		//
-		// The row along the map's bottom edge says the station as well, being lettered with the
-		// same crumb out of the same fields (see RegionCurrentBadge), and it says it in a place
-		// that does not move: a pin stands where its town is, so the radio went wherever the map
-		// was panned to and was as small as a mark's caption. That row is one press away from
-		// nothing and always in the same corner, which is what a radio wants. It also cost this
+		// What a pin cannot give it is a place that does not move: a pin stands where its town is,
+		// so the radio went wherever the map was panned to and was as small as a mark's caption.
+		// It went to the row along the map's bottom edge, which letters the station just as well
+		// — that badge is the same crumb out of the same fields (see RegionCurrentBadge) — and it
+		// is on the band across the top of the page now, always in the same place at the same size
+		// whatever the map is doing, which is what a radio wants. It also cost this
 		// function the `guardWidget` it had to hand the play/pause — a control laid over the map
 		// rather than mounted into a Leaflet marker is not terrain to begin with.)
 

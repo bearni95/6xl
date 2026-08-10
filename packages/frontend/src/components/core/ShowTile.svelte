@@ -11,8 +11,8 @@
 	//
 	// Split out of MapBreadcrumb, back when the tile was not always inside the crumb: the row
 	// naming the open place stood it outside the crumb's button so the radio's play/pause could
-	// come up on it, a button inside a button not being markup. The radio is a row of its own on
-	// the plate at the map's bottom edge now (see TownRadio) and every crumb carries its own tile
+	// come up on it, a button inside a button not being markup. The radio is the middle of the
+	// band across the top of the page now (see MusicBanner) and every crumb carries its own tile
 	// again — but the split stays, because
 	// the pins and the crumbs have to keep drawing the one square, and that is a component
 	// rather than four lines copied into a second place.
