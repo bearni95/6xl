@@ -202,16 +202,30 @@ const GROUND_TILE_SHEET = '/assets/tiles/j-treecko252/assorted-ground.png';
 const GROUND_TILE_PX = 16;
 
 /**
- * How many of those tiles a cell is laid with, across and down — which is what decides
- * how large the artwork's own pixels are drawn, the cell being a fixed size.
+ * How many of those tiles a cell is laid with, across and down — nine to a cell, three
+ * each way. It is what decides how large the artwork's own pixels are drawn, the cell
+ * being a fixed size, and it is a whole number so that every cell's grass begins on a tile
+ * corner and the field reads as one ground rather than as squares of turf laid side by
+ * side.
  *
- * A whole number, so every cell's grass begins on a tile corner and a column of them reads
- * as one field rather than as squares of turf laid side by side.
+ * It is also the subdivision the ground is *ruled* into ({@link ruleGround}): one tile per
+ * bordered subcell, so the two can never say different things about where a tile ends.
  */
-const GROUND_TILES_PER_CELL = 4;
+const GROUND_TILES_PER_CELL = 3;
+
+/**
+ * The yellow the ground's own subdivision is ruled in — read off the same table the
+ * lattice's red comes from, so the board is drawn in combat's colours and not in colours
+ * of its own. It is the finer of the two rulings and is drawn under the red: a cell is the
+ * thing the fight is played on, and its nine tiles are the ground inside it.
+ */
+const GROUND_LINE = combatColorHex('yellow');
 
 /** Below the ruled lattice (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
+
+/** Between the two: over the grass it rules, under the lattice that rules the cells. */
+const GROUND_LINE_Z = -0.5;
 
 /**
  * The viewport the canvas is sized against, across and down.
@@ -1247,13 +1261,20 @@ export class MugenBoard {
 	 * stays where the line's was, which is how the colour comes back if it is ever wanted.
 	 *
 	 * What every cell *does* have under it is ground: each is laid with the grass tile
-	 * ({@link layGround}), drawn below the lattice so the ruling stays on top of it. A board
-	 * whose tile could not be fetched simply has none, and is the bare ruled field it was
-	 * before there was any.
+	 * ({@link layGround}) and ruled into that ground's own squares ({@link ruleGround}),
+	 * both below the lattice so the cells' red stays on top of them. A board whose tile
+	 * could not be fetched keeps the ruling and loses the grass — the subdivision is the
+	 * board's and not the artwork's.
+	 *
+	 * The yellow is a **second** Graphics rather than more calls on this one, because
+	 * adjacent cells share their edges: drawn together, the yellow of a cell laid later
+	 * would go over the red of the cell beside it, one border at a time. Two objects at two
+	 * depths is every red line over every yellow one, whatever order the cells come in.
 	 */
 	private drawBoard(leftColor: number, rightColor: number, centerColor: number): void {
 		if (!this.app) return;
 		const graphics = new Graphics();
+		const groundLines = new Graphics();
 		for (const { q, r } of boardCells()) {
 			// q alone decides the side; the central column (q = 0) is the shared
 			// white ground.
@@ -1261,18 +1282,48 @@ export class MugenBoard {
 			const color = side === 'red' ? leftColor : side === 'blue' ? rightColor : centerColor;
 
 			this.layGround(q, r);
+			this.ruleGround(groundLines, q, r);
 
 			graphics.poly(this.cellOutline(q, r));
 			graphics.fill({ color, alpha: 0 });
 			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 1 });
 		}
+		groundLines.zIndex = GROUND_LINE_Z;
+		this.app.stage.addChild(groundLines);
 		this.app.stage.addChild(graphics);
 	}
 
 	/**
+	 * Rule the cell at [q, r] into its tiles: a yellow border round each of the nine
+	 * squares the grass is laid in ({@link GROUND_TILES_PER_CELL}), drawn into the shared
+	 * ground-line object the caller hands over.
+	 *
+	 * Every one of the nine is bordered, the ones against the cell's own edge included — so
+	 * the subdivision is a grid of squares and not a cross inside a square. What that costs
+	 * is a yellow line under each red one, which is what the depths are for: the red is
+	 * drawn over it at twice the width, and the cell's border stays the cell's.
+	 *
+	 * The finer line is 1px to the lattice's 2 at the size the board is laid out, so the
+	 * two rulings stay a ruling and a sub-ruling however far the finished canvas is then
+	 * scaled — both are geometry in the same space and go through the same scale.
+	 */
+	private ruleGround(graphics: Graphics, q: number, r: number): void {
+		const [topLeft] = cellCorners(q, r);
+		const step = 1 / GROUND_TILES_PER_CELL;
+		for (let row = 0; row < GROUND_TILES_PER_CELL; row++) {
+			for (let col = 0; col < GROUND_TILES_PER_CELL; col++) {
+				const at = this.project(topLeft.x + col * step, topLeft.y + row * step);
+				const beyond = this.project(topLeft.x + (col + 1) * step, topLeft.y + (row + 1) * step);
+				graphics.rect(at.x, at.y, beyond.x - at.x, beyond.y - at.y);
+				graphics.stroke({ width: 1, color: GROUND_LINE, alpha: 1 });
+			}
+		}
+	}
+
+	/**
 	 * Lay the grass over the cell at [q, r]: the tile repeated
-	 * {@link GROUND_TILES_PER_CELL} times across and down, filling the cell corner to
-	 * corner and no further.
+	 * {@link GROUND_TILES_PER_CELL} times across and down — nine of them, one per square of
+	 * the ruling that goes over it — filling the cell corner to corner and no further.
 	 *
 	 * Every cell of the field takes it, whichever half it belongs to: the grass is the
 	 * ground the fight is fought on and not a marking, so it stops at the outer edge of the
