@@ -1446,10 +1446,18 @@
 						     columns of a grid rather than a row of fixed sizes, so the whole of it fits
 						     the narrowest phone and every square is the same square — which is what puts
 						     the arrows *on* the panel's own line instead of holding it between them.
-						     The arrows keep their own column whatever is between them (`col-start-1` and
-						     `col-start-5`), so a fighter that is down or has taken its lane — handed no
-						     orders at all, exactly as its strip on the board is cleared — is still a
-						     fighter the arrows can be walked past.
+						     It is two grids over one box and not one grid: the orders are laid on the
+						     panel and the arrows are laid over them, both `grid-cols-5` across the same
+						     inset, so the five columns are the same five columns and a square in either
+						     layer lands exactly where the other layer's would. The orders take the middle
+						     three (`col-start-2` on the first of them) and leave the end columns standing
+						     empty, which is the whole reason for the split: the three are the width five
+						     columns give them whether or not an arrow is drawn beside them, so nothing on
+						     this row resizes when a fighter is handed no orders — down, or having taken
+						     its lane, exactly as its strip on the board is cleared — and the arrows are
+						     still there to walk past it with. The arrows' layer takes no pointer itself,
+						     only its two buttons do, or the three empty cells between them would be a
+						     sheet laid over the orders underneath.
 						     They are outlined rather than filled, because they are not orders: a filled
 						     square on this row is an order, and the one in the fighter's own colour is
 						     the order it has been given.
@@ -1460,21 +1468,7 @@
 						     order in the fighter's own colour, the rest dark, and one out of reach faded
 						     rather than dropped, as the board's own column greys it. -->
 						<div class="absolute inset-x-2 bottom-2 grid grid-cols-5 gap-2">
-							<button
-								type="button"
-								class="col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
-								disabled={panelLocked}
-								aria-label={$_('combat.previousFighter')}
-								on:click={() => stepFighter(-1)}
-							>
-								<!-- An inline triangle: this one is drawn in the document rather than onto
-								     the canvas, so it takes its colour from the text around it like every
-								     other mark in a page. -->
-								<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
-									<path d="M14 7l-5 5 5 5z" />
-								</svg>
-							</button>
-							{#each row.orders as order (order.id)}
+							{#each row.orders as order, index (order.id)}
 								<!-- An order the fighter's colour hands it free is edged in that colour, exactly
 								     as the board edges it: a border round the whole button, because what is
 								     being said is about the whole of that order. On the one button *filled*
@@ -1489,6 +1483,7 @@
 									type="button"
 									class={classNames(
 										'relative flex aspect-square w-full items-center justify-center rounded-box border-2',
+										index === 0 && 'col-start-2',
 										orderFill(order),
 										order.gift
 											? SPAWN_BORDER_CLASSES[order.color as SpawnColor]
@@ -1506,9 +1501,30 @@
 									<img src={order.icon} alt="" class="w-3/5" />
 								</button>
 							{/each}
+						</div>
+						<!-- The arrows, laid over the row rather than in it: their own five columns across
+						     the same inset, so each keeps the end column it always kept and the three cells
+						     between them are simply left empty for the orders beneath to show through. The
+						     layer itself is not pressable — only the two buttons are — since those three
+						     empty cells lie directly over the orders. -->
+						<div class="pointer-events-none absolute inset-x-2 bottom-2 grid grid-cols-5 gap-2">
 							<button
 								type="button"
-								class="col-start-5 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
+								class="pointer-events-auto col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
+								disabled={panelLocked}
+								aria-label={$_('combat.previousFighter')}
+								on:click={() => stepFighter(-1)}
+							>
+								<!-- An inline triangle: this one is drawn in the document rather than onto
+								     the canvas, so it takes its colour from the text around it like every
+								     other mark in a page. -->
+								<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
+									<path d="M14 7l-5 5 5 5z" />
+								</svg>
+							</button>
+							<button
+								type="button"
+								class="pointer-events-auto col-start-5 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
 								disabled={panelLocked}
 								aria-label={$_('combat.nextFighter')}
 								on:click={() => stepFighter(1)}
