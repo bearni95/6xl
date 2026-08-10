@@ -1120,16 +1120,29 @@
 		     room the screen turns out to have goes into the two gaps rather than into a band
 		     under everything, and each of the three keeps the end of the view it belongs to on
 		     a tall phone and a short one alike. -->
-		<!-- The sky is the sheet's and not the canvas's. The board's top row, and the gaps in
-		     the fringe the field starts with, are drawn on nothing at all, so what shows through
-		     both is this — one blue above the picture and inside it, painted once. `sky-300` is
-		     the value the canvas held itself (#7dd3fc) until the document needed the same sky
-		     over the board as in it, and only the page can cover the whole view. What the board
-		     leaves *below* is not sky: the ground carries on down there (`CombatGround`), laid
-		     over this. -->
 		<div
-			class="relative flex h-full w-full flex-col items-center justify-between bg-sky-300 sm:justify-center"
+			class="relative flex h-full w-full flex-col items-center justify-between sm:justify-center"
 		>
+			<!-- The sky, which is the page's and not the canvas's: the board's top row and the
+			     gaps in the fringe the field starts with are drawn on nothing at all, so what
+			     shows through both is this. `sky-300` is the value the canvas held itself
+			     (#7dd3fc) until the document needed the same blue over the board as in it — one
+			     sky, painted once, rather than a colour kept in step across a canvas and a
+			     stylesheet.
+			     It is the **board's own column** and not the whole sheet: nine squares wide,
+			     which is the canvas's own width (`CombatGround` has the figures), centred on the
+			     same middle the canvas is. On a phone that is the whole width and there is no
+			     difference; on anything wider the canvas is limited by the height and leaves a
+			     band at each end, and those bands are not the fight — they are the sheet, with
+			     the town still faintly through them. Sky out there would have made the arena a
+			     blue screen with a board on it.
+			     First in the flow and taking no pointer, so everything written after stands over
+			     it: the head, the board, and the ground below the board, which is drawn on this
+			     the way the field's own bottom fringe is. -->
+			<div
+				class="pointer-events-none absolute inset-y-0 left-1/2 w-[calc(9*min(100vw/9,100dvh/13))] -translate-x-1/2 bg-sky-300"
+				aria-hidden="true"
+			></div>
 			<!-- The board, and nothing round it. No card, no body, no column, and no border: the
 			     arena is one drawing and every box round a drawing is scale taken off it, since the
 			     canvas is fitted to the room it is given. What used to stand under the board stands
