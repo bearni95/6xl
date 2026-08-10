@@ -10,7 +10,14 @@
 	import { levelIndexForView } from '$utils/geo/level-of-detail';
 	import { layoutPins, type PinAnchor, type PinOffset } from '$utils/map/pin-layout';
 	import { groupPins } from '$utils/map/pin-groups';
-	import type { MapBoosterBox, MapCircle, MapLine, MapMarker, MapOverlay } from '$types/map.type';
+	import type {
+		MapBoosterBox,
+		MapCircle,
+		MapLine,
+		MapMarker,
+		MapOutline,
+		MapOverlay
+	} from '$types/map.type';
 
 	let {
 		center = [20, 0] as [number, number],
@@ -18,6 +25,7 @@
 		minZoom = 2,
 		maxZoom = 19,
 		overlays = [],
+		outline = null,
 		circles = [],
 		lines = [],
 		markers = [],
@@ -55,6 +63,20 @@
 		 * another's style.
 		 */
 		overlays?: MapOverlay[];
+		/**
+		 * One line drawn over every overlay, in a pane of its own between the polygons
+		 * and the marks: the edge of something the shapes add up to, which no shape of
+		 * theirs is (see {@link MapOutline}).
+		 *
+		 * Above the polygons because that is where it is legible — where it runs along a
+		 * border it is covering it, and covering it is the point, the border being one of
+		 * the edges the outline is made of. Under the marks and under the spotlight's
+		 * cover, because it is terrain and not reading matter. It catches no pointer, so
+		 * the land under it is clicked exactly as if it were not there.
+		 *
+		 * Null draws nothing, which is also what an outline with no chains in it does.
+		 */
+		outline?: MapOutline | null;
 		/** Standalone circular regions drawn above the overlays. */
 		circles?: MapCircle[];
 		/** Standalone straight lines drawn above the overlays. */
@@ -264,6 +286,12 @@
 	// 580, the boxes at 590, the pins at 600. Covering the lot is what "one place, on nothing"
 	// means; the pin of the place itself survives because it is inside the hole (see createPane).
 	const MASK_PANE = 'spotlightMaskPane';
+	// The pane the grouping line is drawn in (see `outline`), between the polygons in
+	// Leaflet's own overlay pane at 400 and the leader lines at 580.
+	const OUTLINE_PANE = 'groupOutlinePane';
+	// The one path that line is, so a fresh outline can take the previous one off the map.
+	// A plain variable: nothing is drawn from it — it IS what was drawn.
+	let outlineLayer: L.Polyline | null = null;
 	// The BoosterBox components standing in that layer, tracked for the same reason the
 	// pins' mounts are: clearing the layer only detaches their DOM, and a box left
 	// mounted holds its poster and its logo for a town no longer on screen.
@@ -538,6 +566,33 @@
 		mapInstance.setZoom(mapInstance.getBoundsZoom(zoomBounds, false, focusPadding()), {
 			animate: true
 		});
+	});
+
+	$effect(() => {
+		// Draw the grouping line, or take it off. Gated on `ready` like the framings above,
+		// so an outline handed over before the map mounts is still drawn once there is a
+		// pane to draw it in.
+		//
+		// Redrawn whole rather than edited: the chains are a fresh answer to a question about
+		// every shape on the tier (which of them group together, and where that group ends),
+		// so there is no such thing as moving part of one. One polyline for the lot — a list
+		// of lists is a single path with a subpath each, which is what keeps a couple of
+		// thousand chains to one element on the map.
+		const wanted = outline;
+		if (!ready || !mapInstance || !Leaf) return;
+
+		outlineLayer?.remove();
+		outlineLayer = null;
+		if (!wanted?.chains.length) return;
+
+		outlineLayer = Leaf.polyline(wanted.chains, {
+			...wanted.style,
+			pane: OUTLINE_PANE,
+			// Nothing is inside a chain — it is a run of edges and may not even close — and
+			// a path Leaflet fills would paint the shape a browser closes it into.
+			fill: false,
+			interactive: false
+		}).addTo(mapInstance);
 	});
 
 	// How long the mask takes to arrive and to go, matched to the 250ms every polygon repaints
@@ -2571,6 +2626,14 @@
 		// ground: in a pane it slides with the map exactly as the mark it points at does, and
 		// needs redrawing only where the marks themselves are dealt again.
 		mapInstance.createPane(LEADER_PANE).style.zIndex = '580';
+
+		// The pane the grouping line hangs in (see OUTLINE_PANE and the `outline` prop),
+		// made before anything is added to it. At 450 it is clear of the polygons at 400
+		// and under every mark on the map; it catches nothing, so a press meant for the
+		// town under it reaches the town.
+		const outlinePane = mapInstance.createPane(OUTLINE_PANE);
+		outlinePane.style.zIndex = '450';
+		outlinePane.style.pointerEvents = 'none';
 
 		// The pane the spotlight's cover is drawn in (see MASK_PANE), made before anything is
 		// added to it and made hidden: the mask is faded in by taking that class off, so a
