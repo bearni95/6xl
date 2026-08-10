@@ -58,6 +58,47 @@ describe('the head of the fight', () => {
 		expect(container.querySelectorAll('button').length).toBe(0);
 	});
 
+	/**
+	 * The row is three columns and all three of its cells are conditional, which is the one
+	 * arrangement a grid quietly gets wrong: what it is given goes into the next *free* cell,
+	 * not into the cell it was written for. So a head handed a town with no standing to draw
+	 * used to put the account in the middle column — shrunk to its contents, a whole `1fr` of
+	 * nothing after it — and the row collapsed inwards exactly when the thing that should have
+	 * held it open was the thing that was missing.
+	 *
+	 * Every state the fight can hand this block is therefore checked for the same thing: the
+	 * place on the left, the account on the right, and neither of them anywhere else.
+	 */
+	const columnOf = (element: Element | null): string | null =>
+		element?.className.split(/\s+/).find((name) => name.startsWith('col-start-')) ?? null;
+
+	const cells = (container: HTMLElement) => {
+		const row = container.querySelector('.grid')!;
+		return [...row.children];
+	};
+
+	it('keeps the place on the left and the account on the right, whatever else is drawn', () => {
+		for (const location of [
+			town,
+			// No standing: the seam between the two cells is empty.
+			{ ...town, challenge: null },
+			// Nobody holds it — the right-hand cell is the same plate with nothing on it.
+			{ ...town, holder: null },
+			// Neither, which is a seeded town on a page that has not re-read the ledgers yet.
+			{ ...town, holder: null, challenge: null }
+		]) {
+			const { container } = render(CombatHead, { props: { location } });
+			const drawn = cells(container);
+			expect(columnOf(drawn[0])).toBe('col-start-1');
+			expect(columnOf(drawn[drawn.length - 1])).toBe('col-start-3');
+			// And the middle column is the standing's alone: it is there when there is a
+			// standing to draw and not there at all when there is not.
+			expect(drawn.some((cell) => columnOf(cell) === 'col-start-2')).toBe(
+				Boolean(location.challenge)
+			);
+		}
+	});
+
 	it('stays a reading once fights have finished elsewhere', () => {
 		// The count of fights finished anywhere else was the one press the head carried, at the
 		// far end of the score banner. The banner is gone and the count with it, so the block is

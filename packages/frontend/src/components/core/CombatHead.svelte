@@ -81,7 +81,16 @@
 	     two cells are `1fr` apiece and so stay the same width as each other whatever the bar in
 	     between comes to — the rule that the head lays the two cells out, not each other, is
 	     unchanged. With no standing to draw the middle column is nothing wide and the row is the
-	     pair it always was. -->
+	     pair it always was.
+	     **Every cell names the column it stands in** (`col-start-*`), and that is not decoration:
+	     all three are conditional, and a grid puts what it is given into the next free cell rather
+	     than into the cell it was written for. So a town with no standing to draw — a plate taken
+	     straight off the map before this page has re-read the ledgers, or a fight with no siege
+	     behind it — dropped the account into the *middle* column, shrunk to its own contents, with
+	     a whole `1fr` of nothing after it: the row collapsed inwards exactly when the thing that
+	     should have held it open was the thing that was missing. Named columns, it cannot: each of
+	     the three is drawn where it belongs or not at all, and the row keeps its shape through
+	     every state the fight can hand it. -->
 	<div class="grid grid-cols-[1fr_auto_1fr] items-stretch bg-base-100">
 		<!-- The town, on the very plate its pin carries on the map: the same mark, drawn the same
 		     way, showing what was pressed to get here. Only the challenge button is missing, and
@@ -100,7 +109,7 @@
 		     the same reading given the room it wants. The challenge is still the caller's to leave
 		     out, a fight already under way not being a fight to be started. -->
 		{#if location}
-			<TownPlate {...location} challenge={null} flush mirrored />
+			<TownPlate {...location} challenge={null} flush mirrored classes="col-start-1" />
 		{/if}
 		<!-- How far the town itself has been taken, upright on the seam between the two cells: the
 		     count this one fight is one of, standing between the place it is about and the account
@@ -115,7 +124,7 @@
 		     between them. Padded to the plate's own padding, so the bar is inset exactly as the
 		     tile and the face beside it are. -->
 		{#if location?.challenge}
-			<div class="flex items-center px-1.5">
+			<div class="col-start-2 flex items-center px-1.5">
 				<SiegeBar siege={location.challenge.siege} vertical />
 			</div>
 		{/if}
@@ -131,13 +140,14 @@
 				color={location.holder.color}
 				level={location.holder.level}
 				hint={$_('map.holder.title')}
+				classes="col-start-3"
 			/>
 		{:else}
 			<!-- Nobody holds the town, so nobody is named — and the cell stays, on the very surface
 			     the cell beside it is printed on. What it says is that the line-up on the other side
 			     of the board is the town's own and not a player's, and an empty plate is how a head
 			     with two halves says it. -->
-			<div class={PLATE_FLUSH_CLASSES}></div>
+			<div class={classNames(PLATE_FLUSH_CLASSES, 'col-start-3')}></div>
 		{/if}
 	</div>
 	<!-- Nothing under the row. The standing has stood in three places — a cell across the foot of
