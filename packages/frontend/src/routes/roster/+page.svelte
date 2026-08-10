@@ -18,7 +18,7 @@
 	import CharacterStatue from '$components/core/CharacterStatue.svelte';
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
-	import { SPAWN_FILL_CLASSES, SPAWN_SQUARE_GLYPHS } from '$components/core/spawn-colors';
+	import { SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
 
 	// The cards, on their own page. They were a sheet raised over the map for a long time,
 	// set true by the side standing in the map's corner and false by their own ✕ — which
@@ -52,12 +52,13 @@
 	// where the grid shows three: what it bounds is how many sprites one page may stand up.
 	const CARD_COLUMNS = 4;
 
-	// A character's copies are always gathered into one cell — one statue, with a select
-	// naming which of them it stands as. That was a player preference, and it is the layout
-	// now for the same reason the column count is: the other reading, one cell per card
-	// owned, said a fighter held six times was six fighters, which is what the select in the
-	// cell is there to say instead. (`roster:group-copies` is left behind in localStorage
-	// unread; nothing writes it and nothing looks for it.)
+	// A card is a cell. Copies of one character were gathered into a single cell for a
+	// while — one statue with a select naming which town it stood as — and the price of
+	// that was that most of what a player holds was never on screen: a fighter claimed six
+	// times showed one statue, and the other five were entries in a dropdown. A collection
+	// is the cards in it, so every copy stands up as its own statue, in its own colour,
+	// under its own town. (`roster:group-copies` is left behind in localStorage unread;
+	// nothing writes it and nothing looks for it.)
 
 	// --- Card filters (the header toolbar) ---
 	// Sentinel every "no filter" dropdown uses, so an unset filter is distinct from
@@ -148,7 +149,6 @@
 	const teamCards = teamService.spawns;
 	const teamSaving = teamService.saving;
 	const teamError = teamService.error;
-	const teamColorFilter = teamService.allowedColors;
 
 	// Spawns store only a character id + geojson ids; labels, sprites and place
 	// names are resolved here from the local registry and municipality layer.
@@ -252,8 +252,9 @@
 	})(characterShows);
 
 	// The slot each fielded card holds, by spawn id. Every question the team asks of the
-	// grid — which cards no filter may hide, which cells come first, which of them wears
-	// the border — is answered from this, and ids are all any of them needs.
+	// grid — which cards the grid leaves out because the line-up beside it already stands
+	// them up, which of them wears the border — is answered from this, and ids are all
+	// any of them needs.
 	$: teamSlotById = new Map<string, number>(
 		$teamSlots.flatMap((id, slot) => (id ? [[id, slot] as [string, number]] : []))
 	);
@@ -262,6 +263,10 @@
 	// unset (ANY) filter is a pass. The filter maps are threaded in as deps so the
 	// list re-runs as they load or a control changes. This — not `$spawns` — is what
 	// the grid renders.
+	//
+	// The three predicates are the player's own, and they are the only ones there are: the
+	// team narrows nothing. Any card may lead a side and any card may stand behind any
+	// lead, so there is no such thing as a card the grid should keep out of a player's way.
 	//
 	// A fielded card is not in this list at all: the left grid is where the line-up stands,
 	// and a card cannot be in both without being read as two cards. That holds whatever the
@@ -272,7 +277,6 @@
 		color: SpawnColor | typeof ANY,
 		show: number | typeof ANY,
 		shows: Map<string, { id: number; name: string }[]>,
-		teamColors: Set<string> | null,
 		slots: Map<string, number>
 	) => {
 		const needle = name.trim().toLowerCase();
@@ -282,30 +286,9 @@
 			if (color !== ANY && spawn.color !== color) return false;
 			if (show !== ANY && !(shows.get(spawn.characterId) ?? []).some((entry) => entry.id === show))
 				return false;
-			if (teamColors && !teamColors.has(spawn.color)) return false;
 			return true;
 		});
-	})(filterName, filterColor, filterShow, characterShows, pickableColors, teamSlotById);
-
-	// The ids of the cards the grid may stand up — the filtered roster as a set, which is
-	// the question a place selector asks of one copy at a time: may this cell stand as that
-	// card? Everything else the player owns of the same character is a place the selector
-	// still lists and cannot go to.
-	$: selectableIds = new Set(filteredSpawns.map((spawn) => spawn.id));
-
-	// Every card the player owns, by character, filters and team aside. The grid is built
-	// from the narrowed roster, but a cell's place selector is not: it names every town this
-	// character was ever pulled in, so a player reads the whole of what they hold of a
-	// fighter from the one cell rather than watching towns appear and vanish as they filter.
-	$: copiesByCharacter = ((all: CharacterSpawn[]) => {
-		const byCharacter = new Map<string, CharacterSpawn[]>();
-		for (const spawn of all) {
-			const copies = byCharacter.get(spawn.characterId);
-			if (copies) copies.push(spawn);
-			else byCharacter.set(spawn.characterId, [spawn]);
-		}
-		return byCharacter;
-	})($spawns);
+	})(filterName, filterColor, filterShow, characterShows, teamSlotById);
 
 	// The filters and the pager work on the same list: filtering narrows it, the pager
 	// walks it a page at a time. So any filter change re-pages from the start — the
@@ -313,132 +296,16 @@
 	// meant something under the old filters.
 	$: filterName, filterColor, filterShow, (page = 0);
 
-	// --- What a cell is --------------------------------------------------------------
-	/** One cell of the grid: the character it stands up and every copy the player owns of
-	 * them that got through the filters. The character's own id keys the cell, since a
-	 * character has exactly one cell — that is what grouping means. */
-	interface CharacterCell {
-		characterId: string;
-		copies: CharacterSpawn[];
-	}
-
-	// A character claimed six times is one character, so the grid stands them up once
-	// and lets the cell's select choose between their copies. The grouping happens
-	// before the pager, so a page is ten rows of *characters* — a player with a hundred
-	// reds of the same fighter no longer walks ten pages of the same statue.
-	function groupByCharacter(spawns: CharacterSpawn[]): CharacterCell[] {
-		const groups = new Map<string, CharacterSpawn[]>();
-		for (const spawn of spawns) {
-			const copies = groups.get(spawn.characterId);
-			if (copies) copies.push(spawn);
-			else groups.set(spawn.characterId, [spawn]);
-		}
-		// Insertion order, so the characters keep the order their first copy was in.
-		return [...groups].map(([characterId, copies]) => ({ characterId, copies }));
-	}
-
-	/** The copy of this character holding the earliest team slot, or null if the player
-	 * has fielded none of them. Earliest rather than first-claimed, so a character fielded
-	 * twice sorts and stands as the higher of its two slots. */
-	function fieldedCopy(
-		copies: CharacterSpawn[],
-		slots: Map<string, number>
-	): CharacterSpawn | null {
-		let held: CharacterSpawn | null = null;
-		let heldSlot = TEAM_SIZE;
-		for (const copy of copies) {
-			const slot = slots.get(copy.id);
-			if (slot !== undefined && slot < heldSlot) {
-				held = copy;
-				heldSlot = slot;
-			}
-		}
-		return held;
-	}
-
-	// A character with a fielded copy sorts to the front, in slot order, so where the team
-	// is in the grid at all it is the head of it: the lead is the first cell and the line-up
-	// reads left to right before the roster it was picked from. That is the narrow grid's
-	// case — with a party row there are no fielded cards left in the list for this to move,
-	// and the sort is a no-op it costs nothing to leave standing. Everything else keeps the
-	// order its first copy was claimed in — Array.sort is stable, so a rank every unfielded
-	// character shares leaves them all where they were. Sorting happens before the pager,
-	// which is what keeps the team on the first page: it must never be a page turn away
-	// from the cards being read against it.
-	$: characterGroups = ((slots: Map<string, number>) => {
-		const groups = groupByCharacter(filteredSpawns);
-		const ranks = new Map(
-			groups.map((group) => {
-				const held = fieldedCopy(group.copies, slots);
-				return [group.characterId, held ? (slots.get(held.id) ?? TEAM_SIZE) : TEAM_SIZE];
-			})
-		);
-		return groups.sort(
-			(a, b) =>
-				(ranks.get(a.characterId) ?? TEAM_SIZE) - (ranks.get(b.characterId) ?? TEAM_SIZE)
-		);
-	})(teamSlotById);
-
-	// character id → the id of the copy the grid is showing in that character's cell. Only
-	// holds the ones the player has picked a town for; every other cell shows its first copy.
-	// Keyed by character rather than by page, so a copy picked stays picked as the filters and
-	// the pages move.
-	let shownCopyByCell = new Map<string, string>();
-	function showCopy(characterId: string, spawnId: string): void {
-		shownCopyByCell = new Map(shownCopyByCell).set(characterId, spawnId);
-	}
-
-	/** One place a character has been claimed in, in one colour — an entry in the cell's
-	 * place selector, which is how a cell's copies are chosen between: it asks which town,
-	 * and the colour it was pulled in there comes with the answer. */
-	interface PlaceOption {
-		copy: CharacterSpawn;
-		locationName: string;
-		// Whether the cell can actually stand as this card. A copy the filters have put
-		// aside, or one holding a team slot, is still one of this character's places — it is
-		// listed and disabled rather than dropped, so the selector says what the player holds
-		// and, separately, what is reachable from here right now.
-		selectable: boolean;
-	}
-
-	// A character's copies as the places they were pulled in, one entry per town and
-	// colour: two reds from the same town say the same thing, so they are one entry, and
-	// it stands the first of them up — the first *selectable* one where there is one, since
-	// an entry a copy can be shown for must carry that copy and not the twin that cannot.
-	// Insertion order again, so the list follows the order the copies were claimed in, and a
-	// later copy taking over an entry keeps the place where its first copy put it. `names` is
-	// taken as an argument so the caller's reactive statement has to name the layer these
-	// places are read from.
-	function groupPlaces(
-		copies: CharacterSpawn[],
-		selectable: Set<string>,
-		_names: Map<string, string> | null
-	): PlaceOption[] {
-		const byPlace = new Map<string, PlaceOption>();
-		for (const copy of copies) {
-			const key = `${copy.locationId}|${copy.color}`;
-			const held = byPlace.get(key);
-			const canShow = selectable.has(copy.id);
-			if (held && !(canShow && !held.selectable)) continue;
-			byPlace.set(key, {
-				copy,
-				locationName: locationNameFor(copy.locationId),
-				selectable: canShow
-			});
-		}
-		return [...byPlace.values()];
-	}
-
 	// A page is ROWS_PER_PAGE rows at the current column count, so the slider resizes
 	// the page as well as the cards.
 	$: pageSize = CARD_COLUMNS * ROWS_PER_PAGE;
-	$: pageCount = Math.max(1, Math.ceil(characterGroups.length / pageSize));
+	$: pageCount = Math.max(1, Math.ceil(filteredSpawns.length / pageSize));
 	// Clamp whenever the page count shrinks (a wider column count, or a filter narrowing
 	// the roster) so the view never sits past the last page.
 	$: if (page > pageCount - 1) page = pageCount - 1;
 	$: pageStart = page * pageSize;
-	// The one page of characters the grid actually stands up — not the full list.
-	$: pagedGroups = characterGroups.slice(pageStart, pageStart + pageSize);
+	// The one page of cards the grid actually stands up — not the full list.
+	$: pagedSpawns = filteredSpawns.slice(pageStart, pageStart + pageSize);
 
 	function goToPage(next: number): void {
 		page = Math.min(Math.max(0, next), pageCount - 1);
@@ -471,64 +338,25 @@
 		};
 	}
 
-	// The current page's characters, each with the copy it is showing and the statue of
-	// that copy — a copy carries its own colour and its own claim place, so switching
-	// towns restands the character in the colour that copy was pulled in there with.
-	// Absent a town the player picked, a character standing at the head of the grid
-	// stands as the copy that put it there, so the bordered cell is the fielded card and
-	// not some other one of the same fighter; everything else falls back to its first copy,
-	// which is also where a shown copy filtered out of the grid lands, so the cell is
-	// never left pointing at a card that isn't there. The place names, the show assignment
-	// and the slots are threaded in so the grid re-derives as they load or the team changes
-	// (a bare helper call would hide those deps).
+	// The current page's cards, each as the statue that stands for it. One card, one cell:
+	// a copy carries its own colour and its own claim place, so two copies of a fighter
+	// pulled in two towns are two statues saying two different things, which is what the
+	// player actually holds. The place names, the show assignment and the slots are threaded
+	// in so the grid re-derives as they load or the team changes (a bare helper call would
+	// hide those deps).
 	$: pagedStatues = ((
 		names: Map<string, string> | null,
 		shows: Map<string, { id: number; name: string }[]>,
-		shown: Map<string, string>,
-		slots: Map<string, number>,
-		owned: Map<string, CharacterSpawn[]>,
-		selectable: Set<string>
+		slots: Map<string, number>
 	) =>
-		pagedGroups.map((group) => {
-			const shownId = shown.get(group.characterId);
-			const copy =
-				group.copies.find((spawn) => spawn.id === shownId) ??
-				fieldedCopy(group.copies, slots) ??
-				group.copies[0];
-			// The places are read off everything the player owns of this character rather than
-			// off the cell's own copies, which are only the ones that got through the filters:
-			// the rest are the disabled entries. What the cell may stand as is still the cell's
-			// copies, and that is what `selectable` marks — it is the same question the grid
-			// answered when it built them.
-			const places = groupPlaces(owned.get(group.characterId) ?? group.copies, selectable, names);
-			// Which entry the place selector sits on. Two copies from one town in one
-			// colour are a single entry, so a shown copy that was the second of them has
-			// none of its own — the entry that stands for its town and colour is the one
-			// the selector must read, or it would show blank for a card that is right there.
-			const place =
-				places.find(
-					(entry) =>
-						entry.copy.locationId === copy.locationId && entry.copy.color === copy.color
-				) ?? places[0];
-			return {
-				group,
-				copy,
-				places,
-				placeValue: place.copy.id,
-				statue: toStatue(copy, names, shows),
-				// Whether the copy on show is the one holding a slot — the cell's border, so
-				// the mark follows the card rather than the character: switch a fielded
-				// character to a copy that isn't on the team and the border goes with it.
-				fielded: slots.has(copy.id)
-			};
-		}))(
-		municipalityNames,
-		characterShows,
-		shownCopyByCell,
-		teamSlotById,
-		copiesByCharacter,
-		selectableIds
-	);
+		pagedSpawns.map((copy) => ({
+			copy,
+			statue: toStatue(copy, names, shows),
+			// Whether this card holds a slot — the cell's border. No card in this grid does
+			// while the line-up stands in a row of its own, so this is the mark a card
+			// fielded from a one-grid roster would wear.
+			fielded: slots.has(copy.id)
+		})))(municipalityNames, characterShows, teamSlotById);
 
 	// The line-up as the row the map's corner draws: the cards that are actually fielded, in
 	// slot order, each as the statue that stands for it. An empty slot is not a member and
@@ -550,10 +378,8 @@
 	// What the row itself is handed: the statues alone, in the same order.
 	$: partyMembers = partyLineup.map((entry) => entry.statue);
 
-	// Tapping a statue puts the copy it is showing on the team or takes it off (into the
-	// first free slot, or out of the one it holds). It is the statue that acts and the
-	// select that only chooses which copy it stands as — picking a town to look at the copy
-	// pulled there must never field it. A tap while a line-up is in flight is dropped rather
+	// Tapping a statue puts that card on the team or takes it off (into the first free slot,
+	// or out of the one it holds). A tap while a line-up is in flight is dropped rather
 	// than queued: the team is the server's, and two saves racing would be two answers
 	// to the same question.
 	function handleCardTap(spawn: CharacterSpawn): void {
@@ -561,8 +387,8 @@
 		void teamService.toggle(spawn.id);
 	}
 
-	// The same move the cell's own button makes, and the only one it makes: field the
-	// shown copy or take it out again — the very thing tapping the statue does.
+	// The same move the cell's own button makes, and the only one it makes: field this card
+	// or take it out again — the very thing tapping the statue does.
 	function handleTeamButton(spawn: CharacterSpawn): void {
 		if ($teamSaving) return;
 		void teamService.toggle(spawn.id);
@@ -570,13 +396,6 @@
 
 	// How many slots are filled, for the line above the grid.
 	$: teamFilledCount = $teamSlots.filter(Boolean).length;
-
-	// The colours the team can still take — its lead's own plus the ones that share a
-	// colour with it — folded into the header filters, so the grid shows the cards the
-	// team could actually take. It is the lead that sets the rule, so nothing is
-	// narrowed while the lead slot is empty, where any card is a legal first pick.
-	$: pickableColors = $teamColorFilter;
-
 </script>
 
 <!-- The sheet, the blur, the title bar and Escape are the modal's; everything below is
@@ -690,17 +509,16 @@
 					</span>
 				{/if}
 			</div>
-			<!-- The roster: a statue per character — the same one the map's panel stands the
-			     team up with — each cell naming which of that character's copies is standing
-			     in it. It is four cards
+			<!-- The roster: a statue per card — the same one the map's panel stands the
+			     team up with — every copy the player holds standing on its own, in the colour
+			     it was pulled in and under the town it came from. It is four cards
 			     across, on the right of the two things it is read with: the filters and the
 			     line-up, which are three across on the left. A card is in one of the two
 			     grids and never both — the ones holding a slot are the left grid's and are
 			     left out of the right, or the same three statues would stand twice over and
 			     be read as six cards. Each roster cell carries the button that fields or
-			     unfields the copy it is showing, pinned to its top corner; tapping the statue
-			     itself does the same thing, and picking a town only changes which copy is
-			     shown. Only the current page is mounted —
+			     unfields its card, pinned to its top corner; tapping the statue
+			     itself does the same thing. Only the current page is mounted —
 			     the filters narrow the roster, the pager walks what's left ROWS_PER_PAGE rows
 			     at a time — and that page scrolls in its own grid, the filters and the line-up
 			     keeping their place beside it rather than travelling with it.
@@ -884,9 +702,9 @@
 					bind:this={gridScroller}
 					class="grid min-h-0 grid-cols-3 content-start gap-3 overflow-y-auto lg:col-span-4 lg:grid-cols-4"
 				>
-					{#each pagedStatues as { group, copy, places, placeValue, statue, fielded } (group.characterId)}
+					{#each pagedStatues as { copy, statue, fielded } (copy.id)}
 						<!-- The border is on the cell, not on the statue: it takes in the strip over
-						     it too, so what it marks is this character's whole entry. Every cell
+						     it too, so what it marks is this card's whole entry. Every cell
 						     carries it and only a fielded one colours it in, so joining the team
 						     never nudges the grid by two pixels. Nothing in this grid
 						     is fielded while the line-up stands in a row of its own, so the coloured
@@ -904,38 +722,15 @@
 						>
 							<!-- The top of the cell, over the statue rather than laid out above it, so
 							     the strip is in the same place in every cell whatever the art below it
-							     does: which of this character's copies is standing on the left, the team
-							     button at the right end.
-							     The copies are asked for by the town they were claimed in — a native
-							     select, since a menu of our own would be clipped by the scroll box this
-							     grid lives in, and each option says its colour with a square, the one
-							     thing an option can carry that a stylesheet cannot reach. A character the
-							     player holds one of gets the select too, naming its one town: the strip
-							     is the same in every cell, and a control that came and went with how many
-							     copies were owned would move the team button under it.
+							     does: the team button, at the right end. There is nothing to its left any
+							     more — the select that stood there chose between a character's copies, and
+							     a cell is one copy now, which says its own town on its own panel.
 							     The button is a minus on a fielded card, a plus on one that could still
 							     be fielded, and disabled once the team is full — a plus that cannot add is
-							     a dead button, and the server would refuse the card anyway. -->
+							     a dead button, and the server would refuse the card anyway. Nothing else
+							     disables it: any card may lead a side and any card may stand behind any
+							     lead, so a full team is the one thing that can be in the way. -->
 							<div class="absolute inset-x-1 top-1 z-10 flex items-center gap-1">
-								<select
-									class="select select-xs min-w-0 max-w-[8rem] flex-initial shadow"
-									aria-label={$_('roster.claimedIn', { values: { name: statue.label } })}
-									value={placeValue}
-									on:change={(event) => showCopy(group.characterId, event.currentTarget.value)}
-								>
-									{#each places as place (place.copy.id)}
-										<!-- A town the cell cannot go to is still listed, disabled: the card is
-										     one the player holds, and it is out of reach either because a filter
-										     put it aside or because it is on the team and standing in the grid
-										     to the left. Dropping it had made the selector a different list
-										     under every filter, saying a character was claimed in fewer places
-										     than they were. -->
-										<option value={place.copy.id} disabled={!place.selectable}>
-											{SPAWN_SQUARE_GLYPHS[place.copy.color]}
-											{place.locationName}
-										</option>
-									{/each}
-								</select>
 								<button
 									type="button"
 									class={classNames(

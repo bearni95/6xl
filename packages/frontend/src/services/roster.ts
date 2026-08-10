@@ -4,9 +4,7 @@ import { MAP_ROUTE } from '$services/combat';
 import { authService } from '$services/auth.service';
 import { spawnService } from '$services/spawn.service';
 import { teamService, TEAM_SIZE } from '$services/team.service';
-import { canFieldFullTeam } from '$utils/color/compare';
 import { AuthStatus } from '$types/profile.type';
-import type { CombatColor } from '$types/character-definition.type';
 
 /**
  * The roster, and the two addresses it lives between.
@@ -59,22 +57,18 @@ export async function openRoster(options: { replaceState?: boolean } = {}): Prom
  *
  * The third condition is the one that keeps it from being a trap. A player is held only
  * where finishing is a move they can make: a new account with no cards, or one holding
- * fewer than three, or three in colours that cannot stand together, is *not* held — cards
- * come from the boxes drawn on towns, so holding such a player on the roster would be
- * shutting them out of the only place that could ever fix it. It reads off the cards
- * actually loaded, so a player whose roster has not been read yet is not held either: the
- * question simply has no answer until it does, and the answer it would give meanwhile is
- * the same as an empty roster's.
+ * fewer than three, is *not* held — cards come from the boxes drawn on towns, so holding
+ * such a player on the roster would be shutting them out of the only place that could ever
+ * fix it. Holding three is the whole of the question now: any three of a player's own cards
+ * are a side, whatever colours they are and whatever shows they come out of. It reads off
+ * the cards actually loaded, so a player whose roster has not been read yet is not held
+ * either: the question simply has no answer until it does, and the answer it would give
+ * meanwhile is the same as an empty roster's.
  */
 export const teamUnfinished: Readable<boolean> = derived(
 	[authService.status, teamService.complete, spawnService.spawns],
 	([status, complete, spawns]) =>
-		status === AuthStatus.SignedIn &&
-		!complete &&
-		canFieldFullTeam(
-			spawns.map((spawn) => spawn.color as unknown as CombatColor),
-			TEAM_SIZE
-		)
+		status === AuthStatus.SignedIn && !complete && spawns.length >= TEAM_SIZE
 );
 
 /**

@@ -284,19 +284,37 @@ nothing — hands the player back to `/roster` from wherever else they are, as t
 resume rule hands them back into an open fight. Leaving still returns them to the page the
 gate took them from. Two things keep it from being a trap: it is **only** raised where
 finishing is a move the player can make — signed in, short of a full side, and holding
-cards that could actually fill one (`canFieldFullTeam` in `$utils/color/compare`, since
-every member must share a colour with the lead, so three cards in unrelated colours are
-three cards and no team) — and it **looks twice rather than watching**: when the player
+`TEAM_SIZE` cards at all, which is the whole of the question since **nothing narrows what
+may be fielded** (see below) — and it **looks twice rather than watching**: when the player
 arrives somewhere, and when their cards first land. A live watch would fire the moment a
 booster pack awarded the card that completed the roster, navigating the pack's own sheet
 out from under the player mid-opening. The **welcome box** is the one opening that does not
 wait for the next arrival: `WelcomeBoosterModal` calls `holdIfUnfinished()` itself as its
 sheet closes, that being the moment a brand new account first holds cards to field. It is
 the end of that opening, so nothing is taken out from under anybody, and it is the only box
-a player is stopped and given rather than one they went and found. Not every welcome sends
-them: the box deals five cards in the white stock's three compounds, no two compounds are
-teammates, so one that came up two-two-one fields nobody and leaves the player on the map,
-where the boxes that would finish the side are. Everything that is not the map
+a player is stopped and given rather than one they went and found. It always sends them now:
+the box deals five cards, and five cards are a side whatever they came up as — it used to
+deal in the white stock's three compounds, no two of which were teammates, so a two-two-one
+fielded nobody and left the player on the map where the boxes that would finish the side are.
+
+**A side is any `TEAM_SIZE` of the player's own cards.** No colour has to be shared, no show
+has to be common, and nothing in the roster is hidden or greyed on account of what is already
+fielded: `set_team` proves ownership, that no card is named twice, and that the lead slot is
+filled, and that is the whole of the rule. It used to bind every member to the lead's colour
+(`teammate_colors` in Postgres, `teammateColors` in `$utils/color/compare`, and the roster
+narrowing its grid to what the lead admitted); the SQL function is dropped and the check with
+it. The colour relation itself is untouched — it still decides what a colour is good at in a
+fight (`utils/color/traits`) and still draws the **seeded** sides a town is garrisoned with
+(`utils/spawn/municipality-team`), which are generated rather than built. One consequence
+worth knowing: taking the lead off a team now promotes the whole of the rest, where it used
+to drop whoever the new lead's colour could not take.
+
+**The roster grid is one cell per card**, never per character. Every copy the player holds
+stands as its own statue, in the colour it was pulled in and under the town it came from —
+they were gathered into one cell with a town selector for a while, which meant a fighter
+claimed six times showed one statue and hid the other five in a dropdown.
+
+Everything that is not the map
 is behind the **burger menu** — the `<aside>` drawer summoned from the far end of the
 breadcrumb bar: the block of buttons that raise those sheets, the sign-in, and at its foot
 `MusicPlayer.svelte`. The plate draws nothing until a song is loaded, and the audio element

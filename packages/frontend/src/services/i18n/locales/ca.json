@@ -165,7 +165,6 @@
 		"clear": "Neteja",
 		"noMatches": "Cap personatge no coincideix amb aquests filtres.",
 		"clearFilters": "Neteja els filtres",
-		"claimedIn": "{name} — on es va reclamar",
 		"addToTeam": "Afegeix {name} a l'equip",
 		"removeFromTeam": "Treu {name} de l'equip",
 		"colors": {

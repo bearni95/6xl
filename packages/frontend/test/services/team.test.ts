@@ -53,8 +53,6 @@ beforeEach(() => {
 
 describe('teamService.toggle — taking the lead off', () => {
 	it('promotes the second card to lead and moves the third up behind it', async () => {
-		// A red lead with two oranges behind it: orange is a teammate of red, and red
-		// of orange, so the whole line-up survives the promotion.
 		spawnsStore.set([
 			card('lead', SpawnColor.Red, 0),
 			card('second', SpawnColor.Orange, 1),
@@ -74,10 +72,10 @@ describe('teamService.toggle — taking the lead off', () => {
 		expect(savedTeam()).toEqual(['second', null, null]);
 	});
 
-	it('drops a third card the promoted lead cannot take', async () => {
-		// The non-transitive case: red admits both orange and purple, but orange does
-		// not admit purple. Promoting the orange therefore cannot keep the purple, and
-		// handing the server that line-up would lose the orange too.
+	it('keeps every card behind the promoted lead, whatever colours they are', async () => {
+		// This used to cost the player a card: red admitted both orange and purple, but
+		// orange did not admit purple, so promoting the orange dropped the purple. No
+		// colour binds a member to its lead any more, so the whole of the rest moves up.
 		spawnsStore.set([
 			card('lead', SpawnColor.Red, 0),
 			card('second', SpawnColor.Orange, 1),
@@ -86,7 +84,7 @@ describe('teamService.toggle — taking the lead off', () => {
 
 		await teamService.toggle('lead');
 
-		expect(savedTeam()).toEqual(['second', null, null]);
+		expect(savedTeam()).toEqual(['second', 'third', null]);
 	});
 
 	it('empties the team when the lead was the only card fielded', async () => {
@@ -120,7 +118,7 @@ describe('teamService.toggle — the other slots', () => {
 		expect(savedTeam()).toEqual(['lead', null, 'third']);
 	});
 
-	it('fields a card of an allowed colour in the first empty slot', async () => {
+	it('fields a bench card in the first empty slot', async () => {
 		spawnsStore.set([card('lead', SpawnColor.Red, 0), card('bench', SpawnColor.Purple, null)]);
 
 		await teamService.toggle('bench');
@@ -128,8 +126,22 @@ describe('teamService.toggle — the other slots', () => {
 		expect(savedTeam()).toEqual(['lead', 'bench', null]);
 	});
 
-	it('is not a move at all for a colour the lead cannot take', async () => {
+	it('fields a card in any colour, the lead having no say in it', async () => {
+		// Green shares nothing with red, which was once the whole of what stopped this.
 		spawnsStore.set([card('lead', SpawnColor.Red, 0), card('bench', SpawnColor.Green, null)]);
+
+		await teamService.toggle('bench');
+
+		expect(savedTeam()).toEqual(['lead', 'bench', null]);
+	});
+
+	it('is not a move at all once every slot is filled', async () => {
+		spawnsStore.set([
+			card('lead', SpawnColor.Red, 0),
+			card('second', SpawnColor.Blue, 1),
+			card('third', SpawnColor.Green, 2),
+			card('bench', SpawnColor.Yellow, null)
+		]);
 
 		await teamService.toggle('bench');
 

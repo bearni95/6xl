@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-	canFieldFullTeam,
 	isPrimaryColor,
 	isTeammateColor,
 	relatedColors,
@@ -67,46 +66,6 @@ describe('colour relation', () => {
 		expect(isTeammateColor('orange', 'yellow')).toBe(true);
 		expect(isTeammateColor('orange', 'blue')).toBe(false);
 		expect(isTeammateColor('orange', 'green')).toBe(false);
-	});
-});
-
-describe('whether a full side can be fielded at all', () => {
-	// What holds a player on the roster asks this of everything they own (see
-	// $services/roster's teamUnfinished), so the cases that matter are the ones where
-	// holding enough cards is not the same as being able to field them.
-	it('says no while there are simply not enough cards', () => {
-		expect(canFieldFullTeam([], 3)).toBe(false);
-		expect(canFieldFullTeam(['red'], 3)).toBe(false);
-		expect(canFieldFullTeam(['red', 'red'], 3)).toBe(false);
-	});
-
-	it('says yes to three of one colour, a lead being one of its own teammates', () => {
-		expect(canFieldFullTeam(['red', 'red', 'red'], 3)).toBe(true);
-	});
-
-	it('says no to three cards in colours that cannot stand together', () => {
-		// The three primaries: none of them is a teammate of either other, so whichever
-		// leads stands alone. Three cards, and no team.
-		expect(canFieldFullTeam(['red', 'blue', 'yellow'], 3)).toBe(false);
-		// Same for the three compounds.
-		expect(canFieldFullTeam(['purple', 'orange', 'green'], 3)).toBe(false);
-	});
-
-	it('finds the lead that works even where another would not', () => {
-		// Nothing follows green here — but purple leads red and blue, so this is a side.
-		expect(canFieldFullTeam(['green', 'purple', 'red', 'blue'], 3)).toBe(true);
-		// A red lead takes purple and orange; the green is simply left out.
-		expect(canFieldFullTeam(['red', 'purple', 'orange', 'green'], 3)).toBe(true);
-	});
-
-	it('counts the lead itself once and no more', () => {
-		// One purple and one red: two cards a purple lead admits, which is a side of two.
-		expect(canFieldFullTeam(['purple', 'red'], 3)).toBe(false);
-		expect(canFieldFullTeam(['purple', 'red'], 2)).toBe(true);
-	});
-
-	it('is untroubled by a side of none', () => {
-		expect(canFieldFullTeam([], 0)).toBe(true);
 	});
 });
 

@@ -212,32 +212,18 @@ export function ensureTables(): Promise<void> {
 				revoke all on player_spawns_public from anon, authenticated;
 				grant select on player_spawns_public to anon, authenticated;
 				drop view if exists player_teams_public;
-				-- The colours that may stand beside a lead of p_color: its own, plus — for a
-				-- primary — the compounds that mix it, or — for a compound — the two
-				-- primaries that make it. The same relation as teammateColors in
-				-- @3xl/shared utils/color/compare.ts; keep the two in step.
-				create or replace function teammate_colors(p_color text)
-				returns text[] language sql immutable set search_path = public as $teammate_colors$
-					select case p_color
-						when 'red' then array['red', 'purple', 'orange']
-						when 'blue' then array['blue', 'purple', 'green']
-						when 'yellow' then array['yellow', 'orange', 'green']
-						when 'purple' then array['purple', 'red', 'blue']
-						when 'orange' then array['orange', 'red', 'yellow']
-						when 'green' then array['green', 'blue', 'yellow']
-						else array[p_color]
-					end;
-				$teammate_colors$;
 				-- Set the caller's team: p_team is the three slots in fielded order, as spawn
 				-- ids with null for an empty one. It replaces whatever they had — there is one
 				-- team, so saving a line-up is saving THE line-up.
 				--
 				-- security definer because character_spawns takes no client update at all;
 				-- this writes exactly one column, on rows the caller owns, and it is the only
-				-- path to it. What it proves is what start_battle would otherwise discover far
-				-- too late: the cards are the caller's, each named once, and every one of them
-				-- shares a colour with the lead (see teammate_colors) — so a team that could
-				-- never fight is refused where it is built rather than at the door of a fight.
+				-- path to it. What it proves is ownership and nothing else: the cards are the
+				-- caller's, each named once, and the lead slot is filled. A side used to have
+				-- to be one colour's — every member sharing a colour with the lead, checked
+				-- here by a teammate_colors function dropped below — and it does not any more:
+				-- a player fields any three of their own cards, whatever colours they carry
+				-- and whatever shows they came out of.
 				create or replace function set_team(p_team jsonb)
 				returns void language plpgsql security definer set search_path = public as $set_team$
 				declare
@@ -249,7 +235,6 @@ export function ensureTables(): Promise<void> {
 						v_distinct int;
 						v_owned int;
 						v_lead_color text;
-						v_mismatched int;
 				begin
 						if v_uid is null then
 								raise exception 'You must be signed in to field a team.';
@@ -283,20 +268,14 @@ export function ensureTables(): Promise<void> {
 						if v_owned <> v_given then
 								raise exception 'Every fighter must be one of your own claimed cards.';
 						end if;
-						-- The lead is the first slot, and it is the lead that says what the rest of
-						-- the team may be, so a team with no lead is a team with nobody behind it.
+						-- The lead is the first slot: a side stands behind somebody, so cards in
+						-- the slots behind an empty one are not a line-up. Its colour is read only
+						-- to answer that — what the lead is no longer says anything about who may
+						-- stand behind it.
 						select cs.color into v_lead_color from character_spawns cs
 							where cs.user_id = v_uid and cs.id = v_ids[1];
 						if v_lead_color is null and v_given > 0 then
 								raise exception 'A team is led by its first card; fill that slot first.';
-						end if;
-						if v_lead_color is not null then
-								select count(*) into v_mismatched from character_spawns cs
-									where cs.user_id = v_uid and cs.id = any(v_ids[2:])
-										and not (cs.color = any(teammate_colors(v_lead_color)));
-								if v_mismatched > 0 then
-										raise exception 'Every fighter must share a colour with the team lead.';
-								end if;
 						end if;
 						-- Cleared first, so the line-up being saved never collides with the one it
 						-- replaces over a slot they both use.
@@ -311,6 +290,12 @@ export function ensureTables(): Promise<void> {
 				end;
 				$set_team$;
 				grant execute on function set_team(jsonb) to authenticated;
+				-- The colour relation as a SQL function existed for the check set_team no
+				-- longer makes, and nothing else in the database ever called it. Dropped after
+				-- the function that used it is replaced, so no rule stands here that is not
+				-- enforced; the relation lives on in @3xl/shared utils/color/compare.ts, where
+				-- the browser draws a town's seeded garrison with it.
+				drop function if exists teammate_colors(text);
 				-- Per-player progression: an accumulated experience total the frontend
 				-- reads to derive a level (D&D 5e table). RLS lets a player read only
 				-- their own row; it is never written directly — the award_combat_exp RPC
