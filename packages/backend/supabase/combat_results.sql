@@ -80,6 +80,13 @@
 -- happens. See the send at the foot of the function for what it carries and why it can
 -- never cost the fight.
 --
+-- A broadcast reaches whoever is listening at the moment it is made, so somebody who
+-- opens the game at five past knows nothing of five o'clock. `recent_combat_feed` at the
+-- foot of this file is the ten fights they are given to start from — the same rows, in
+-- the same shape the channel sends them in, read once. Which is what puts the town and
+-- the capture on this table: a fight that is going to be read out later has to record
+-- what it was over, not only what it paid.
+--
 -- Territory is also where the challenge cooldown is *set*: settling a fight is
 -- what shuts that town to its challenger for the next hour, timed from this
 -- report rather than from when the fight opened, so a long fight is never also a
@@ -131,8 +138,28 @@ alter table public.combat_results drop column if exists hp_max;
 alter table public.combat_results
 	add column if not exists rivals_defeated integer not null default 0;
 
+-- WHERE the fight was, and what it did to the place. The row recorded what a fight paid
+-- and never what it was over, which was fine while it was only an audit trail of awards
+-- — and is not, now that the last ten of them are what a player joining the game is
+-- shown (see recent_combat_feed below). A fight that cannot say which town it was over
+-- cannot be read out.
+--
+-- Null on every row written before this, and that is what null means here: not "no
+-- town", which no fight has, but "not recorded". The feed passes those over rather than
+-- announcing a fight over nowhere.
+alter table public.combat_results add column if not exists location_id text;
+alter table public.combat_results add column if not exists captured boolean not null default false;
+alter table public.combat_results add column if not exists stale boolean not null default false;
+
 create index if not exists combat_results_user_day_idx
 	on public.combat_results (user_id, fought_at);
+
+-- The feed's own read: the last handful of fights across the whole game, newest first.
+-- Nothing about a player is in the ordering, so this is the one index that is not by
+-- user — everybody's fights are one list here.
+create index if not exists combat_results_recent_idx
+	on public.combat_results (fought_at desc)
+	where location_id is not null;
 
 alter table public.combat_results enable row level security;
 
@@ -393,11 +420,6 @@ begin
 		v_felled := 0;
 	end if;
 
-	insert into public.combat_results
-		(user_id, outcome, survivors, fielded, rivals_defeated, level, level_span, exp_awarded)
-		values (v_uid, p_outcome, v_standing, v_owned, v_felled, v_level, v_span, v_award)
-		returning id, fought_at into v_result_id, v_fought_at;
-
 	if v_award > 0 then
 		insert into public.player_profiles (user_id, exp)
 			values (v_uid, v_award)
@@ -571,6 +593,19 @@ begin
 		town_stale := v_stale;
 	end;
 
+	-- The fight is filed, and it is filed *here* — after the town has been settled rather
+	-- than before it. The row is the audit trail behind the award, and it is now also the
+	-- only memory the feed has: what a fight was over and whether it took the place are
+	-- decided in the block above, so a row written before that block could only have said
+	-- what the fight paid. Every rejection above raises and rolls the whole transaction
+	-- back, so nothing is recorded that was not also paid.
+	insert into public.combat_results
+		(user_id, outcome, survivors, fielded, rivals_defeated, level, level_span, exp_awarded,
+			location_id, captured, stale)
+		values (v_uid, p_outcome, v_standing, v_owned, v_felled, v_level, v_span, v_award,
+			v_location, v_captured, v_stale)
+		returning id, fought_at into v_result_id, v_fought_at;
+
 	-- The fight is over: the battle is closed and the player is free to start
 	-- another. Every path that got here has already been paid for — the ones that
 	-- reject a report raise, which rolls this back along with the experience, so a
@@ -644,3 +679,57 @@ end;
 $$;
 
 grant execute on function public.award_combat_exp(text, jsonb, int) to authenticated;
+
+-- The last few fights, for somebody who has only just started listening.
+--
+-- A broadcast is heard by whoever is on the channel at the moment it is made and by
+-- nobody else, so an arena opened at five past the hour knows nothing of five o'clock.
+-- This is the tail that fixes it: the newest {@link COMBAT_FEED_HISTORY} fights across the
+-- whole game, read once as the channel is subscribed to, in **exactly the shape the
+-- broadcast sends** — so a client has one thing to parse and one list to keep, and a fight
+-- that arrives both ways (heard live, then read back on a re-subscribe) is recognised as
+-- the same fight by the record id both carry.
+--
+-- Ten is the cap and not a suggestion: p_limit may only lower it. A feed is what is
+-- happening, and a page of a hundred old fights is a log.
+--
+-- security definer, because combat_results is RLS-scoped to its owner and this is
+-- deliberately everybody's: it publishes exactly what the channel already publishes to
+-- anyone holding the anon key — a chosen name, the avatar worn, a level, and what a fight
+-- did to a town. Rows from before a fight recorded its town are skipped rather than
+-- announced from nowhere.
+--
+-- The level is the player's level *now* rather than the one the fight left them on. A
+-- level frozen into a row goes stale the moment its owner gains one, and everywhere else
+-- in this game a player is drawn as they currently stand (municipality_holders_public
+-- reads their experience live for the same reason).
+create or replace function public.recent_combat_feed(p_limit int default 10)
+returns setof jsonb
+language sql stable security definer set search_path = public as $$
+	select jsonb_build_object(
+		'id', r.id,
+		'at', r.fought_at,
+		'outcome', r.outcome,
+		'exp', r.exp_awarded,
+		'survivors', r.survivors,
+		'fielded', r.fielded,
+		'rivals', r.rivals_defeated,
+		'town', r.location_id,
+		'captured', r.captured,
+		'stale', r.stale,
+		'player', jsonb_build_object(
+			'id', r.user_id,
+			'name', p.username,
+			'character_id', p.avatar_character_id,
+			'color', p.avatar_color,
+			'level', public.level_for_exp(coalesce(p.exp, 0))
+		)
+	)
+	from public.combat_results r
+	left join public.player_profiles p on p.user_id = r.user_id
+	where r.location_id is not null
+	order by r.fought_at desc
+	limit least(greatest(coalesce(p_limit, 10), 1), 10);
+$$;
+
+grant execute on function public.recent_combat_feed(int) to anon, authenticated;

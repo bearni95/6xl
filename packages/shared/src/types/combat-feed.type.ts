@@ -13,9 +13,13 @@
  * name, the avatar worn, a level — plus what the fight did to a town. Nothing about the
  * account behind it and nothing about the cards fielded.
  *
- * It carries **no history**. A broadcast is heard by whoever is listening at the moment it
- * is made, so a client that subscribes at noon knows nothing of the morning: the feed is
- * what has happened since this page opened, which is exactly what it says on screen.
+ * A broadcast carries **no history** of its own: it is heard by whoever is listening at the
+ * moment it is made, so a client that subscribes at noon would know nothing of the morning.
+ * What answers that is {@link COMBAT_FEED_HISTORY} — the newest few fights, read once from
+ * `recent_combat_feed` as the channel is subscribed to, in exactly the shape the channel
+ * sends. So a page opens on what has just been happening and then hears the rest as it
+ * happens, and the two are the same kind of thing all the way down: one shape, one adapter,
+ * one list, and a fight that arrives both ways is recognised by the record id it carries.
  */
 import type { SpawnColor } from './character-spawn.type';
 import type { CombatOutcome } from './combat.type';
@@ -33,6 +37,17 @@ export const COMBAT_FEED_EVENT = 'fight';
  * so the oldest fall off the end rather than accumulating for as long as a tab lives.
  */
 export const COMBAT_FEED_LIMIT = 50;
+
+/**
+ * How many fights a page is handed to start from — the tail `recent_combat_feed` keeps, and
+ * the whole of what somebody arriving mid-afternoon knows about the morning.
+ *
+ * Ten, and the server caps it there rather than trusting the number: what this feed is for
+ * is what is happening, and a client that asked for a hundred would be asking for a log.
+ * Well under {@link COMBAT_FEED_LIMIT}, so a page opens with room to hear plenty more
+ * before the oldest of them starts falling off.
+ */
+export const COMBAT_FEED_HISTORY = 10;
 
 /** Whoever fought it, exactly as the map says a player: the name they chose, the avatar
  * they wear and the level the fight left them on. Every field may be missing — an account

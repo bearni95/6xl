@@ -1071,8 +1071,21 @@ export function ensureTables(): Promise<void> {
 					-- carry no rival count and read as 0, which is what they were paid on.
 					alter table combat_results
 						add column if not exists rivals_defeated integer not null default 0;
+					-- Where the fight was and what it did to the place. The row recorded what a
+					-- fight paid and never what it was over, which is not enough now that the last
+					-- ten fights are what somebody joining the game is shown (recent_combat_feed
+					-- below). Null on every row written before this, and null means "not
+					-- recorded" rather than "no town": the feed passes those over.
+					alter table combat_results add column if not exists location_id text;
+					alter table combat_results add column if not exists captured boolean not null default false;
+					alter table combat_results add column if not exists stale boolean not null default false;
 					create index if not exists combat_results_user_day_idx
 						on combat_results (user_id, fought_at);
+					-- The feed's own read: everybody's fights as one list, newest first, which is
+					-- the one index here that is not by player.
+					create index if not exists combat_results_recent_idx
+						on combat_results (fought_at desc)
+						where location_id is not null;
 					alter table combat_results enable row level security;
 					drop policy if exists combat_results_select_own on combat_results;
 					create policy combat_results_select_own on combat_results
@@ -1683,12 +1696,6 @@ export function ensureTables(): Promise<void> {
 							if p_outcome <> 'lose' then
 								v_felled := 0;
 							end if;
-							insert into combat_results
-								(user_id, outcome, survivors, fielded, rivals_defeated,
-									level, level_span, exp_awarded)
-								values (v_uid, p_outcome, v_standing, v_owned, v_felled,
-									v_level, v_span, v_award)
-								returning id, fought_at into v_result_id, v_fought_at;
 							if v_award > 0 then
 								insert into player_profiles (user_id, exp)
 									values (v_uid, v_award)
@@ -1838,6 +1845,18 @@ export function ensureTables(): Promise<void> {
 								town_turnover := v_turnover;
 								town_stale := v_stale;
 							end;
+							-- The fight is filed, after the town has been settled rather than before
+							-- it: the row is the audit trail behind the award and now also the only
+							-- memory the feed has, and what a fight was over and whether it took
+							-- the place are decided in the block above. Every rejection there
+							-- raises and rolls the whole transaction back, so nothing is recorded
+							-- that was not also paid.
+							insert into combat_results
+								(user_id, outcome, survivors, fielded, rivals_defeated,
+									level, level_span, exp_awarded, location_id, captured, stale)
+								values (v_uid, p_outcome, v_standing, v_owned, v_felled,
+									v_level, v_span, v_award, v_location, v_captured, v_stale)
+								returning id, fought_at into v_result_id, v_fought_at;
 							-- The fight is over: close the battle, freeing the player to start
 							-- another. Every rejection above raises, which rolls this back with the
 							-- experience — a refused report leaves them in the battle they were in.
@@ -1893,6 +1912,47 @@ export function ensureTables(): Promise<void> {
 					end;
 					$award_combat_exp$;
 					grant execute on function award_combat_exp(text, jsonb, int) to authenticated;
+					-- The last few fights, for somebody who has only just started listening. A
+					-- broadcast reaches whoever is on the channel at the moment it is made, so an
+					-- arena opened at five past knows nothing of five o'clock: this is the tail
+					-- that fixes it, in exactly the shape the channel sends, so a client has one
+					-- thing to parse and recognises a fight it has already heard by its record id.
+					-- Ten is a cap and not a suggestion — p_limit may only lower it — because a
+					-- feed is what is happening and a hundred old fights is a log. security
+					-- definer, since combat_results is RLS-scoped to its owner and this is
+					-- deliberately everybody's; it publishes exactly what the channel already
+					-- publishes to anyone holding the anon key. Rows from before a fight recorded
+					-- its town are skipped rather than announced from nowhere, and the level is
+					-- the player's now rather than one frozen into a row, as everywhere else.
+					create or replace function recent_combat_feed(p_limit int default 10)
+					returns setof jsonb
+					language sql stable security definer set search_path = public as $recent_combat_feed$
+						select jsonb_build_object(
+							'id', r.id,
+							'at', r.fought_at,
+							'outcome', r.outcome,
+							'exp', r.exp_awarded,
+							'survivors', r.survivors,
+							'fielded', r.fielded,
+							'rivals', r.rivals_defeated,
+							'town', r.location_id,
+							'captured', r.captured,
+							'stale', r.stale,
+							'player', jsonb_build_object(
+								'id', r.user_id,
+								'name', p.username,
+								'character_id', p.avatar_character_id,
+								'color', p.avatar_color,
+								'level', level_for_exp(coalesce(p.exp, 0))
+							)
+						)
+						from combat_results r
+						left join player_profiles p on p.user_id = r.user_id
+						where r.location_id is not null
+						order by r.fought_at desc
+						limit least(greatest(coalesce(p_limit, 10), 1), 10);
+					$recent_combat_feed$;
+					grant execute on function recent_combat_feed(int) to anon, authenticated;
 					-- The acceptance ledger: which legal document, at which version, was agreed to
 					-- by whom and when. Server-side because an acceptance held in the player's own
 					-- browser demonstrates nothing — GDPR art. 5(2) puts the burden of showing it on

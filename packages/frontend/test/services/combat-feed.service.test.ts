@@ -5,9 +5,9 @@ import { COMBAT_FEED_LIMIT } from '$types/combat-feed.type';
 
 /** One announcement, distinguished by the record it names — which is the whole of what
  * makes two of them two fights. */
-const fight = (id: string, town = 'ES_08019') => ({
+const fight = (id: string, town = 'ES_08019', at = '2026-08-10T17:04:00.000Z') => ({
 	id,
-	at: '2026-08-10T17:04:00.000Z',
+	at,
 	outcome: 'win',
 	exp: 300,
 	survivors: 3,
@@ -82,6 +82,41 @@ describe('combatFeedService — what arrives on the channel', () => {
 		expect(get(entries).length).toBe(COMBAT_FEED_LIMIT);
 		// The newest are the ones kept.
 		expect(get(entries)[0].id).toBe(`flood-${COMBAT_FEED_LIMIT + 9}`);
+	});
+
+	it('takes the tail the server keeps without calling any of it news', () => {
+		// What somebody joining is handed: fights that finished before they were listening.
+		// They fill the sheet — that is the whole point of keeping them — and they must never
+		// put a number on the button, which is for what has happened since.
+		const ids = () => get(entries).map((entry) => entry.id);
+		combatFeedService.receiveHistory([fight('tail-1'), fight('tail-2'), 'not a fight']);
+		expect(ids()).toContain('tail-1');
+		expect(ids()).toContain('tail-2');
+		expect(get(unread)).toBe(0);
+
+		// And a fight already heard live is not stacked a second time by the read that comes
+		// back a moment later holding the same rows.
+		combatFeedService.receive(fight('tail-3'));
+		combatFeedService.receiveHistory([fight('tail-3'), fight('tail-2')]);
+		expect(ids().filter((id) => id === 'tail-3').length).toBe(1);
+		expect(ids().filter((id) => id === 'tail-2').length).toBe(1);
+		expect(get(unread)).toBe(1);
+	});
+
+	it('orders the list by when the fights were fought, not by when they arrived', () => {
+		// The read that fills a page is a moment behind the socket that is already running, so
+		// the older ten routinely arrive after something newer. Two players watching the same
+		// feed still read it in the same order.
+		combatFeedService.receive(fight('late', 'ES_08019', '2026-08-10T20:00:00.000Z'));
+		combatFeedService.receiveHistory([
+			fight('older', 'ES_08019', '2026-08-10T19:00:00.000Z'),
+			fight('newest', 'ES_08019', '2026-08-10T21:00:00.000Z')
+		]);
+		expect(
+			get(entries)
+				.slice(0, 3)
+				.map((entry) => entry.id)
+		).toEqual(['newest', 'late', 'older']);
 	});
 
 	it('lets go of the channel only when the last listener does', () => {
