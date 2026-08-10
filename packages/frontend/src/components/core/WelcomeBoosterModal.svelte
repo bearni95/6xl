@@ -4,6 +4,7 @@
 	import ChooseShowBooster from '$components/core/pack/ChooseShowBooster.svelte';
 	import { authService } from '$services/auth.service';
 	import { legalService } from '$services/legal.service';
+	import { holdIfUnfinished } from '$services/roster';
 	import { spawnService } from '$services/spawn.service';
 	import {
 		WELCOME_BOX_CAPTION,
@@ -87,6 +88,27 @@
 	// Signed out mid-welcome: the gate is about an account, and there is no account. This one
 	// takes the sheet even mid-reveal, for the same reason.
 	$: if (!signedIn && showing) showing = false;
+
+	/**
+	 * The welcome is over: the box is open, its cards have been looked at, and the sheet says
+	 * it is done.
+	 *
+	 * Which is the moment a new account first holds cards to field, so it is where the player
+	 * is sent to field them. `TeamGate` is what asks this everywhere else, and it deliberately
+	 * looks only when a player arrives somewhere or when their cards first land — neither of
+	 * which is the end of an opening they have been standing in front of all along, so this
+	 * asks for itself rather than leaving a brand new player on the map with nothing fielded
+	 * until they happen to go somewhere.
+	 *
+	 * Nothing is held on a box that could not fill a side. The welcome deals five cards in the
+	 * white stock's three colours and no two of those are teammates, so a box that came up two
+	 * and two and one is a box that fields nobody — that player is left on the map, which is
+	 * where the boxes that would finish it are (see `teamUnfinished`).
+	 */
+	function done(): void {
+		showing = false;
+		holdIfUnfinished();
+	}
 </script>
 
 {#if showing}
@@ -98,6 +120,6 @@
 		light={WELCOME_BOX_STOCK === SpawnBox.White}
 		locked
 		claim={(showId) => spawnService.claimWelcomeBooster(showId)}
-		on:close={() => (showing = false)}
+		on:close={done}
 	/>
 {/if}

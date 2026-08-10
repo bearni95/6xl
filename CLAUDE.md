@@ -289,7 +289,14 @@ every member must share a colour with the lead, so three cards in unrelated colo
 three cards and no team) — and it **looks twice rather than watching**: when the player
 arrives somewhere, and when their cards first land. A live watch would fire the moment a
 booster pack awarded the card that completed the roster, navigating the pack's own sheet
-out from under the player mid-opening. Everything that is not the map
+out from under the player mid-opening. The **welcome box** is the one opening that does not
+wait for the next arrival: `WelcomeBoosterModal` calls `holdIfUnfinished()` itself as its
+sheet closes, that being the moment a brand new account first holds cards to field. It is
+the end of that opening, so nothing is taken out from under anybody, and it is the only box
+a player is stopped and given rather than one they went and found. Not every welcome sends
+them: the box deals five cards in the white stock's three compounds, no two compounds are
+teammates, so one that came up two-two-one fields nobody and leaves the player on the map,
+where the boxes that would finish the side are. Everything that is not the map
 is behind the **burger menu** — the `<aside>` drawer summoned from the far end of the
 breadcrumb bar: the block of buttons that raise those sheets, the sign-in, and at its foot
 `MusicPlayer.svelte`. The plate draws nothing until a song is loaded, and the audio element

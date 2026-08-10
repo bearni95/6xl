@@ -77,6 +77,28 @@ export const teamUnfinished: Readable<boolean> = derived(
 		)
 );
 
+/**
+ * Hand the player back to their cards if their side is unfinished, unless that is where
+ * they already are.
+ *
+ * The one move `TeamGate` makes, out here because the gate is not the only thing that has
+ * cause to make it: the welcome box calls it as it is closed, that being the moment a brand
+ * new account first holds cards to field (see WelcomeBoosterModal). The gate looks when a
+ * player arrives somewhere and when their cards first land, and neither of those is the end
+ * of an opening the player has been standing in front of all along.
+ *
+ * `path` is where the caller believes the player is standing. It is asked for rather than
+ * read off the document because a caller in the middle of a navigation knows better than
+ * the address bar does; the document is the fallback for the callers that are not.
+ */
+export function holdIfUnfinished(path: string = currentPath()): void {
+	if (path.startsWith(ROSTER_ROUTE)) return;
+	if (!get(teamUnfinished)) return;
+	// Replacing rather than pushing: the page being left is one the player is not allowed to
+	// be on, so a step in the history for it would be a Back that bounces forward again.
+	void openRoster({ replaceState: true });
+}
+
 /** Leave the roster for the page it was opened from. */
 export async function leaveRoster(): Promise<void> {
 	await goto(get(returnRoute));
@@ -93,4 +115,10 @@ function currentRoute(): string {
 	if (typeof window === 'undefined') return MAP_ROUTE;
 	const here = `${window.location.pathname}${window.location.search}`;
 	return here.startsWith(ROSTER_ROUTE) ? MAP_ROUTE : here;
+}
+
+/** The path alone, for the one question that is about which page this is rather than about
+ * where a player should be sent back to. */
+function currentPath(): string {
+	return typeof window === 'undefined' ? MAP_ROUTE : window.location.pathname;
 }

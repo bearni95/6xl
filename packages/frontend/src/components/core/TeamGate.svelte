@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 	import { page } from '$app/stores';
 	import { authService } from '$services/auth.service';
 	import { spawnService } from '$services/spawn.service';
-	import { ROSTER_ROUTE, openRoster, teamUnfinished } from '$services/roster';
+	import { holdIfUnfinished } from '$services/roster';
 	import { AuthStatus } from '$types/profile.type';
 
 	// What happens to a player who can field a side and has not.
@@ -25,6 +24,13 @@
 	// open on the map: a gate that fired on the card arriving would navigate that sheet out
 	// from under the player mid-pack. Arriving anywhere afterwards catches it, which is the
 	// next thing they do.
+	//
+	// The one opening that does not wait for that is the welcome box, which calls the same
+	// move itself as it is closed (see WelcomeBoosterModal): a brand new account has just been
+	// handed the first cards it has ever held, and the next thing it should be doing is
+	// fielding them. It is the *end* of that opening, so nothing is taken out from under
+	// anybody — and it is the only box a player is stopped and given rather than one they went
+	// and found, which is why it, and not the boxes on the towns, is where this belongs.
 
 	const status = authService.status;
 	const profile = authService.profile;
@@ -50,9 +56,11 @@
 	$: if (!currentUserId) askedFor = null;
 
 	// The one dependency this statement may name: arriving somewhere is what it looks at, and
-	// naming the team here is what would make it a live watch (see above).
+	// naming the team here is what would make it a live watch (see above). The move itself is
+	// `holdIfUnfinished` out in the service, which reads the team out of its store rather than
+	// as a dependency — so what this component decides is *when* to ask, and no more.
 	$: pathname = $page.url.pathname;
-	$: consider(pathname);
+	$: holdIfUnfinished(pathname);
 
 	async function readCards(userId: string): Promise<void> {
 		try {
@@ -63,24 +71,8 @@
 			return;
 		}
 		// Wherever they have got to while the read was in flight, which is what `pathname`
-		// holds — a navigation during it has already been considered on its own account, and
-		// this is the same question asked of the answer that has just arrived.
-		consider(pathname);
-	}
-
-	/**
-	 * Hand the player back to their cards, unless that is where they already are.
-	 *
-	 * Read out of the store rather than taken as a dependency, deliberately: the whole point
-	 * of this component is that it looks at the team only at the two moments above.
-	 */
-	function consider(path: string): void {
-		if (path === ROSTER_ROUTE) return;
-		if (!get(teamUnfinished)) return;
-		// Replacing rather than pushing: the page being left is one the player is not allowed
-		// to be on, so a step in the history for it would be a Back that bounces forward again.
-		// Where they came from is remembered all the same, and is where finishing the side
-		// puts them.
-		void openRoster({ replaceState: true });
+		// holds — a navigation during it has already been asked on its own account, and this
+		// is the same question asked of the answer that has just arrived.
+		holdIfUnfinished(pathname);
 	}
 </script>
