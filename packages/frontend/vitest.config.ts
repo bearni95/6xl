@@ -28,7 +28,10 @@ export default defineConfig({
 			$types: resolve(__dirname, '../shared/src/types'),
 			$utils: resolve(__dirname, '../shared/src/utils'),
 			$sharedComponents: resolve(__dirname, '../shared/src/components'),
-			$app: resolve(__dirname, './test/mocks/$app')
+			$app: resolve(__dirname, './test/mocks/$app'),
+			// SvelteKit's own env module, which only exists inside a SvelteKit build: a component
+			// test that reaches the Supabase client needs it to resolve to an empty environment.
+			'$env/dynamic/public': resolve(__dirname, './test/mocks/$env/dynamic/public.ts')
 		}
 	}
 });
