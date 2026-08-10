@@ -43,10 +43,15 @@
 		<!-- The song. A banner rather than a truncation (see MarqueeText): a name of a place can be
 			recognised from its head, but a song on a radio is being announced and half an
 			announcement is not one. It is lettered straight onto the plate in the plate's own ink,
-			having no fill and no press of its own. -->
+			having no fill and no press of its own.
+			`text-right`, which is the end of the plate the plate itself is held against and the
+			end the play/pause square on the band below stands at: a short title left-aligned
+			drifts away from the mark it belongs to and leaves the gap on the side the two are
+			read from. It settles the still line only — a title too long for the plate is a
+			running track as wide as it needs, and has no end to be put against. -->
 		<MarqueeText
 			text={state.track.title}
-			classes="min-w-0 flex-1 text-left text-xs font-medium opacity-70"
+			classes="min-w-0 flex-1 text-right text-xs font-medium opacity-70"
 		/>
 	{/if}
 </div>
