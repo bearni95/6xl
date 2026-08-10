@@ -2,6 +2,7 @@
 	import classNames from 'classnames';
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
+	import CombatFlanks from '$components/core/CombatFlanks.svelte';
 	import CombatGround from '$components/core/CombatGround.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
@@ -1151,6 +1152,17 @@
 				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(9*min(100vw/9,100dvh/11))] -translate-x-1/2 bg-sky-300"
 				aria-hidden="true"
 			></div>
+			<!-- What is beside the board, on every screen the board does not fill the width of:
+			     the picture's own rows carried out to the left and right edges of the view, the
+			     board's own count of squares running on past its edges rather than its edge tile
+			     stamped along a band. It is the same answer `CombatGround` gives below the board
+			     on a phone, given on the other axis — whichever axis the canvas did not run out on
+			     is the fight's ground rather than the page.
+			     It is also why the sky above stays the board's own column and is not widened to
+			     the sheet: out here the sky is a row of the picture like the grass under it, and
+			     the flanks carry that row out themselves. Written after the sky and on the same
+			     layer, so it stands on it. -->
+			<CombatFlanks />
 			<!-- The board, and nothing round it. No card, no body, no column, and no border: the
 			     arena is one drawing and every box round a drawing is scale taken off it, since the
 			     canvas is fitted to the room it is given. What used to stand under the board stands

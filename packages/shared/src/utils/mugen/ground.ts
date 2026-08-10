@@ -36,6 +36,18 @@ export const GROUND_SHEET_TILES = 16;
  */
 export const GROUND_TILES_PER_CELL = 3;
 
+/**
+ * The **brow**: how many rows of squares are cut off the top of the board to make the
+ * picture, counted from the board's own top-left corner. So the picture starts on this
+ * row, which is what the document has to know to lay ground beside it — the row a band's
+ * first square is level with is the row the canvas's first square is.
+ *
+ * What those rows are, what cutting them costs the tallest fighters and what it buys the
+ * rest is on `mugen-board`'s `BROW_DEPTH`, which is this in cell widths. Here it is one
+ * more fact about the shape of the picture, like the tiles it is laid with.
+ */
+export const GROUND_BROW_SQUARES = 2;
+
 /** A tile's place on the sheet, counted in tiles of {@link GROUND_TILE_PX} from its
  * top-left corner — which is how the sheet itself is read, and the only way any of these
  * are named. */
@@ -110,9 +122,16 @@ export const GROUND_EARTH_TILES: SheetTile[] = [
  * The set is taken in turn along both axes, so no square is ever the tile east or north of
  * it, and with three the pattern runs on the diagonal. It is a fact about where a square is
  * and nothing else: no throw, nothing stored, so the same board is the same field every
- * time it is drawn — and the ground drawn in the document below the canvas carries the
- * canvas's own pattern on, being the same rule counted from the same corner.
+ * time it is drawn — and the ground drawn in the document below and beside the canvas
+ * carries the canvas's own pattern on, being the same rule counted from the same corner.
+ *
+ * **A square may be off the board on either side.** The document lays ground out to the
+ * edges of the view, which past the board's left-hand column is column −1, −2 and on, so
+ * the remainder is taken the positive way round rather than by the language's `%` — which
+ * keeps the sign of what it is given and would index off the front of the list. The
+ * alternation is the same one either side of the corner it is counted from.
  */
 export function groundTileAt<T>(tiles: T[], column: number, row: number): T {
-	return tiles[(column + row) % tiles.length];
+	const at = (column + row) % tiles.length;
+	return tiles[at < 0 ? at + tiles.length : at];
 }

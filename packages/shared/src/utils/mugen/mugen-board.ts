@@ -13,6 +13,7 @@ import { destroyPixiApp } from '../pixi/release-context';
 import { combatColorHex, GRID_LINE } from '../color/combat-color';
 import {
 	GROUND_BOTTOM_EDGE_TILE,
+	GROUND_BROW_SQUARES,
 	GROUND_EARTH_TILES,
 	GROUND_FILL_TILES,
 	GROUND_TILE_PX,
@@ -277,8 +278,13 @@ const APRON_ROW = LAST_ROW + 1;
  * canvas edge, as a limb sweeping past an outer column already is. What the row buys is the
  * size of the board on the screen: every row taken off the picture is the rest of it drawn
  * larger.
+ *
+ * How many rows it is lives in `ground.ts` ({@link GROUND_BROW_SQUARES}), with the rest of
+ * the picture's shape: the document lays ground beside this board (`CombatFlanks`) and has
+ * to start it on the row the picture starts on. This is that count in cell widths, which is
+ * what the projection takes.
  */
-const BROW_DEPTH = 2 / GROUND_TILES_PER_CELL;
+const BROW_DEPTH = GROUND_BROW_SQUARES / GROUND_TILES_PER_CELL;
 
 /**
  * The field's first and last rows of squares, counted in ground squares down from the top
