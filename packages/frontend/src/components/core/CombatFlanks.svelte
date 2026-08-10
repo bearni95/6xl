@@ -3,7 +3,7 @@
 	 * The ground to the left and right of the board, drawn in the document.
 	 *
 	 * The canvas is `min(100vw, 100dvh × aspect)` and on anything wider than a phone the
-	 * height is what runs out, so a board nine squares across and eleven deep takes the whole
+	 * height is what runs out, so a board eight squares across and eleven deep takes the whole
 	 * height and leaves a band of view at each end. This is what those bands stand on: the
 	 * board's own rows, carried out past the edges of the picture to the edges of the screen,
 	 * so the field runs off the sides of the view rather than stopping at the sides of a
@@ -29,16 +29,19 @@
 	 *
 	 * **The figures are the picture's, spelled again in CSS.** A Tailwind class is a literal,
 	 * so what `ground.ts` and `grid.ts` say in TypeScript this has to say a second time in
-	 * `calc()`, exactly as `CombatGround` does: the canvas is nine squares across and eleven
-	 * down, so one square is `min(100vw/9, 100dvh/11)` — the same two limits the canvas sizes
-	 * itself between, which is what makes a square here exactly a square there.
+	 * `calc()`, exactly as `CombatGround` does: the canvas is eight squares across
+	 * ({@link GROUND_FIELD_COLUMNS} — every cell's three, less the one column the board is
+	 * drawn without) and eleven down, so one square is `min(100vw/8, 100dvh/11)` — the same
+	 * two limits the canvas sizes itself between, which is what makes a square here exactly a
+	 * square there.
 	 */
 	import classNames from 'classnames';
-	import { BOARD_HEIGHT, BOARD_WIDTH, FIRST_LANE_ROW, FIRST_ROW } from '$utils/mugen/grid';
+	import { BOARD_HEIGHT, FIRST_LANE_ROW, FIRST_ROW } from '$utils/mugen/grid';
 	import {
 		GROUND_BOTTOM_EDGE_TILE,
 		GROUND_BROW_SQUARES,
 		GROUND_EARTH_TILES,
+		GROUND_FIELD_COLUMNS,
 		GROUND_FILL_TILES,
 		GROUND_TILES_PER_CELL,
 		GROUND_TOP_EDGE_TILE,
@@ -47,9 +50,9 @@
 	} from '$utils/mugen/ground';
 
 	/** The board's own width in ground squares, which is the gap left in the middle of every
-	 * row here: the canvas stands in it. (It is `9` in the spacer's class below, a class being
+	 * row here: the canvas stands in it. (It is `8` in the spacer's class below, a class being
 	 * a literal.) */
-	const COLUMNS = BOARD_WIDTH * GROUND_TILES_PER_CELL;
+	const COLUMNS = GROUND_FIELD_COLUMNS;
 
 	/** The square row the field's grass begins on — the top of the first row a lane opens on,
 	 * which is where the sky stops — and the row it ends on, which is the apron below the last
@@ -60,8 +63,8 @@
 
 	/**
 	 * How many squares each band is drawn, out from the board's own edge. The band is
-	 * `(100vw − 9 squares) / 2` and at eleven squares to the height that is
-	 * `(11 × vw/dvh − 9) / 2` squares, so this many covers a view up to `(2 × columns + 9) / 11`
+	 * `(100vw − 8 squares) / 2` and at eleven squares to the height that is
+	 * `(11 × vw/dvh − 8) / 2` squares, so this many covers a view up to `(2 × columns + 8) / 11`
 	 * times as wide as it is tall — past 32:9, which is the widest screen sold. The rest is cut
 	 * off by the clip, which is what the overflow is for: the rows are allowed to run past the
 	 * sides of the view and are never to be scrolled to.
@@ -77,18 +80,18 @@
 	 * allowed to give way would answer an overflowing row by squeezing every square out of true
 	 * rather than by running off the screen, which is what the clip is for.
 	 */
-	const SQUARE = 'size-[min(100vw/9,100dvh/11)] shrink-0';
+	const SQUARE = 'size-[min(100vw/8,100dvh/11)] shrink-0';
 
 	/** A tile of the sheet laid over one square: the sheet scaled so that one of its own tiles
 	 * covers a square exactly, magnified with its own pixels rather than smeared (`pixelated`)
 	 * — the canvas samples the same artwork `nearest` for the same reason. *Which* tile is the
 	 * offset beside it ({@link TILE_POSITIONS}). */
 	const TILE =
-		'[background-image:url(/assets/tiles/grass-16x16.png)] [background-size:calc(16*min(100vw/9,100dvh/11))_calc(16*min(100vw/9,100dvh/11))] [image-rendering:pixelated]';
+		'[background-image:url(/assets/tiles/grass-16x16.png)] [background-size:calc(16*min(100vw/8,100dvh/11))_calc(16*min(100vw/8,100dvh/11))] [image-rendering:pixelated]';
 
-	/** The gap in the middle of every row: the board's own nine squares, drawn as nothing at
+	/** The gap in the middle of every row: the board's own eight squares, drawn as nothing at
 	 * all, so the canvas stands in it and this is only ever what is beside the canvas. */
-	const SPACER = 'w-[calc(9*min(100vw/9,100dvh/11))] shrink-0';
+	const SPACER = 'w-[calc(8*min(100vw/8,100dvh/11))] shrink-0';
 
 	/**
 	 * Where each tile the field uses sits on the sheet, as the offset that pulls it into view:
@@ -99,17 +102,17 @@
 	 */
 	const TILE_POSITIONS: Record<string, string> = {
 		// The three grasses the field is laid with, straight down the block's left column.
-		'0:3': '[background-position:0_calc(-3*min(100vw/9,100dvh/11))]',
-		'0:4': '[background-position:0_calc(-4*min(100vw/9,100dvh/11))]',
-		'0:5': '[background-position:0_calc(-5*min(100vw/9,100dvh/11))]',
+		'0:3': '[background-position:0_calc(-3*min(100vw/8,100dvh/11))]',
+		'0:4': '[background-position:0_calc(-4*min(100vw/8,100dvh/11))]',
+		'0:5': '[background-position:0_calc(-5*min(100vw/8,100dvh/11))]',
 		// The block's two fringes: the lower one along the apron, the upper along the field's
 		// first row.
-		'2:3': '[background-position:calc(-2*min(100vw/9,100dvh/11))_calc(-3*min(100vw/9,100dvh/11))]',
-		'2:5': '[background-position:calc(-2*min(100vw/9,100dvh/11))_calc(-5*min(100vw/9,100dvh/11))]',
+		'2:3': '[background-position:calc(-2*min(100vw/8,100dvh/11))_calc(-3*min(100vw/8,100dvh/11))]',
+		'2:5': '[background-position:calc(-2*min(100vw/8,100dvh/11))_calc(-5*min(100vw/8,100dvh/11))]',
 		// The earth, along the sheet's own top row, which is what the lower fringe is laid on.
-		'6:0': '[background-position:calc(-6*min(100vw/9,100dvh/11))_0]',
-		'7:0': '[background-position:calc(-7*min(100vw/9,100dvh/11))_0]',
-		'8:0': '[background-position:calc(-8*min(100vw/9,100dvh/11))_0]'
+		'6:0': '[background-position:calc(-6*min(100vw/8,100dvh/11))_0]',
+		'7:0': '[background-position:calc(-7*min(100vw/8,100dvh/11))_0]',
+		'8:0': '[background-position:calc(-8*min(100vw/8,100dvh/11))_0]'
 	};
 
 	function tileClass(tile: SheetTile): string {
@@ -127,7 +130,7 @@
 
 	/**
 	 * What the square at [column, row] carries. The column is the board's own, counted on past
-	 * both its edges — negative to the left of it, nine and up to the right — so a square out
+	 * both its edges — negative to the left of it, eight and up to the right — so a square out
 	 * here is asked the same question in the same terms as one on the board, and the
 	 * alternation is the board's carried on rather than a second one started beside it.
 	 *
@@ -154,8 +157,8 @@
 
 	/**
 	 * The rows of the picture, each as the squares beside the board: the columns to the left of
-	 * it, in reading order and so ending at its edge, the board's own nine squares as a gap, and
-	 * the columns to the right of it. `null` is the gap.
+	 * it, in reading order and so ending at its edge, the board's own eight squares as a gap,
+	 * and the columns to the right of it. `null` is the gap.
 	 *
 	 * Every square is asked for itself, off its own column, which is the whole of what makes the
 	 * band a continuation: the last square of the left band is the column before the board's
@@ -177,7 +180,7 @@
 </script>
 
 <!-- Laid over the whole sheet and clipped to it, with the picture's own eleven rows centred in
-     it exactly as the canvas is centred in it: the middle nine squares of every row are the
+     it exactly as the canvas is centred in it: the middle eight squares of every row are the
      gap the canvas stands in, so what is drawn is only ever what is beside the canvas. On a
      phone there is nothing to draw — the width is what runs out there and the board takes the
      whole of it — so this is `sm:` and up, which is where `CombatGround` leaves off.

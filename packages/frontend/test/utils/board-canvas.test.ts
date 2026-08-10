@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { APRON_DEPTH, MugenBoard, type BoardGrid } from '$utils/mugen/mugen-board';
-import { BOARD_HEIGHT, BOARD_WIDTH } from '$utils/mugen/grid';
+import { BOARD_HEIGHT } from '$utils/mugen/grid';
+import { GROUND_FIELD_COLUMNS, GROUND_TILES_PER_CELL } from '$utils/mugen/ground';
 
 /**
  * The canvas the board is laid out on.
@@ -32,7 +33,13 @@ describe('the canvas the board is laid out on', () => {
 		// gutter the row numbers and column letters used to stand in is gone, and with it
 		// the third of a cell it took off two sides of a canvas that is scaled to fit its
 		// box — so what it held is board now.
-		expect(width).toBeCloseTo(padding * 2 + cellSize * BOARD_WIDTH);
+		//
+		// The board is measured in its own squares rather than in its cells, because one of
+		// them is not drawn: the field is closed up over the cut column, so it is
+		// GROUND_FIELD_COLUMNS squares across where its three cells would make nine.
+		expect(width).toBeCloseTo(
+			padding * 2 + (cellSize * GROUND_FIELD_COLUMNS) / GROUND_TILES_PER_CELL
+		);
 
 		// And down: the board's own height, that same padding, and the apron — the strip of
 		// ground below the last row of cells that the field's bottom fringe is drawn on. It

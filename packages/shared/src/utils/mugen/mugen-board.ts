@@ -14,7 +14,9 @@ import { combatColorHex } from '../color/combat-color';
 import {
 	GROUND_BOTTOM_EDGE_TILE,
 	GROUND_BROW_SQUARES,
+	GROUND_CUT_COLUMN,
 	GROUND_EARTH_TILES,
+	GROUND_FIELD_COLUMNS,
 	GROUND_FILL_TILES,
 	GROUND_TILE_PX,
 	GROUND_TILE_SHEET,
@@ -224,7 +226,7 @@ const DEFAULTS = {
 /**
  * The yellow the ground's squares are ruled in — read off combat's own table, so the board
  * is drawn in the fight's colours and not in colours of its own. It is the board's only
- * ruling: every square of ground is bordered in it, and the nine that make up a cell are
+ * ruling: every square of ground is bordered in it, and the ones that make up a cell are
  * bordered exactly like the three of the apron under them.
  */
 const GROUND_LINE = combatColorHex('yellow');
@@ -241,12 +243,35 @@ const SQUARE_NUMBER_FILL = 0x000000;
 const SQUARE_NUMBER_HEIGHT = 1 / 3;
 
 /**
- * How many squares of ground the board is ruled into across its whole width — every cell's
- * {@link GROUND_TILES_PER_CELL} taken over every column. It is the width the numbering wraps
- * on: a square's number is counted from the board's own top-left corner, one to the right and
- * on to the next row when a row runs out ({@link MugenBoard.numberGround}).
+ * How many squares of ground the board is ruled into across its whole width, the cut column
+ * not among them ({@link GROUND_CUT_COLUMN}). It is the width the numbering wraps on: a
+ * square's number is counted from the board's own top-left corner, one to the right and on to
+ * the next row when a row runs out ({@link MugenBoard.numberGround}).
  */
-const SQUARES_ACROSS = BOARD_WIDTH * GROUND_TILES_PER_CELL;
+const SQUARES_ACROSS = GROUND_FIELD_COLUMNS;
+
+/** One square of ground, in cell widths — the unit the cut is taken in, the field being
+ * closed up by exactly one of them ({@link closeCut}). */
+const SQUARE_WIDTH = 1 / GROUND_TILES_PER_CELL;
+
+/** Where the cut falls, in cell widths off the board's left edge: the near side of the square
+ * that is not drawn. Everything from here to a square further on is the cut itself. */
+const CUT_AT = GROUND_CUT_COLUMN * SQUARE_WIDTH;
+
+/**
+ * A place across the board in cell widths, with the cut closed up: itself up to the cut, and a
+ * square further left past it. Anything *inside* the cut lands on its near edge, which is where
+ * the two sides of the field now meet — there is no room in between for a point to be at.
+ *
+ * Every x on this canvas goes through it ({@link MugenBoard.project}), so a cell's corners, a
+ * square of ground, a fighter's mark and the crop the picture is cut to all close up together
+ * and nothing has to be told twice where the field's width went. What it does *not* do is
+ * change a cell's own width ({@link MugenBoard.cellWidth}, measured over the board's first
+ * column, which is left of the cut): a fighter is drawn the size a cell is, whichever cell it
+ * happens to be standing on.
+ */
+const closeCut = (col: number): number =>
+	col <= CUT_AT ? col : Math.max(CUT_AT, col - SQUARE_WIDTH);
 
 // **The sky is not the canvas's.** The board's top row is the one no line opens on
 // ({@link FIRST_LANE_ROW}) — board the lanes have over them, walked over and measured
@@ -357,9 +382,11 @@ interface GroundSquare {
 	y: number;
 	width: number;
 	height: number;
-	/** Where the square sits in the board's own grid of squares, counted from its top-left
-	 * corner across every cell rather than restarting inside each — which is what lets the
-	 * tiles alternate over the whole field instead of over one cell at a time. */
+	/** Where the square sits in the board's own grid of squares **as it is drawn**, counted
+	 * from its top-left corner across every cell rather than restarting inside each, and with
+	 * the cut column closed up out of the count ({@link GROUND_CUT_COLUMN}) — which is what
+	 * lets the tiles alternate over the whole field instead of over one cell at a time, and
+	 * what the square's number is read off. */
 	column: number;
 	row: number;
 }
@@ -1134,7 +1161,12 @@ export class MugenBoard {
 	 * ({@link loadGround}) — empty if it could not be had. Held so they can be freed with
 	 * the board: they are built here rather than fetched through `Assets`, so nothing else
 	 * is keeping them. */
-	private groundTiles: GroundTiles = { fills: [], topEdge: null, bottomEdge: null, earth: [] };
+	private groundTiles: GroundTiles = {
+		fills: [],
+		topEdge: null,
+		bottomEdge: null,
+		earth: []
+	};
 	private iconTextures = new Map<string, Texture>();
 	/**
 	 * A cycle's crown offset in the artwork's own pixels ({@link crownOffset}), keyed by
@@ -1163,8 +1195,9 @@ export class MugenBoard {
 	/**
 	 * Total canvas size: the grid's own extent at `cellSize` px to the cell width
 	 * ({@link BOARD_WIDTH}, {@link BOARD_HEIGHT}, which on a field of squares is the count
-	 * of columns and the count of rows), the {@link APRON_DEPTH} of ground below the last
-	 * of those rows, plus the padding around it.
+	 * of columns and the count of rows), less the square the field is drawn without
+	 * ({@link GROUND_CUT_COLUMN}), the {@link APRON_DEPTH} of ground below the last of those
+	 * rows, plus the padding around it.
 	 *
 	 * This is the size the board is *laid out* at, not the size it is seen at: the canvas
 	 * is cropped to the grid once everything is on it ({@link MugenBoard.fitToContent}) and
@@ -1177,7 +1210,7 @@ export class MugenBoard {
 	get dimensions(): { width: number; height: number } {
 		const { cellSize, padding } = this.options;
 		return {
-			width: padding * 2 + cellSize * BOARD_WIDTH,
+			width: padding * 2 + cellSize * (BOARD_WIDTH - SQUARE_WIDTH),
 			height: padding * 2 + cellSize * (BOARD_HEIGHT + APRON_DEPTH)
 		};
 	}
@@ -1384,7 +1417,8 @@ export class MugenBoard {
 	 * never stretched, only scaled.
 	 *
 	 * Two terms and no third: a host has no say in this at all, and the same two figures
-	 * answer every screen. The picture is nine squares across and eleven down — the board's
+	 * answer every screen. The picture is eight squares across ({@link GROUND_FIELD_COLUMNS} —
+	 * the board's nine, less the cut column) and eleven down — the board's
 	 * thirteen, less the two the brow takes off the top and plus the one the apron adds at
 	 * the foot — so it is taller than it is wide and a wide screen is limited by its height,
 	 * a phone by its width; either
@@ -1423,7 +1457,12 @@ export class MugenBoard {
 		// stage, and this board cut its tiles for itself out of the sheet.
 		const { fills, topEdge, bottomEdge, earth } = this.groundTiles;
 		for (const tile of [...fills, ...earth, topEdge, bottomEdge]) tile?.destroy(true);
-		this.groundTiles = { fills: [], topEdge: null, bottomEdge: null, earth: [] };
+		this.groundTiles = {
+			fills: [],
+			topEdge: null,
+			bottomEdge: null,
+			earth: []
+		};
 		this.cellPaint.clear();
 		this.crownOffsets.clear();
 	}
@@ -1435,18 +1474,38 @@ export class MugenBoard {
 	 * The cells' own proportions are already inside the figures handed to it, so
 	 * anything measured in cell widths projects through it unchanged: a cell's corners,
 	 * its foot line, and the height a character is drawn at alike.
+	 *
+	 * One thing is not a plain scale, and it is the whole of what the cut column costs: an x
+	 * past the cut is drawn a square nearer the left edge ({@link closeCut}), so the field
+	 * closes over the column it is drawn without. It is done here and nowhere else, which is
+	 * what keeps the ground, the cells, the fighters and the crop agreeing about where the
+	 * right-hand half of the board is.
 	 */
 	private project(col: number, row: number): Point {
 		const { cellSize } = this.options;
-		return { x: this.gridLeft + col * cellSize, y: this.gridTop + row * cellSize };
+		return {
+			x: this.gridLeft + closeCut(col) * cellSize,
+			y: this.gridTop + row * cellSize
+		};
 	}
 
-	/** Screen-space point at the middle of the cell at [q, r]'s foot line
+	/**
+	 * Screen-space point at the middle of the cell at [q, r]'s foot line
 	 * ({@link cellFoot}), so a fighter reads as inside the cell rather than floating at
-	 * its centre or standing on the line it shares with the row below. */
+	 * its centre or standing on the line it shares with the row below.
+	 *
+	 * **The middle is taken between the cell's own drawn edges** rather than by projecting the
+	 * middle of its width, and the two are the same figure on every column but the one the cut
+	 * runs through ({@link closeCut}). That cell is drawn two thirds of a cell wide, and the
+	 * point halfway across the *whole* of it lands off to one side of the ground it actually
+	 * has — a fighter standing there would be visibly shouldered towards the half it came from.
+	 * Measured off the edges, a fighter stands in the middle of the room its cell is given,
+	 * which is what standing in a cell has always meant here.
+	 */
 	private cellMark(q: number, r: number): Point {
 		const foot = cellFoot(q, r);
-		return this.project(foot.x, foot.y);
+		const { left, right } = this.columnEdges(q);
+		return { x: (left + right) / 2, y: this.project(foot.x, foot.y).y };
 	}
 
 	/**
@@ -1569,7 +1628,10 @@ export class MugenBoard {
 	 * It is counted off the square's own place in the board's grid ({@link GroundSquare}), the
 	 * same pair the tiles are alternated by, so a square's number is a fact about where it is
 	 * and not about which cell handed it over or in what order: the apron numbers on from the
-	 * last row of cells exactly as another row of cells would have.
+	 * last row of cells exactly as another row of cells would have, and the cut column
+	 * ({@link GROUND_CUT_COLUMN}) is not counted at all — the numbers run unbroken across the
+	 * field as it is drawn, since a number that stepped over a square nobody can see would be a
+	 * gap in the one thing here that is meant to be read straight off the picture.
 	 *
 	 * The first two rows of the board are above the crop ({@link BROW_DEPTH}) and are numbered
 	 * all the same — the numbering is of the board and not of the picture taken out of it, and
@@ -1599,7 +1661,7 @@ export class MugenBoard {
 
 	/**
 	 * Rule the given squares of ground: a yellow border round each, drawn into the shared
-	 * ground-line object the caller hands over. A cell's own nine squares, or the strip of
+	 * ground-line object the caller hands over. A cell's own squares, or the strip of
 	 * apron under a column — the ruling has no idea which, ground being ground.
 	 *
 	 * Every square is bordered, the ones against a cell's own edge included — so the board is
@@ -1620,7 +1682,7 @@ export class MugenBoard {
 
 	/**
 	 * Lay the ground over the given squares: one of the sheet's grass tiles drawn into each,
-	 * filling it corner to corner and no further. What those squares are — a cell's nine,
+	 * filling it corner to corner and no further. What those squares are — a cell's own,
 	 * or the apron under a column — is the caller's business; this reads each square's own
 	 * row to know what belongs on it, so the same code lays the field, the sky above it and
 	 * the fringe below.
@@ -1632,7 +1694,7 @@ export class MugenBoard {
 	 * **The board's top row is not fought on and is not grassed.** No line opens there
 	 * ({@link FIRST_LANE_ROW}) — it is the board the lanes have over them — so nothing is
 	 * laid on it at all: it is left clear and the sky the page is painted shows through it.
-	 * The row is still ruled into its nine squares a cell like every other, the ruling being
+	 * The row is still ruled into its squares a cell like every other, the ruling being
 	 * the board's whatever fills them.
 	 *
 	 * **One sprite per square, off the same list the ruling is drawn from** ({@link
@@ -1641,8 +1703,8 @@ export class MugenBoard {
 	 * says where it ends. A single tiling sprite over the whole cell drew the same picture
 	 * by a different route: it repeated the texture at a pitch of its own and the ruling
 	 * measured the thirds again separately, two answers to where a tile ends that agree only
-	 * as long as the arithmetic does. Nine sprites is one answer. It costs nine quads a cell
-	 * — a hundred and eight on a board — which is nothing beside one MUGEN fighter.
+	 * as long as the arithmetic does. One sprite a square is one answer. It costs nine quads a
+	 * cell — a hundred on a board — which is nothing beside one MUGEN fighter.
 	 *
 	 * **Which** tile a square gets is its place on the board and nothing else
 	 * ({@link groundTileAt}), counted over the whole field rather than per cell
@@ -1694,24 +1756,30 @@ export class MugenBoard {
 	}
 
 	/**
-	 * The nine squares the cell at [q, r] is divided into, in screen space: the cell cut
-	 * {@link GROUND_TILES_PER_CELL} ways across and down. It is arithmetic on a cell's
-	 * corners and asks nothing about which cells the board has, so {@link APRON_ROW} — the
-	 * row that would come after the last, whose first three squares are the apron — goes
-	 * through it exactly like a real one.
+	 * The squares the cell at [q, r] is divided into, in screen space: the cell cut
+	 * {@link GROUND_TILES_PER_CELL} ways across and down — nine of them, or six on the cell
+	 * the cut runs through, which is drawn without its left-hand column
+	 * ({@link GROUND_CUT_COLUMN}). It is arithmetic on a cell's corners and asks nothing about
+	 * which cells the board has, so {@link APRON_ROW} — the row that would come after the
+	 * last, whose first squares are the apron — goes through it exactly like a real one.
 	 *
-	 * The one place those squares are worked out. Both the grass and the yellow ruling are
-	 * drawn from what this returns, which is what makes them the same nine squares rather
-	 * than two divisions of the same cell that happen to come out equal. Each is measured
-	 * from its own two corners projected — never a corner plus a width — so neighbouring
-	 * squares share an edge exactly and the row of them ends precisely on the cell's own
-	 * border, with no gap left by a third of a cell not dividing evenly into pixels.
+	 * The one place those squares are worked out. Both the grass and the ruling are drawn from
+	 * what this returns, which is what makes them the same squares rather than two divisions
+	 * of the same cell that happen to come out equal. Each is measured from its own two
+	 * corners projected — never a corner plus a width — so neighbouring squares share an edge
+	 * exactly and the row of them ends precisely on the cell's own border, with no gap left by
+	 * a third of a cell not dividing evenly into pixels. The cut needs nothing of its own for
+	 * that: the projection has already closed the field over it ({@link closeCut}), so the
+	 * square to its right begins exactly where the cell does.
 	 *
-	 * Each one is also told where it sits in the *board's* grid of squares rather than in
-	 * its cell's — the cell's own column and row, counted off the first of them, times the
-	 * three squares a cell holds. Three being odd, a count that restarted at every cell
-	 * would put two of the same tile side by side across every cell border and the
-	 * alternation would break exactly on the lines it should run through.
+	 * Each one is also told where it sits in the *board's* grid of squares rather than in its
+	 * cell's, **as the board is drawn** — the count runs on through the cell borders and
+	 * closes up over the cut, so the field is columns 0 to {@link SQUARES_ACROSS} − 1 with no
+	 * gap in them. It is the count the tiles are alternated by (three being odd, a count that
+	 * restarted at every cell would put two of the same tile side by side across every cell
+	 * border) and the count the numbering is read off, and it is the one the document carries
+	 * on past the edges of the picture (`CombatFlanks`) — one count from one corner, wherever
+	 * the ground is drawn.
 	 */
 	private groundSquares(q: number, r: number): GroundSquare[] {
 		const [topLeft] = cellCorners(q, r);
@@ -1721,6 +1789,10 @@ export class MugenBoard {
 		const squares: GroundSquare[] = [];
 		for (let row = 0; row < GROUND_TILES_PER_CELL; row++) {
 			for (let col = 0; col < GROUND_TILES_PER_CELL; col++) {
+				// Where this square would stand on an uncut board, which is what says whether it
+				// is the cut one and how far the cut has moved it.
+				const across = firstColumn + col;
+				if (across === GROUND_CUT_COLUMN) continue;
 				const at = this.project(topLeft.x + col * step, topLeft.y + row * step);
 				const beyond = this.project(topLeft.x + (col + 1) * step, topLeft.y + (row + 1) * step);
 				squares.push({
@@ -1728,7 +1800,7 @@ export class MugenBoard {
 					y: at.y,
 					width: beyond.x - at.x,
 					height: beyond.y - at.y,
-					column: firstColumn + col,
+					column: across > GROUND_CUT_COLUMN ? across - 1 : across,
 					row: firstRow + row
 				});
 			}
@@ -1766,7 +1838,12 @@ export class MugenBoard {
 	 * which is a board.
 	 */
 	private async loadGround(): Promise<GroundTiles> {
-		const nothing: GroundTiles = { fills: [], topEdge: null, bottomEdge: null, earth: [] };
+		const nothing: GroundTiles = {
+			fills: [],
+			topEdge: null,
+			bottomEdge: null,
+			earth: []
+		};
 		try {
 			const response = await fetch(GROUND_TILE_SHEET);
 			if (!response.ok) return nothing;
@@ -1801,7 +1878,7 @@ export class MugenBoard {
 	 * The cell at [q, r] as a closed screen-space outline: its four corners projected in
 	 * order, flattened to the `[x, y, x, y, …]` list Pixi draws a polygon from. It is what a
 	 * claimed cell's overlay is drawn from ({@link paintCell}) — the one thing left that is
-	 * drawn a cell at a time — and it is the same corners the cell's nine squares of ground
+	 * drawn a cell at a time — and it is the same corners the cell's own squares of ground
 	 * are measured off ({@link groundSquares}), so a claim lands exactly on the ruled lines
 	 * round its ground.
 	 */
@@ -2528,7 +2605,11 @@ export class MugenBoard {
 		// the line its own height puts it on ({@link Actor.footDrop}), so a fighter that has
 		// walked the whole board on its cells' floors does not step up onto the foot line for
 		// the duel and back down again after it.
-		const midX = this.project(BOARD_WIDTH / 2, 0).x;
+		// The board's own middle, taken between its drawn edges: the field is closed up over a
+		// square of the middle cell ({@link closeCut}), so halfway across the width the cells
+		// add up to is no longer halfway across the picture — and this line is the one the two
+		// halves meet on.
+		const midX = (this.project(0, 0).x + this.project(BOARD_WIDTH, 0).x) / 2;
 		const line = this.cellMark(meeting.red.destination.q, meeting.red.destination.r).y;
 		const redLead = (1 - red.sprite.anchor.x) * Math.abs(red.sprite.width);
 		const blueLead = (1 - blue.sprite.anchor.x) * Math.abs(blue.sprite.width);
@@ -3134,7 +3215,15 @@ export class MugenBoard {
 		sprite.y = actor.y;
 		sprite.zIndex = actor.y - 0.5;
 		this.app.stage.addChild(sprite);
-		actor.aura = { sprite, frames, frameIndex: 0, frameElapsed: 0, scaleX, scaleY, rise: 0 };
+		actor.aura = {
+			sprite,
+			frames,
+			frameIndex: 0,
+			frameElapsed: 0,
+			scaleX,
+			scaleY,
+			rise: 0
+		};
 	}
 
 	/** Put out a character's aura, if it has one. */
@@ -3189,7 +3278,9 @@ export class MugenBoard {
 		const label = this.calloutText(text, 0xffffff);
 		const foot = cellFoot(cell.q, cell.r);
 		const at = this.project(foot.x, foot.y - CHAR_HEIGHT_RATIO - CELL_CALLOUT_GAP);
-		label.x = at.x;
+		// Over the middle of the cell's own drawn ground, which is where whoever it happened to
+		// is standing ({@link cellMark}) — the height is the only thing this measures for itself.
+		label.x = this.cellMark(cell.q, cell.r).x;
 		label.y = at.y;
 		// Over everything the lane holds, as a callout is: what has just happened is never
 		// covered by whoever it happened to.
@@ -3552,7 +3643,10 @@ export class MugenBoard {
 	 */
 	private columnEdges(q: number): { left: number; right: number } {
 		const middle = cellCenter(q, 0).x;
-		return { left: this.project(middle - 0.5, 0).x, right: this.project(middle + 0.5, 0).x };
+		return {
+			left: this.project(middle - 0.5, 0).x,
+			right: this.project(middle + 0.5, 0).x
+		};
 	}
 
 	/**

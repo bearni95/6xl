@@ -15,6 +15,8 @@
  * panel's own rules repeat these figures in `calc()`. Keep the two in step.
  */
 
+import { BOARD_WIDTH } from './grid';
+
 /** The vendored sheet the ground tiles are cut from. */
 export const GROUND_TILE_SHEET = '/assets/tiles/grass-16x16.png';
 
@@ -47,6 +49,34 @@ export const GROUND_TILES_PER_CELL = 3;
  * more fact about the shape of the picture, like the tiles it is laid with.
  */
 export const GROUND_BROW_SQUARES = 2;
+
+/**
+ * The **cut**: the one square-column the board is drawn without, counted in squares from
+ * the board's own top-left corner. It is the left-hand third of the middle cell — the white
+ * column both halves can enter — and the field closes up over it: everything to its right is
+ * drawn a square further left, and the board is one square narrower for it.
+ *
+ * So the two halves keep their three squares apiece and the ground between them is two, which
+ * is a field still symmetric about its own middle — the line a duel is fought across
+ * (`mugen-board`'s `meleeApproach`) — with a third of a cell less of it between the lines.
+ * Nothing about the *rules* moves: the middle column is one cell like any other, walked to and
+ * fought over in cells ({@link file://./grid.ts}); it is drawn in two thirds of the room its
+ * neighbours get, and a fighter standing on it stands in the middle of the ground it has.
+ *
+ * A fact about the shape of the picture, like {@link GROUND_BROW_SQUARES} — which is the same
+ * cut taken in rows off the top — and kept here for the same reason: the canvas closes it up
+ * in its projection, the document lays its bands beside a board this many squares across, and
+ * the two have to be counting the same field.
+ */
+export const GROUND_CUT_COLUMN = 3;
+
+/**
+ * How many squares across the board is drawn: every cell's own {@link GROUND_TILES_PER_CELL}
+ * over every column, less the cut one. It is what the numbering of the squares wraps on, what
+ * the canvas's aspect is taken from, and the count the document spells again as a literal —
+ * `min(100vw/8, 100dvh/11)` in `CombatGround`, `CombatFlanks` and the arena's own sky.
+ */
+export const GROUND_FIELD_COLUMNS = BOARD_WIDTH * GROUND_TILES_PER_CELL - 1;
 
 /** A tile's place on the sheet, counted in tiles of {@link GROUND_TILE_PX} from its
  * top-left corner — which is how the sheet itself is read, and the only way any of these

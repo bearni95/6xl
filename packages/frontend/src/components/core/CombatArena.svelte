@@ -1162,7 +1162,7 @@
 			     (#7dd3fc) until the document needed the same blue over the board as in it — one
 			     sky, painted once, rather than a colour kept in step across a canvas and a
 			     stylesheet.
-			     It is the **canvas's own column** and not the whole sheet: nine squares wide,
+			     It is the **canvas's own column** and not the whole sheet: eight squares wide,
 			     which is the canvas's own width (`CombatGround` has the figures), centred on the
 			     same middle the canvas is. On a phone that is the whole width and there is no
 			     difference; on anything wider the canvas is limited by the height and leaves a
@@ -1181,7 +1181,7 @@
 			     drawn on. It takes no pointer either: it is a colour, not a surface. The head,
 			     the board and the ground below the board all stand on it. -->
 			<div
-				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(9*min(100vw/9,100dvh/11))] -translate-x-1/2 bg-sky-300"
+				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(8*min(100vw/8,100dvh/11))] -translate-x-1/2 bg-sky-300"
 				aria-hidden="true"
 			></div>
 			<!-- What is beside the board, on every screen the board does not fill the width of:
@@ -1360,7 +1360,7 @@
 			     and what is left is a band at each end: the panel takes the right-hand one, out of
 			     the flow entirely (`absolute`, so the board is never sized against it) and the full
 			     height of the view, exactly as wide as the gap between the canvas's right edge and
-			     the screen's — `(100vw − the canvas's own nine squares) / 2`, the figures spelled
+			     the screen's — `(100vw − the canvas's own eight squares) / 2`, the figures spelled
 			     again in CSS as `CombatFlanks` and `CombatGround` spell them, since a class is a
 			     literal.
 			     It is not `sm:`-scoped any more, which is what used to stand in for this: on a wide
@@ -1415,7 +1415,7 @@
 			     the board settle at the bottom of the view first and then jump up as the orders
 			     came in. An empty one holds the place they are coming to. -->
 			<div
-				class="relative min-h-0 w-full flex-1 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:w-[calc((100vw_-_9*min(100vw/9,100dvh/11))/2)]"
+				class="relative min-h-0 w-full flex-1 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:w-[calc((100vw_-_8*min(100vw/8,100dvh/11))/2)]"
 			>
 				<!-- What the band stands on: the board's own ground, carried on into the document
 				     past the last row the canvas had room to draw. It is laid under the whole of
