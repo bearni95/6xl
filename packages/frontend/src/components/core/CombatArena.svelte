@@ -6,6 +6,7 @@
 	import CombatGround from '$components/core/CombatGround.svelte';
 	import CombatHead from '$components/core/CombatHead.svelte';
 	import CombatHost from '$components/core/CombatHost.svelte';
+	import GameGlyph from '$components/core/GameGlyph.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
@@ -674,6 +675,24 @@
 	 * played out.
 	 */
 	$: panelLocked = !state || state.phase !== 'planning' || state.ready || !!state.outcome;
+
+	/**
+	 * Whether the account at the corner of the orders panel has been pressed and is showing
+	 * the way out of the fight in its own place.
+	 *
+	 * It is a state of that corner and not of the fight: giving up is asked for in two words
+	 * and answered with two buttons, so the card the player is looking at is what turns into
+	 * the question rather than a box opening somewhere else over the board. The head's own flag
+	 * is unaffected — it is the same order given from the other end of the screen, and neither
+	 * knows about the other.
+	 *
+	 * It closes itself when there is nothing left to give up. A decided fight reads its result
+	 * off the panel in the middle of the board, and a pair of buttons offering to concede it
+	 * would be an offer standing over a fight that is already over — which is also what happens
+	 * the moment the give-up is pressed, so the corner puts itself back without being told.
+	 */
+	let conceding = false;
+	$: if (state?.outcome) conceding = false;
 
 	/**
 	 * Mark the fighter the panel is turned to on the board itself, by walking it on the spot
@@ -1496,17 +1515,109 @@
 						     round a thing that has one. The picture leads the reading, since the corner
 						     it stands in is the near one. Laid over the panel rather than standing in it
 						     (`absolute`), so the fighter behind keeps the whole of the card's height —
-						     the same reason the orders are laid over the foot of it. -->
+						     the same reason the orders are laid over the foot of it.
+						     The row is three columns wide and everything in it lives in the first of
+						     them, the other two standing empty. It is not a shrink-to-fit block any
+						     more, because what stands here changes: the card is one width and the pair
+						     of buttons it turns into is another, and a box as wide as whatever it
+						     happens to be holding would have changed size under the press. A third of
+						     the panel is a width neither of them decides, so both are drawn into the
+						     same room and nothing moves when one replaces the other. -->
 						{#if $profile}
-							<CombatHost
-								name={$profile.username || $_('profile.username.none')}
-								characterId={$profile.avatarCharacterId}
-								color={$profile.avatarColor}
-								level={$profile.level}
-								plated={false}
-								faceFirst
-								classes="absolute top-2 left-2 z-10"
-							/>
+							<div class="absolute inset-x-2 top-2 z-10 grid grid-cols-3 gap-2">
+								<!-- The one cell that holds anything, and it holds both faces of it at once:
+								     the account, and the way out the account is pressed for. They are stacked
+								     in a single grid cell (`col-start-1 row-start-1` on each) rather than
+								     swapped in and out, which is what makes the change a crossfade and not a
+								     cut — the two are over each other for the length of it, one coming up as
+								     the other goes down, and the cell stays as tall as the taller of them
+								     throughout so nothing under it shifts.
+								     It is opacity and nothing else: a Svelte transition would mount and
+								     unmount, which is the layout jump this is drawn to avoid, and the fade is
+								     a pair of Tailwind classes on boxes that are both always there. What is
+								     faded out is also taken out of reach — `pointer-events-none` for the
+								     pointer and `inert` for the keyboard — since a button at nought opacity
+								     is still a button otherwise, and the one thing that must not be reachable
+								     by accident is the way out of a fight. -->
+								<div class="grid">
+									<!-- The account, and the press. The whole card is the target: there is one
+									     thing to do here and the block is the thing to press, which is the same
+									     reading the map's own row is pressed under. It says nothing about what
+									     the press does — the account is what is drawn, and what it turns into
+									     is the answer. -->
+									<button
+										type="button"
+										class={classNames(
+											'col-start-1 row-start-1 w-fit cursor-pointer text-left transition-opacity duration-200',
+											conceding && 'pointer-events-none opacity-0'
+										)}
+										inert={conceding || undefined}
+										on:click={() => (conceding = true)}
+									>
+										<CombatHost
+											name={$profile.username || $_('profile.username.none')}
+											characterId={$profile.avatarCharacterId}
+											color={$profile.avatarColor}
+											level={$profile.level}
+											plated={false}
+											faceFirst
+										/>
+									</button>
+									<!-- The way back from the question, and then the way out of the fight. In that
+									     order, the harmless one nearest the edge the row is read from: this is a
+									     question the card asked without being asked to, so the answer that undoes it is
+									     the one under the hand first, and the destructive one is the one that has to be
+									     reached past it.
+									     Two marks and no words. The flag is the head's own (`lorc/flying-flag`, white on
+									     red), so giving up is one picture wherever the arena offers it — this is a
+									     second way to reach that order and not a second control — and the cross is what
+									     this game closes anything with. Both carry the catalogue's own wording as their
+									     label, said to a screen reader and to a pointer resting on them, which is where
+									     the words went rather than off the screen.
+									     The way back is outlined and the way out is filled: one of the two is a thing
+									     that happens and the other is the absence of it, and a filled shape beside an
+									     outlined one says which is which before either is read. Yellow for it, the one
+									     colour on this row that is neither the fight's two sides nor the red of the
+									     thing it undoes.
+									     Between turns only for the flag, exactly as the head's is: a turn already being
+									     carried out settles itself. The way back is never held shut — whatever the fight
+									     is doing, a player who opened this by mistake may close it. -->
+									<div
+										class={classNames(
+											'col-start-1 row-start-1 flex w-fit gap-2 transition-opacity duration-200',
+											!conceding && 'pointer-events-none opacity-0'
+										)}
+										inert={!conceding || undefined}
+									>
+										<button
+											type="button"
+											class="btn btn-outline btn-warning btn-square btn-sm"
+											title={$_('common.cancel')}
+											aria-label={$_('common.cancel')}
+											on:click={() => (conceding = false)}
+										>
+											<!-- An inline cross, drawn in the document like the panel's own arrows, so it
+											     takes its colour from the button it stands in — which is the whole of what
+											     an outlined button is: its own ink on nothing. -->
+											<svg viewBox="0 0 24 24" fill="currentColor" class="size-4" aria-hidden="true">
+												<path
+													d="M18.3 5.71 12 12.01l-6.3-6.3-1.41 1.41 6.3 6.3-6.3 6.3 1.41 1.41 6.3-6.3 6.3 6.3 1.41-1.41-6.3-6.3 6.3-6.3z"
+												/>
+											</svg>
+										</button>
+										<button
+											type="button"
+											class="btn border-red-500 bg-red-500 text-white btn-square btn-sm"
+											disabled={!state || !!state.outcome || state.phase !== 'planning'}
+											title={$_('combat.concede')}
+											aria-label={$_('combat.concede')}
+											on:click={() => controller?.concede()}
+										>
+											<GameGlyph name="lorc/flying-flag" classes="[&>svg]:size-5" />
+										</button>
+									</div>
+								</div>
+							</div>
 						{/if}
 						<!-- What the panel is worked by, at the foot of it: the way round the line, and
 						     then what may be asked of the fighter it is turned to. Two rows of one stack
