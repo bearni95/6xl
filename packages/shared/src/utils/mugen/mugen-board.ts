@@ -291,9 +291,9 @@ const crownFrames = (frames: LoadedFrame[]): CrownFrame[] =>
  * What a button in a column is *sized* by: a cell split this many ways. Not how many a
  * column holds — the column runs as long as the list it is handed — but it is the same
  * three now, a fighter being given the three orders there are (charge, defend, shoot),
- * and the size says so: three buttons and the two gaps between them are exactly one cell
- * tall, so a column of orders fills the cell of the central column it stands in and the
- * ruled lines either side of it are the column's own top and bottom.
+ * and the size says so: three buttons and the two gaps between them are one cell tall,
+ * less the room left around them ({@link ORDER_PAD_RATIO}), so a column of orders is the
+ * cell it stands in and the ruled lines around it are its own edges.
  *
  * It was four — the three orders and, over them, a slot for what the fighter's colour did
  * of its own accord, which left the three at three quarters of a cell and a quarter of it
@@ -304,10 +304,24 @@ const crownFrames = (frames: LoadedFrame[]): CrownFrame[] =>
 const ORDER_COLUMN_COUNT = 3;
 /** Gap between buttons in a column, as a fraction of a button's height. */
 const ORDER_SPACING_RATIO = 0.12;
+/**
+ * Room left around a whole column of orders, as a fraction of a cell's side — taken off
+ * every side of it, so the buttons stand *inside* their cell rather than on its lines.
+ *
+ * A column drawn flush to the ruled square reads as part of the board, and the two lanes
+ * a fighter is not in are a button's width away from the one it is: what a group of three
+ * needs to be is plainly one group, told from the grid it stands on and from the group
+ * above and below. Taken out of the buttons rather than added around them, since the cell
+ * is what there is — so padding a column makes its buttons smaller and never makes it
+ * spill into a neighbour's.
+ */
+const ORDER_PAD_RATIO = 0.07;
 /** A button's height as a fraction of a cell's side: the count and the gaps above,
- * solved so that many buttons and the gaps between them span one whole cell. */
+ * solved so that many buttons and the gaps between them span one whole cell, and the
+ * padding taken off both ends of that cell first. */
 const ORDER_HEIGHT_RATIO =
-	1 / (ORDER_COLUMN_COUNT + (ORDER_COLUMN_COUNT - 1) * ORDER_SPACING_RATIO);
+	(1 - 2 * ORDER_PAD_RATIO) /
+	(ORDER_COLUMN_COUNT + (ORDER_COLUMN_COUNT - 1) * ORDER_SPACING_RATIO);
 /** The glyph's size inside a button, as a fraction of the button's height. */
 const ORDER_ICON_RATIO = 0.62;
 /** Corner rounding, as a fraction of a button's height. */
@@ -2173,9 +2187,10 @@ export class MugenBoard {
 		// only the side the blow is on, and that is the side the attacker has just walked up
 		// and planted itself on, so the whole of it was under somebody else's sprite. A
 		// shield is between the fighter and what is coming at it either way. Just over the
-		// order buttons, which stand at 5000 in the central column — where a blow is thrown,
-		// so the two do meet: a guard is something happening, a button is furniture, and the
-		// two left on the same number would have been settled by whichever was added first.
+		// order buttons, which stand at 5000 at the highest and in the middle column, where
+		// a blow is thrown, so the two do meet: a guard is something happening, a button is
+		// furniture, and the two left on the same number would have been settled by
+		// whichever was added first.
 		ring.graphics.zIndex = actor.y + 6000;
 		// Struck at a rate rather than per frame, so a board running at 120Hz throws the same
 		// sparks as one running at 60, and a frame the browser sat on throws the ones it owes.
@@ -2694,15 +2709,17 @@ export class MugenBoard {
 	}
 
 	/**
-	 * A button's drawn size: a cell's side split {@link ORDER_COLUMN_COUNT} ways with the
-	 * gaps taken out of it, and **square** — a cell is square, the three of them fill one
-	 * end to end, so a button is as wide as its share of that side is tall. One size for
-	 * every fighter, because one size is what a cell is, and one size for the whole fight,
-	 * whatever else comes and goes from the column.
+	 * A button's drawn size: a cell's side less the room left around a column
+	 * ({@link ORDER_PAD_RATIO}), split {@link ORDER_COLUMN_COUNT} ways with the gaps taken
+	 * out of it, and **square** — a cell is square and the three of them fill one padded
+	 * side of it end to end, so a button is as wide as its share of that side is tall. One
+	 * size for every fighter, because one size is what a cell is, and one size for the whole
+	 * fight, whatever else comes and goes from the column.
 	 *
-	 * A square this size is under a third of a cell wide, so the two strips a lane hangs
-	 * inside the central column ({@link centerColumnEdges}) take about three fifths of it
-	 * between them and the ground they are fought over still shows down the middle.
+	 * A square this size is close to a quarter of a cell wide, so a column and the padding
+	 * that frames it take about a third of the cell it stands in and the rest of that
+	 * ground — the middle of the white column, a rival's own standing room — is still
+	 * plainly there beside it.
 	 */
 	private orderSize(): MarkSize {
 		const height = this.cellWidth() * ORDER_HEIGHT_RATIO;
@@ -2745,13 +2762,13 @@ export class MugenBoard {
 
 	/** Keep a fighter's column of orders standing in the cell it was placed in
 	 * ({@link OrderPlacement}) — the middle column or the fighter's own — on the fighter's
-	 * own row, and flush inside that cell's left or right ruled side.
+	 * own row, inside that cell's left or right ruled side by {@link ORDER_PAD_RATIO}.
 	 *
-	 * A column is a whole cell tall ({@link ORDER_COLUMN_COUNT}), so it is stood on the
-	 * cell's **floor** and not on the foot line its fighter stands on: a fighter plants
-	 * itself a quarter of a cell up from that floor ({@link cellFoot}), and a full cell
-	 * anchored there would hang the same quarter over the line into the row above. The
-	 * drop from the one to the other is measured off the grid itself — a cell's bottom
+	 * A column is a whole cell tall ({@link ORDER_COLUMN_COUNT}, that padding included), so
+	 * it is stood on the cell's **floor** and not on the foot line its fighter stands on: a
+	 * fighter plants itself a quarter of a cell up from that floor ({@link cellFoot}), and a
+	 * full cell anchored there would hang the same quarter over the line into the row above.
+	 * The drop from the one to the other is measured off the grid itself — a cell's bottom
 	 * corner against its own foot line — so nothing here has to know what fraction of a
 	 * cell a figure stands at. Taking it off `actor.y` rather than off the row keeps it
 	 * with a fighter that is mid-step, whose feet are between two rows.
@@ -2767,11 +2784,21 @@ export class MugenBoard {
 		const { width } = this.orderSize();
 		const { cell, side } = strip.placement;
 		const edges = this.columnEdges(cell === 'fighter' ? actor.column : 0);
+		const pad = this.cellWidth() * ORDER_PAD_RATIO;
 		const footToFloor = (cellCorners(0, 0)[2].y - cellFoot(0, 0).y) * this.cellWidth();
-		strip.container.x = side === 'left' ? edges.left + width / 2 : edges.right - width / 2;
-		strip.container.y = actor.y + footToFloor;
-		// Above the board and its own fighter, below the callouts and the sparks.
-		strip.container.zIndex = actor.y + 5000;
+		const reach = pad + width / 2;
+		strip.container.x = side === 'left' ? edges.left + reach : edges.right - reach;
+		strip.container.y = actor.y + footToFloor - pad;
+		// Above the board, below the callouts and the sparks — but which side of its own
+		// fighter it goes depends on whose cell it is standing in. Orders laid on the middle
+		// column are on ground nobody is standing on, so they go over everything on the
+		// board; orders standing on the fighter's own cell are *on the fighter*, and there
+		// the character is what a reader is looking at and the buttons are what is being
+		// said about it, so they pass behind its sprite (which sits at its own `y`) — over
+		// the charge aura under it, under the fighter itself. It is a reading either way:
+		// nothing behind a sprite is a thing to tap, and a rival's orders are not offered
+		// as one.
+		strip.container.zIndex = cell === 'fighter' ? actor.y - 0.25 : actor.y + 5000;
 	}
 
 	/** Take a fighter's strip off the board. */
