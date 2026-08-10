@@ -1188,59 +1188,74 @@
 			     On a phone the same three buttons are a fraction of the canvas — the board there is
 			     limited by the width and the columns are drawn at whatever scale is left over — so
 			     they are also the one part of the picture that has to be hit rather than looked at.
-			     Here they are the document's own: a row per fighter, the fighter drawn at the head
-			     of it so the row says who it is ordering, and three buttons big enough for a thumb.
-			     Nothing about the fight is decided here that is not decided there. The rows carry
-			     the very list the board is handed (`orderRows`), press the very handler a tap on
-			     the canvas presses, and a fighter with nothing left to be asked keeps its row and
-			     loses its buttons exactly as its column is cleared. So the board is still the
-			     fight; this is a second way of reaching the same three orders, and both are live at
-			     once — an order given on either is drawn on both.
+			     Here they are the document's own: the player's line drawn across the screen the
+			     way it stands on the board — a column per fighter, the character on the top row
+			     and the three orders it can be given directly under it — so a column is one
+			     fighter and reading down it is reading that fighter's own plan.
+			     Nothing about the fight is decided here that is not decided there. The columns
+			     carry the very list the board is handed (`orderRows`), press the very handler a
+			     tap on the canvas presses, and a fighter with nothing left to be asked keeps its
+			     column and loses its buttons exactly as its strip is cleared. So the board is
+			     still the fight; this is a second way of reaching the same three orders, and both
+			     are live at once — an order given on either is drawn on both.
+			     One grid rather than three: the three fighters are on one row and their nine
+			     buttons on the row under it, which is what keeps every fighter the same width and
+			     every order the same size whatever is drawn above it. Nine buttons across a phone
+			     is what three fighters' orders cost when they are all reachable at once, so a
+			     button is as wide as a third of a third of the block and square.
 			     On its own fill: it is the foot of the sheet, where the page is graded down to
-			     nine tenths and the town is faintly through it, so a row of orders reads off its
-			     own ground rather than off whatever is under there.
+			     nine tenths and the town is faintly through it, so the orders read off their own
+			     ground rather than off whatever is under there.
 			     Drawn whether there are rows in it yet or not: it is the foot of a column spread
 			     end to end (above), so a block that arrived with the fight would have let the board
 			     settle at the bottom of the view first and then jump up as the orders came in. An
 			     empty one holds the place they are coming to. -->
 			<div class="flex w-full flex-col gap-2 p-3 sm:hidden">
-				{#each orderRows as row (row.fighter.id)}
-					<div class="flex items-center gap-3 rounded-box bg-base-100/80 p-2 shadow-xl">
-						<!-- Who the row is about, told the way the fight tells it: the character
-						     standing there, idling, as they are on the board. No veil — the reveal
-						     is a thing a card does when a player first meets it, and by here they
-						     are three fighters in a battle already under way. -->
-						<div class="h-16 w-16 flex-none">
-							<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
-						</div>
-						<!-- The three, at the far end of the row so every row's buttons stand in one
-						     column under the thumb, whatever the fighters beside them are called.
+				{#if orderRows.length > 0}
+					<div class="grid grid-cols-3 gap-2 rounded-box bg-base-100/80 p-2 shadow-xl">
+						<!-- The top row: who each column is about, told the way the fight tells it —
+						     the character standing there, idling, as they are on the board. No veil —
+						     the reveal is a thing a card does when a player first meets it, and by
+						     here they are three fighters in a battle already under way. -->
+						{#each orderRows as row (row.fighter.id)}
+							<div class="h-16 w-full">
+								<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
+							</div>
+						{/each}
+						<!-- The row under it: each fighter's three, in its own column, so a button is
+						     under the fighter it is an order to.
 						     A plain button rather than a `btn`: the glyphs are the canvas's own white
 						     artwork, so what they need is a dark tile under them in *every* state
 						     (see the icon note in CLAUDE.md), and daisyUI repaints a disabled button's face. So the
 						     tile stays and the states are said over it — the chosen order in the
 						     fighter's own colour, the rest dark, and one out of reach faded rather
-						     than dropped, as the board's own column greys it. -->
-						<div class="ml-auto flex flex-none gap-2">
-							{#each row.orders as order (order.id)}
-								<button
-									type="button"
-									class={classNames(
-										'flex size-12 items-center justify-center rounded-box',
-										orderFill(order),
-										{ 'opacity-40': order.disabled }
-									)}
-									disabled={order.disabled}
-									aria-label={ORDER_LABELS[order.id as CombatAction]}
-									aria-pressed={order.selected}
-									on:click={() => giveOrder(row.fighter.id, order.id)}
-								>
-									<img src={order.icon} alt="" class="size-7" />
-								</button>
-							{/each}
-						</div>
+						     than dropped, as the board's own column greys it.
+						     A fighter that is down or has taken its cell is handed no orders at all,
+						     which leaves its cell of this row empty — the column stays, because the
+						     fighter is still one of the player's three, and there is nothing under it
+						     because there is nothing left to ask of it. -->
+						{#each orderRows as row (row.fighter.id)}
+							<div class="flex gap-1">
+								{#each row.orders as order (order.id)}
+									<button
+										type="button"
+										class={classNames(
+											'flex aspect-square flex-1 items-center justify-center rounded-box',
+											orderFill(order),
+											{ 'opacity-40': order.disabled }
+										)}
+										disabled={order.disabled}
+										aria-label={ORDER_LABELS[order.id as CombatAction]}
+										aria-pressed={order.selected}
+										on:click={() => giveOrder(row.fighter.id, order.id)}
+									>
+										<img src={order.icon} alt="" class="w-3/5" />
+									</button>
+								{/each}
+							</div>
+						{/each}
 					</div>
-				{/each}
+				{/if}
 				<!-- Giving up, which on a phone exists nowhere else. On the banner it is reached
 				     for — hidden under the turn until the pointer is on the plate — and a phone has
 				     no pointer to put there, so that control was simply unreachable on a touch
