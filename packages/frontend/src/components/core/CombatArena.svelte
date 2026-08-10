@@ -1281,11 +1281,12 @@
 			     limited by the width and the columns are drawn at whatever scale is left over — so
 			     they are also the one part of the picture that has to be hit rather than looked at.
 			     Here they are the document's own, and one fighter at a time: the character on
-			     show with the three orders it can be given under it, and an arrow either side to
-			     turn to the next of the player's three. A phone is a screen with room for one
-			     thing, so it is given one thing, at the size a thing that has to be hit wants to
-			     be — where laying all three out at once meant nine buttons over the width of a
-			     phone, each a third of a third of it.
+			     show, and under it one row of five squares — an arrow, this fighter's three
+			     orders, an arrow — so everything the panel can be pressed for is on one line and
+			     the same size. A phone is a screen with room for one thing, so it is given one
+			     thing, at the size a thing that has to be hit wants to be — where laying all
+			     three fighters out at once meant nine buttons over the width of a phone, each a
+			     third of a third of it.
 			     Nothing about the fight is decided here that is not decided there. The panel
 			     carries the very list the board is handed (`orderRows`), presses the very handler
 			     a tap on the canvas presses, and a fighter with nothing left to be asked shows
@@ -1311,71 +1312,78 @@
 				{#if shownRow}
 					{@const row = shownRow}
 					<div
-						class={classNames(
-							'flex items-center gap-2 rounded-box bg-base-100/80 p-2 shadow-xl',
-							{ 'pointer-events-none opacity-50': panelLocked }
-						)}
+						class={classNames('flex flex-col gap-2 rounded-box bg-base-100/80 p-2 shadow-xl', {
+							'pointer-events-none opacity-50': panelLocked
+						})}
 					>
-						<!-- The way back round the line. A ghost button and an inline triangle: this
-						     one is drawn in the document rather than onto the canvas, so it takes its
-						     colour from the text around it like every other mark in a page. -->
-						<button
-							type="button"
-							class="btn btn-ghost btn-sm flex-none px-1"
-							disabled={panelLocked}
-							aria-label={$_('combat.previousFighter')}
-							on:click={() => stepFighter(-1)}
-						>
-							<svg viewBox="0 0 24 24" fill="currentColor" class="size-6" aria-hidden="true">
-								<path d="M14 7l-5 5 5 5z" />
-							</svg>
-						</button>
-						<div class="flex min-w-0 flex-1 flex-col items-center gap-2">
-							<!-- Who the panel is turned to, told the way the fight tells it: the
-							     character standing there, idling, as they are on the board. No veil —
-							     the reveal is a thing a card does when a player first meets it, and by
-							     here they are three fighters in a battle already under way. -->
-							<div class="h-20 w-full">
-								<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
-							</div>
-							<!-- This fighter's three.
-							     A plain button rather than a `btn`: the glyphs are the canvas's own white
-							     artwork, so what they need is a dark tile under them in *every* state
-							     (see the icon note in CLAUDE.md), and daisyUI repaints a disabled button's face. So the
-							     tile stays and the states are said over it — the chosen order in the
-							     fighter's own colour, the rest dark, and one out of reach faded rather
-							     than dropped, as the board's own column greys it. -->
-							<div class="flex gap-2">
-								{#each row.orders as order (order.id)}
-									<button
-										type="button"
-										class={classNames(
-											'flex size-14 items-center justify-center rounded-box',
-											orderFill(order),
-											{ 'opacity-40': order.disabled }
-										)}
-										disabled={order.disabled}
-										aria-label={ORDER_LABELS[order.id as CombatAction]}
-										aria-pressed={order.selected}
-										on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
-									>
-										<img src={order.icon} alt="" class="size-8" />
-									</button>
-								{/each}
-							</div>
+						<!-- Who the panel is turned to, told the way the fight tells it: the character
+						     standing there, idling, as they are on the board. No veil — the reveal is a
+						     thing a card does when a player first meets it, and by here they are three
+						     fighters in a battle already under way. -->
+						<div class="h-20 w-full">
+							<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
 						</div>
-						<!-- And the way on round it. -->
-						<button
-							type="button"
-							class="btn btn-ghost btn-sm flex-none px-1"
-							disabled={panelLocked}
-							aria-label={$_('combat.nextFighter')}
-							on:click={() => stepFighter(1)}
-						>
-							<svg viewBox="0 0 24 24" fill="currentColor" class="size-6" aria-hidden="true">
-								<path d="M10 7l5 5-5 5z" />
-							</svg>
-						</button>
+						<!-- Everything that can be pressed, on one row of five squares: the way back
+						     round the line, this fighter's three orders, and the way on round it. Five
+						     columns of a grid rather than a row of fixed sizes, so the whole of it fits
+						     the narrowest phone and every square is the same square — which is what puts
+						     the arrows *on* the panel's own line instead of holding it between them.
+						     The arrows keep their own column whatever is between them (`col-start-1` and
+						     `col-start-5`), so a fighter that is down or has taken its lane — handed no
+						     orders at all, exactly as its strip on the board is cleared — is still a
+						     fighter the arrows can be walked past.
+						     They are outlined rather than filled, because they are not orders: a filled
+						     square on this row is an order, and the one in the fighter's own colour is
+						     the order it has been given.
+						     A plain button rather than a `btn` for the three: the glyphs are the canvas's
+						     own white artwork, so what they need is a dark tile under them in *every*
+						     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
+						     button's face. So the tile stays and the states are said over it — the chosen
+						     order in the fighter's own colour, the rest dark, and one out of reach faded
+						     rather than dropped, as the board's own column greys it. -->
+						<div class="grid grid-cols-5 gap-2">
+							<button
+								type="button"
+								class="col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
+								disabled={panelLocked}
+								aria-label={$_('combat.previousFighter')}
+								on:click={() => stepFighter(-1)}
+							>
+								<!-- An inline triangle: this one is drawn in the document rather than onto
+								     the canvas, so it takes its colour from the text around it like every
+								     other mark in a page. -->
+								<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
+									<path d="M14 7l-5 5 5 5z" />
+								</svg>
+							</button>
+							{#each row.orders as order (order.id)}
+								<button
+									type="button"
+									class={classNames(
+										'flex aspect-square w-full items-center justify-center rounded-box',
+										orderFill(order),
+										{ 'opacity-40': order.disabled }
+									)}
+									disabled={order.disabled}
+									aria-label={ORDER_LABELS[order.id as CombatAction]}
+									aria-pressed={order.selected}
+									on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
+								>
+									<img src={order.icon} alt="" class="w-3/5" />
+								</button>
+							{/each}
+							<button
+								type="button"
+								class="col-start-5 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
+								disabled={panelLocked}
+								aria-label={$_('combat.nextFighter')}
+								on:click={() => stepFighter(1)}
+							>
+								<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
+									<path d="M10 7l5 5-5 5z" />
+								</svg>
+							</button>
+						</div>
 					</div>
 				{/if}
 				<!-- Giving up, which on a phone exists nowhere else. On the banner it is reached
