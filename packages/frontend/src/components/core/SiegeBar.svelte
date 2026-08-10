@@ -48,7 +48,12 @@
 	and the fill — rounded by the same amount, on its own box — comes out an ellipse a fraction
 	of the width it is meant to say. So the element and both of the fills the two engines draw
 	are squared, and the twenty pixels the box measures are the twenty pixels that read. Lying
-	down there is a plate's width to round against and nothing to lose by it. -->
+	down there is a plate's width to round against and nothing to lose by it.
+
+	The empty part is base-100, the same surface everything else in the head is printed on. Left
+	alone it is the fill's own colour at a fifth, which on a bar this size is a block of pale
+	blue standing between the two plates. -->
+
 <div
 	class={classNames('relative', vertical ? 'h-10 w-5 flex-none' : 'w-full', classes)}
 	title={$_('map.challenge.siege')}
@@ -57,7 +62,7 @@
 		class={classNames(
 			'progress progress-primary',
 			vertical
-				? 'absolute top-1/2 left-1/2 h-5 w-10 -translate-x-1/2 -translate-y-1/2 -rotate-90 rounded-none [&::-moz-progress-bar]:rounded-none [&::-webkit-progress-value]:rounded-none'
+				? 'absolute top-1/2 left-1/2 h-5 w-10 -translate-x-1/2 -translate-y-1/2 -rotate-90 rounded-none bg-base-100 [&::-moz-progress-bar]:rounded-none [&::-webkit-progress-value]:rounded-none'
 				: 'block h-6 w-full'
 		)}
 		value={siege.wins}
