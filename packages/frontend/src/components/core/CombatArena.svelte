@@ -1120,8 +1120,15 @@
 		     room the screen turns out to have goes into the two gaps rather than into a band
 		     under everything, and each of the three keeps the end of the view it belongs to on
 		     a tall phone and a short one alike. -->
+		<!-- The sky is the sheet's and not the canvas's. The board's top row, and the gaps in
+		     the fringe the field starts with, are drawn on nothing at all, so what shows through
+		     both is this — one blue above the picture and inside it, painted once. `sky-300` is
+		     the value the canvas held itself (#7dd3fc) until the document needed the same sky
+		     over the board as in it, and only the page can cover the whole view. What the board
+		     leaves *below* is not sky: the ground carries on down there (`CombatGround`), laid
+		     over this. -->
 		<div
-			class="relative flex h-full w-full flex-col items-center justify-between sm:justify-center"
+			class="relative flex h-full w-full flex-col items-center justify-between bg-sky-300 sm:justify-center"
 		>
 			<!-- The board, and nothing round it. No card, no body, no column, and no border: the
 			     arena is one drawing and every box round a drawing is scale taken off it, since the

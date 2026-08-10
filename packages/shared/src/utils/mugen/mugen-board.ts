@@ -219,20 +219,16 @@ const DEFAULTS = {
  */
 const GROUND_LINE = combatColorHex('yellow');
 
-/**
- * The light blue the board's top row is painted, square by square, in place of grass.
- *
- * That row is the one no line opens on ({@link FIRST_LANE_ROW}) — board the lanes have
- * over them, walked over and measured across but never fought for. So it is not laid with
- * the ground the fight is fought on: its squares are filled flat, which reads as the field
- * ending and something else beginning above it, and its yellow ruling is drawn over the
- * fill exactly as it is over the grass, so the row is the same nine squares as any other.
- *
- * Stated here rather than read off combat's table, which holds the six colours a fighter
- * can be and has no light blue in it — this is not a side's colour and must not be
- * mistaken for one, the blue half's own being that table's `blue`.
- */
-const SKY_FILL = 0x7dd3fc;
+// **The sky is not the canvas's.** The board's top row is the one no line opens on
+// ({@link FIRST_LANE_ROW}) — board the lanes have over them, walked over and measured
+// across but never fought for — and the field's top fringe is blades with gaps in it.
+// Neither is drawn on anything: the squares of that row are left empty and the gaps
+// between the blades are left clear, so what shows through both is the page the canvas is
+// standing on, which is painted the sky (`CombatArena`'s own background). The canvas held
+// that colour itself until the document needed the same sky above the picture as in it —
+// two things painting one sky is two values to keep in step, and the one that can cover
+// the whole view is the page. The row keeps its yellow ruling: what the squares are is the
+// board's, only what fills them is not.
 
 /**
  * The **apron**: one row of ground squares below the last cell of the board, a third of a
@@ -270,10 +266,11 @@ const FIELD_BOTTOM_SQUARE_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL;
 /** Below the ruled lattice (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
 
-/** Below the grass itself: where whatever the grass is laid *on* is drawn — the sky the
- * field's top fringe comes out of, and the earth its bottom fringe stops on. Both are under
- * tiles that are blades with gaps between them, and neither may be drawn over its own
- * fringe, so the ordering is a depth rather than the order things were added in. */
+/** Below the grass itself: where whatever the grass is laid *on* is drawn, which on this
+ * canvas is the earth under the field's bottom fringe — a fringe being blades with gaps,
+ * and the thing behind it never to be drawn over it. A depth rather than the order things
+ * were added in, so it holds however the squares are walked. (The other side of the field
+ * is laid on the sky, which is the page and is behind the whole canvas already.) */
 const BACKING_Z = -1.5;
 
 /** Between the two: over the grass it rules, under the lattice that rules the cells. */
@@ -1340,11 +1337,11 @@ export class MugenBoard {
 	 * stays where the line's was, which is how the colour comes back if it is ever wanted.
 	 *
 	 * What every cell *does* have under it is ground: each is laid with grass
-	 * ({@link layGround}) — or, on the row no line opens on, filled with {@link SKY_FILL}
-	 * instead — and ruled into that ground's own squares ({@link ruleGround}), both below
-	 * the lattice so the cells' red stays on top of them. A board whose tiles could not be
-	 * fetched keeps the ruling and the sky and loses the grass alone: the subdivision is the
-	 * board's and not the artwork's.
+	 * ({@link layGround}) — bar the row no line opens on, which is left clear for the sky
+	 * the page is painted — and ruled into that ground's own squares ({@link ruleGround}),
+	 * both below the lattice so the cells' red stays on top of them. A board whose tiles
+	 * could not be fetched keeps both rulings and loses the grass alone: the subdivision is
+	 * the board's and not the artwork's.
 	 *
 	 * **The apron is ground with no cell over it** ({@link APRON_DEPTH}): one row of squares
 	 * below the last cell, laid and ruled exactly as any other row of ground and left out of
@@ -1361,7 +1358,6 @@ export class MugenBoard {
 		if (!this.app) return;
 		const graphics = new Graphics();
 		const groundLines = new Graphics();
-		const groundFill = new Graphics();
 		for (const { q, r } of boardCells()) {
 			// q alone decides the side; the central column (q = 0) is the shared
 			// white ground.
@@ -1369,7 +1365,7 @@ export class MugenBoard {
 			const color = side === 'red' ? leftColor : side === 'blue' ? rightColor : centerColor;
 
 			const squares = this.groundSquares(q, r);
-			this.layGround(groundFill, squares);
+			this.layGround(squares);
 			this.ruleGround(groundLines, squares);
 
 			graphics.poly(this.cellOutline(q, r));
@@ -1382,12 +1378,10 @@ export class MugenBoard {
 			const apron = this.groundSquares(q, APRON_ROW).filter(
 				(square) => square.row === FIELD_BOTTOM_SQUARE_ROW
 			);
-			this.layGround(groundFill, apron);
+			this.layGround(apron);
 			this.ruleGround(groundLines, apron);
 		}
-		groundFill.zIndex = BACKING_Z;
 		groundLines.zIndex = GROUND_LINE_Z;
-		this.app.stage.addChild(groundFill);
 		this.app.stage.addChild(groundLines);
 		this.app.stage.addChild(graphics);
 	}
@@ -1425,13 +1419,10 @@ export class MugenBoard {
 	 * the board and nowhere inside it.
 	 *
 	 * **The board's top row is not fought on and is not grassed.** No line opens there
-	 * ({@link FIRST_LANE_ROW}) — it is the board the lanes have over them — so its squares
-	 * are filled flat in {@link SKY_FILL} instead, into the shared fill object the caller
-	 * hands over. Square by square off the same list, not one wash across the row: the row
-	 * is ruled into nine squares per cell like every other, and what fills them has to be
-	 * what those squares are, or the yellow would be lying about what it divides. A flat
-	 * fill also needs nothing loaded, so that row looks the same whether the sheet arrived
-	 * or not.
+	 * ({@link FIRST_LANE_ROW}) — it is the board the lanes have over them — so nothing is
+	 * laid on it at all: it is left clear and the sky the page is painted shows through it.
+	 * The row is still ruled into its nine squares a cell like every other, the ruling being
+	 * the board's whatever fills them.
 	 *
 	 * **One sprite per square, off the same list the ruling is drawn from** ({@link
 	 * groundSquares}) — so a square of grass and the yellow border round it are the same
@@ -1451,34 +1442,26 @@ export class MugenBoard {
 	 * **The field's first and last rows of squares break that alternation** and take the
 	 * sheet's two grass edges along their whole width — those rows are where the grass
 	 * starts and where it stops, and those are the tiles the sheet draws for exactly that.
-	 * Both are blades with gaps between them, and each is laid on what the gaps ought to
-	 * show: the top one on a square of {@link SKY_FILL}, the sky row being directly above
-	 * it, and the bottom one on a square of the sheet's own earth
-	 * ({@link GROUND_EARTH_TILE}), so the grass is seen to stop and the bare ground under it
-	 * to carry on. Both backings go at {@link BACKING_Z}, behind the tile rather than over
-	 * it. The bottom row is also the apron and not a cell's, which is what keeps every
-	 * square a fighter stands over whole grass.
+	 * Both are blades with gaps between them, and what the gaps show is what is on that side
+	 * of the field: over the top one, nothing at all, so the page's sky comes through the
+	 * blades exactly as it does through the row above; under the bottom one, a square of the
+	 * sheet's own earth ({@link GROUND_EARTH_TILES}) laid at {@link BACKING_Z}, so the grass
+	 * is seen to stop and the bare ground under it to carry on. The bottom row is also the
+	 * apron and not a cell's, which is what keeps every square a fighter stands over whole
+	 * grass.
 	 */
-	private layGround(fill: Graphics, squares: GroundSquare[]): void {
+	private layGround(squares: GroundSquare[]): void {
 		if (!this.app) return;
 		const { fills, topEdge, bottomEdge, earth } = this.groundTiles;
 		for (const square of squares) {
-			// Above the field: sky, and nothing laid on it.
-			if (square.row < FIELD_TOP_SQUARE_ROW) {
-				fill.rect(square.x, square.y, square.width, square.height);
-				fill.fill({ color: SKY_FILL, alpha: 1 });
-				continue;
-			}
+			// Above the field: the page, showing through. Nothing to draw.
+			if (square.row < FIELD_TOP_SQUARE_ROW) continue;
 			if (fills.length === 0) continue;
 			const atTop = square.row === FIELD_TOP_SQUARE_ROW;
 			const atBottom = square.row === FIELD_BOTTOM_SQUARE_ROW;
 			const brink = atTop ? topEdge : atBottom ? bottomEdge : null;
-			// What the fringe's gaps show: sky at the top of the field, earth at the foot of
-			// it. One is a colour and one is a tile, being what each of them is.
-			if (atTop && brink) {
-				fill.rect(square.x, square.y, square.width, square.height);
-				fill.fill({ color: SKY_FILL, alpha: 1 });
-			}
+			// The one thing a fringe is laid on: the earth at the foot of the field. The top
+			// one is laid on the sky, which is the page and is already there.
 			if (atBottom && brink && earth.length > 0) {
 				this.layTile(groundTileAt(earth, square.column, square.row), square, BACKING_Z);
 			}
