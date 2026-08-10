@@ -2475,14 +2475,13 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Give a fighter the orders it can be given, drawn as a column of square buttons that
-	 * fills one whole cell of the board's **central column** — the three of them and their
-	 * gaps are a cell tall ({@link ORDER_COLUMN_COUNT}), stood on the row the fighter is on
-	 * and flush inside one of the two lines that column is ruled between
-	 * ({@link centerColumnEdges}). So the orders belonging to one lane are the two strips
-	 * in that lane's own cell of the middle column, one against each border, and a side's
-	 * three are a straight run down the middle of the board instead of a set of columns
-	 * that drift with whatever their fighters are doing.
+	 * Give a fighter the orders it can be given, drawn as a column of square buttons a
+	 * cell tall ({@link ORDER_COLUMN_COUNT}) standing in the board's **central column** —
+	 * on the foot line its own fighter stands on, and flush inside one of the two lines
+	 * that column is ruled between ({@link centerColumnEdges}). So the orders belonging to
+	 * one lane are the two strips standing on that lane's own line, one against each
+	 * border, and a side's three are a straight run down the middle of the board instead of
+	 * a set of columns that drift with whatever their fighters are doing.
 	 *
 	 * `side` says which end of that column this fighter's strip stands at, and is the
 	 * caller's to decide because it is about the fight and not about the board: the two
@@ -2707,11 +2706,11 @@ export class MugenBoard {
 
 	/**
 	 * Stack the buttons in a column and size their glyphs to fit. The column is laid out
-	 * upward from its own origin — the bottom edge of the cell it stands in
-	 * ({@link updateOrders}) — so the bottom button sits on the line under that cell and
-	 * the rest rise from it, while the list still reads top to bottom in the order it was
-	 * handed in. Three buttons and their gaps are a cell tall ({@link ORDER_COLUMN_COUNT}),
-	 * so the top one finishes on the line over it and the column is the cell.
+	 * upward from its own origin — the foot line its fighter stands on
+	 * ({@link updateOrders}) — so the bottom button sits on the ground the fighter is
+	 * standing on and the rest rise from it, while the list still reads top to bottom in
+	 * the order it was handed in. Three buttons and their gaps are a cell tall
+	 * ({@link ORDER_COLUMN_COUNT}), so the column is as high off that line as a cell.
 	 */
 	private layOutOrders(actor: Actor): void {
 		const strip = actor.orders;
@@ -2729,27 +2728,29 @@ export class MugenBoard {
 		});
 	}
 
-	/** Keep a fighter's column standing in the cell of the central column it was given:
-	 * one of that column's two ruled sides, and the row its fighter is on.
+	/** Keep a fighter's column standing at the end of the central column it was given, on
+	 * the very line its fighter is standing on.
 	 *
 	 * The x is the board's and not the fighter's — flush inside the left or the right line
 	 * ({@link centerColumnEdges}) — so a side's orders are on one vertical line whatever
 	 * their fighters are doing, and a fighter walking to a duel no longer drags its orders
-	 * across the board with it. The y is the fighter's, so which lane a column speaks for
-	 * is read off the row it is standing in, but it is taken to the **bottom edge of the
-	 * cell** rather than to the feet line inside it: the buttons stack upward from here and
-	 * come to exactly a cell, so anchoring them where a fighter stands would hang the whole
-	 * column a quarter of a cell high, straddling the line into the row above. The drop is
-	 * measured off the grid itself, the bottom-right corner of a cell against its own foot
-	 * line, so nothing here has to know what fraction of a cell a fighter stands at. */
+	 * across the board with it.
+	 *
+	 * The y is the fighter's own: `actor.y` is the foot line of the cell it is in
+	 * ({@link cellFoot}, three quarters of the way down rather than the bottom edge), the
+	 * buttons stack upward from it, so the column of orders is planted on the ground its
+	 * fighter is planted on and the two read as standing on one line across the lane. It is
+	 * a cell tall ({@link ORDER_COLUMN_COUNT}), and a fighter stands a quarter of a cell up
+	 * from the floor, so the top of the column reaches that same quarter over the line into
+	 * the row above — which is what standing on the ground rather than filling the cell
+	 * costs, and is why the lanes have a row of plain board above them to reach into. */
 	private updateOrders(actor: Actor): void {
 		const strip = actor.orders;
 		if (!strip) return;
 		const { width } = this.orderSize();
 		const edges = this.centerColumnEdges();
-		const footToFloor = (cellCorners(0, 0)[2].y - cellFoot(0, 0).y) * this.cellWidth();
 		strip.container.x = strip.side === 'left' ? edges.left + width / 2 : edges.right - width / 2;
-		strip.container.y = actor.y + footToFloor;
+		strip.container.y = actor.y;
 		// Above the board and its own fighter, below the callouts and the sparks.
 		strip.container.zIndex = actor.y + 5000;
 	}
