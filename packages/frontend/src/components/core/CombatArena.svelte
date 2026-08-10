@@ -1460,6 +1460,11 @@
 			     is what puts it back at the head of the column it is written at the foot of. The
 			     board follows it there rather than under it, out of the room a width-limited canvas
 			     leaves standing empty.
+			     `relative` throughout, which on a phone it is *only* for the painting: a positioned
+			     box paints over an unpositioned one whatever the order they are written in, so the
+			     sky laid across the top of this sheet covered a head that was the one thing in here
+			     still in the flow. Everything else in the arena is positioned already; this is that
+			     and nothing more, since with no offsets given `relative` moves nothing.
 			     Neither takes the pointer except where it has to (see the banner's plate): they are
 			     readings laid over the board, and the board underneath is what is played.
 			     The column is only as wide as the widest thing in it — the banner, in practice — and
@@ -1467,7 +1472,7 @@
 			     objects that happen to be stacked. Centred by the row it sits in rather than by
 			     centring its own contents, which is what leaves the stretching to it. -->
 			<div
-				class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
+				class="pointer-events-none relative order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
 			>
 				<div class="flex flex-col">
 					<!-- The town, on the very plate its pin carries on the map: the same mark, drawn
