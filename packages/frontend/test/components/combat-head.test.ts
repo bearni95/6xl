@@ -39,32 +39,29 @@ describe('the head of the fight', () => {
 		expect(getByText('Guifré')).toBeTruthy();
 	});
 
-	it('counts the town alongside the score, off the same card', () => {
-		const { container } = render(CombatHead, {
-			props: { location: town, wins: { info: 2, error: 1 } }
-		});
-		// The siege bar is a progress element laid under the score; the two counts are the
-		// progressbar roles beside it.
-		expect(container.querySelector('progress')).toBeTruthy();
-		expect(container.querySelectorAll('[role="progressbar"]').length).toBe(2);
+	it('counts the town off the same card, and counts nothing else', () => {
+		const { container } = render(CombatHead, { props: { location: town } });
+		// How far the town has been taken is the one quantity the head draws, and it is the
+		// upright bar on the seam: one progress element, off `location` like the rest of the
+		// block. The score of the fight itself stood under it as two rows of discs and is gone
+		// with the banner they were drawn on, so a head that has grown a second count has grown
+		// back the band this one was taken out of.
+		expect(container.querySelectorAll('progress').length).toBe(1);
+		expect(container.querySelectorAll('[role="progressbar"]').length).toBe(0);
 	});
 
-	it('is a reading and offers nothing to press about the fight', () => {
-		const { container } = render(CombatHead, {
-			props: { location: town, wins: { info: 1, error: 1 } }
-		});
+	it('is a reading and offers nothing to press at all', () => {
+		const { container } = render(CombatHead, { props: { location: town } });
 		// The way out of the fight stood on the seam between the two cells and is asked for on
 		// the player's own card in the orders panel now. A head with a button in it is that
-		// control back in the middle of a reading of the other side. Nothing has finished
-		// elsewhere yet either, so the one press this block does carry is not drawn.
+		// control back in the middle of a reading of the other side.
 		expect(container.querySelectorAll('button').length).toBe(0);
 	});
 
-	it('carries the count of other fights once there are any, and nothing before', () => {
-		// The one press on the head, and it decides nothing about this fight: how many fights
-		// have finished anywhere else while this one has been going on. It appears with the
-		// first of them — a feed with nothing in it has nothing to reveal — so the head is a
-		// reading and nothing else for as long as the game is quiet.
+	it('stays a reading once fights have finished elsewhere', () => {
+		// The count of fights finished anywhere else was the one press the head carried, at the
+		// far end of the score banner. The banner is gone and the count with it, so the block is
+		// a reading whether or not the game is busy — and nothing in the arena opens the feed.
 		combatFeedService.receive({
 			id: 'head-feed',
 			at: '2026-08-10T17:04:00.000Z',
@@ -72,9 +69,7 @@ describe('the head of the fight', () => {
 			town: 'ES_08019',
 			player: { name: 'Ermessenda', level: 3 }
 		});
-		const { container } = render(CombatHead, {
-			props: { location: town, wins: { info: 1, error: 1 } }
-		});
-		expect(container.querySelectorAll('button').length).toBe(1);
+		const { container } = render(CombatHead, { props: { location: town } });
+		expect(container.querySelectorAll('button').length).toBe(0);
 	});
 });

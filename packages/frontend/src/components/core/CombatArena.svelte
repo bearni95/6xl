@@ -1506,8 +1506,8 @@
 				<div class="absolute inset-0 landscape:hidden" aria-hidden="true">
 					<CombatGround />
 				</div>
-				<!-- The head of the fight, lying down: the town, whoever holds it, the way out and
-				     the score, at the top of this column and across the whole of it. It is where
+				<!-- The head of the fight, lying down: the town, whoever holds it and how far it has
+				     been taken, at the top of this column and across the whole of it. It is where
 				     the head goes once the board is against the left edge of the view and this
 				     panel has all the width past it — the room beside a fight is where a reading of
 				     the fight belongs, and laying it over the board there would be taking room off
@@ -1518,11 +1518,7 @@
 				     what it says at the size it says it — a short panel takes it out of the
 				     fighter's picture below, which is the thing here with room to give. -->
 				{#if lyingDown}
-					<CombatHead
-						{location}
-						wins={state && !state.outcome ? state.wins : null}
-						classes="relative shrink-0"
-					/>
+					<CombatHead {location} classes="relative shrink-0" />
 				{/if}
 				{#if shownRow}
 					{@const row = shownRow}
@@ -1792,18 +1788,14 @@
 			     Centred by the row it sits in rather than by centring its own contents, which is
 			     what leaves the score's stretching to it: the head settles its own width only from
 			     `sm:` up, where the wrapper stops being the viewport. A phone gets a head that runs
-			     the full width of the screen — the two cells, and the score across the foot of them
-			     — rather than a block of chrome shrunk to its longest word and floated in the
-			     middle of a view it could have spanned. -->
+			     the full width of the screen — the two cells and the seam between them — rather
+			     than a block of chrome shrunk to its longest word and floated in the middle of a
+			     view it could have spanned. -->
 			{#if !lyingDown}
 				<div
 					class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
 				>
-					<CombatHead
-						{location}
-						wins={state && !state.outcome ? state.wins : null}
-						classes="sm:w-auto"
-					/>
+					<CombatHead {location} classes="sm:w-auto" />
 				</div>
 			{/if}
 		</div>

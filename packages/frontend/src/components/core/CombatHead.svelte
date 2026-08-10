@@ -4,18 +4,17 @@
 	 *
 	 * One block of chrome and not three things that happen to be near each other — the account
 	 * holding the town and the town's own plate side by side, each set against the middle they
-	 * meet on, and the score banner across the foot of both, every row the width of the block. It is a reading and nothing but: what a town is
-	 * called and whose it is are the map's, the score is the controller's, and nothing here is
-	 * worked out. The way out of the fight stood on the
-	 * seam between the two cells for a while and is asked for on the player's own card at the
-	 * corner of the orders panel now (see CombatArena) — a control belongs with the side it
-	 * acts for, not in the middle of a reading of the other one.
+	 * meet on, and how far the town has been taken standing on the seam between them. It is a
+	 * reading and nothing but: what a town is called, whose it is and how far it has gone are all
+	 * the map's, and nothing here is worked out.
 	 *
-	 * The one press on it is at the far end of the score banner, and it is a press about the
-	 * reading rather than about the fight: how many other fights have finished anywhere in the
-	 * game while this one has been going on, opening the sheet that lists them (see
-	 * CombatFeedButton). It decides nothing about this fight, which is what lets it stand in a
-	 * block that decides nothing.
+	 * One row, and nothing on it is pressable. The way out of the fight stood on the seam between
+	 * the two cells for a while and is asked for on the player's own card at the corner of the
+	 * orders panel now (see CombatArena) — a control belongs with the side it acts for, not in
+	 * the middle of a reading of the other one. Under the row stood a score banner: the lanes each
+	 * side had taken, drawn as discs, with the way into the feed of finished fights at the end of
+	 * it. It is gone — a whole band of chrome between the head and the board, for a count the
+	 * fight itself is showing.
 	 *
 	 * It is drawn in two entirely different places and that is why it is its own file. Standing
 	 * up, it is laid over the board's top edge (or at the head of the column on a phone), where
@@ -33,11 +32,9 @@
 	 */
 	import classNames from 'classnames';
 	import { _ } from 'svelte-i18n';
-	import CombatFeedButton from '$components/core/CombatFeedButton.svelte';
 	import CombatHost from '$components/core/CombatHost.svelte';
 	import SiegeBar from '$components/core/SiegeBar.svelte';
 	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
-	import { TEAM_SIZE } from '$services/team.service';
 	import type { TownPlateCard } from '$types/map.type';
 
 	// The town the fight is over, drawn on the very plate its pin carries on the map, and the
@@ -46,25 +43,7 @@
 	// card at all, which is what a match with no town behind it gets.
 	export let location: TownPlateCard | null = null;
 
-	// The standing, while there is a fight to have one: how many lanes each side has taken.
-	// Null is a fight that has not begun or one already decided — a decided fight reads its
-	// score off the panel in the middle of the board, and the same score at both ends of one
-	// canvas would be one score too many — and it is what the whole banner hangs on, the siege
-	// bar it stands on included.
-	export let wins: { info: number; error: number } | null = null;
-
 	export let classes: string = '';
-
-	// The lanes of the fight, 1..n, for the score: one square per lane, filled once that many
-	// have been taken. A lane is a fighter of each side and the white cell between them, so
-	// there are as many of them as a team has members — the score is drawn from the same count
-	// the team is built to, and cannot come to say a fight is longer or shorter than it is.
-	const LANES = Array.from({ length: TEAM_SIZE }, (_, index) => index + 1);
-
-	// The rivals' half of the score is read the other way round, so its squares are laid out
-	// backwards and its count fills from the right — see the score's own note. The order is the
-	// whole of the difference between the two: same squares, same rule.
-	const RIVAL_LANES = [...LANES].reverse();
 </script>
 
 <!-- The head's own column. It takes the whole width it is given, and what that is is the
@@ -103,7 +82,7 @@
 	     between comes to — the rule that the head lays the two cells out, not each other, is
 	     unchanged. With no standing to draw the middle column is nothing wide and the row is the
 	     pair it always was. -->
-	<div class="grid grid-cols-[1fr_auto_1fr] items-stretch">
+	<div class="grid grid-cols-[1fr_auto_1fr] items-stretch bg-base-100">
 		<!-- The town, on the very plate its pin carries on the map: the same mark, drawn the same
 		     way, showing what was pressed to get here. Only the challenge button is missing, and
 		     the caller is what leaves it out — a fight already under way has nothing left to
@@ -131,11 +110,12 @@
 		     score.
 		     Sized off the portrait across from it — the same depth as the face in the cell to the
 		     right, half as wide — so the seam reads as one mark's worth of upright and not as a
-		     third column of chrome. On the cells' own surface, which is what makes the row one
-		     block of plate rather than two with a gap between them, and padded to the plate's own
-		     padding so the bar is inset exactly as the tile and the face beside it are. -->
+		     third column of chrome. It carries no surface of its own: the row is printed on one,
+		     which is what makes the three cells one block of plate rather than two with a gap
+		     between them. Padded to the plate's own padding, so the bar is inset exactly as the
+		     tile and the face beside it are. -->
 		{#if location?.challenge}
-			<div class="flex items-center bg-base-100/80 px-1.5 shadow-lg">
+			<div class="flex items-center px-1.5">
 				<SiegeBar siege={location.challenge.siege} vertical />
 			</div>
 		{/if}
@@ -160,111 +140,9 @@
 			<div class={PLATE_FLUSH_CLASSES}></div>
 		{/if}
 	</div>
-	<!-- The standing has stood in three places and is on the seam of the row above now: a cell
-	     across the foot of that grid first, then the ground the score below was drawn on. What
-	     the last one cost is what it said — a quantity about the town, laid in among the count of
-	     one fight — so it went back up to the two things it is about, upright between them. -->
-	{#if wins}
-		<!-- The score, at the head of the fight it is a score of, under the town being fought
-		     over.
-		     The fight is three duels, each played for one cell of the white column down the middle
-		     of the board, so the score is drawn as that ground: three squares a side, one per lane,
-		     filled white as that side takes it. A number said how many; these say which of a known
-		     three, and they are cells of a board rather than a length being filled, which is what
-		     the thing being counted is. Each side's three sit over the half of the board that side
-		     holds — the rivals' to the left, the player's to the right. Between them plain room,
-		     and nothing else on the row: the banner counts this one fight and only this one, the
-		     siege having gone up to the seam it is about. One row deep for that, since what is on
-		     it is three discs and three discs.
-		     Both counts grow outwards from that middle, so the rivals' three are laid out backwards
-		     and fill from the right: it is the same count read either way round, and the two then
-		     mirror each other across the middle rather than both running left to right. Both are
-		     drawn white — the ground down the middle they are played for is white, and a count of
-		     it says so at a glance. -->
-		<!-- On the same plate the map's breadcrumb bar stands on: the base colour at four fifths so
-		     what is behind reads through it, white type and a shadow to lift it off what it covers.
-		     The score and the path are the same kind of thing — a line of state laid over a picture
-		     that fills the view — so they are drawn as one thing and not two.
-		     It runs the full width of the head, which is the width of the two cells above it: the
-		     head is one block of chrome and every row of it is the same width, so a phone gets a
-		     band across the top of the view rather than a label floating in the middle of one. It
-		     had a triangular wing at either end for a while, which made the row a banner narrower
-		     than the rows above it — a shape, and shapes do not butt against anything.
-		     The counts keep their own width at the two ends and the room between them is what gives
-		     (`flex-1`), so a wider head is a wider bar, never two counts drifting apart from the
-		     halves of the board they are about. -->
-		<div
-			class="pointer-events-auto flex h-7 w-full items-stretch gap-2 bg-base-100/80 text-white shadow-xl"
-		>
-			<!-- Each side's count is three cells in a row, laid out as cells of the board because
-			     that is what is being counted: three equal columns over `w-24`, which is three of the
-			     plate's own former depth — the two blocks are the same width as each other and read
-			     together whatever the plate comes to.
-			     `relative`, and that is not decoration: the bar behind them is positioned, and a
-			     positioned box paints over the in-flow content of the same stack. Giving each block a
-			     position of its own is what puts the discs back on top of the ground they are counted
-			     on.
-			     Nothing is ruled between them. The cells were divided by a line down each of their
-			     sides, and what the lines were dividing is three discs in a row with a plate's own
-			     width of air around them — a thing already read as three from across the room, since
-			     a count of three is what a disc apart from another disc says. So the rules were
-			     drawing a grid over a figure that did not need one, and the busiest mark on the
-			     banner was the one carrying the least. The grid still sets the spacing; it simply is
-			     not drawn any more.
-			     A lane taken is a disc in its cell rather than the cell painted in: the ground a lane
-			     is played for is one white cell of the middle column, and a mark set in a cell reads
-			     as something standing on that ground where a filled cell reads as the ground itself
-			     having changed. The disc is always drawn and simply carries no colour until the lane
-			     is won, so the three cells hold their spacing whatever the score is. -->
-			<div
-				class="relative grid h-full w-24 grid-cols-3 py-1"
-				role="progressbar"
-				aria-label={$_('combat.rivalWins')}
-				aria-valuemin={0}
-				aria-valuemax={TEAM_SIZE}
-				aria-valuenow={wins.error}
-			>
-				{#each RIVAL_LANES as lane}
-					<span class="flex items-center justify-center">
-						<span
-							class={classNames('size-4 rounded-full', lane <= wins.error && 'bg-white')}
-						></span>
-					</span>
-				{/each}
-			</div>
-			<!-- The room between the two counts, and it is deliberately empty. Two things have stood
-			     here and neither belonged: the turn number, a figure nothing on the screen was
-			     waiting for, and after it the way out of the fight, out of sight until the pointer
-			     was on the plate. The way out has left the head entirely — it is asked for on the
-			     player's own card in the orders panel, which is the side it acts for — so what is
-			     left here is the room itself, which is what the middle of a score is.
-			     It is what gives as the head gets wider (`flex-1`), the counts keeping the width they
-			     are drawn at: a count is three cells of the board and means nothing stretched, where
-			     the space between two counts is only ever space. -->
-			<div class="flex-1"></div>
-			<div
-				class="relative grid h-full w-24 grid-cols-3 py-1"
-				role="progressbar"
-				aria-label={$_('combat.yourWins')}
-				aria-valuemin={0}
-				aria-valuemax={TEAM_SIZE}
-				aria-valuenow={wins.info}
-			>
-				{#each LANES as lane}
-					<span class="flex items-center justify-center">
-						<span class={classNames('size-4 rounded-full', lane <= wins.info && 'bg-white')}></span>
-					</span>
-				{/each}
-			</div>
-			<!-- Past the player's own count, at the far end of the bar: how many other fights have
-			     finished anywhere in the game while this one has been going on, and the way to read
-			     them. It stands on the siege bar with everything else on this row, which is the
-			     sense of putting it here — the bar is how far *this* town has been taken and the
-			     number beside it is how many other towns have just been fought over, so the row is
-			     one reading of the map's afternoon rather than two.
-			     `relative` for the same reason the counts carry it: the bar behind is positioned
-			     and would otherwise paint over it. -->
-			<CombatFeedButton classes="relative" />
-		</div>
-	{/if}
+	<!-- Nothing under the row. The standing has stood in three places — a cell across the foot of
+	     that grid, then the ground of a score banner below it — and is on the seam of the row
+	     above now, upright between the two things it is about. The banner it was last drawn on is
+	     gone with it: a whole band of chrome between the head and the board, for a count the
+	     fight itself is showing. -->
 </div>
