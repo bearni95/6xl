@@ -181,15 +181,19 @@ const DEFAULTS = {
 // rather than written out again beside it: the lattice is not a side's marking, it is the
 // board itself, so it is one colour all the way across and that colour is combat's own red.
 
-// --- The ground the red half stands on ---------------------------------------------
+// --- The ground the fight is fought on ---------------------------------------------
 //
-// The red half's cells are laid with grass instead of being left as bare ruled squares:
+// Every cell of the field is laid with grass instead of being left a bare ruled square:
 // one small tile off the sheet vendored in `@3xl/assets` (`public/tiles/`), repeated
-// across each of those cells. Only the sheet's **top-left** tile is taken — the plain
-// grass, the one square on a page of flowers, sand, water and shrubs that says nothing
-// but ground — and it is cut out of the sheet as it loads rather than pointed at inside
-// it: a sub-rectangle of a larger bitmap has no edges of its own to wrap at, and a tile
-// that cannot wrap is one tile with an empty cell around it.
+// across each of them. It is ground rather than a marking, so it is the same ground on
+// both halves and in the column between them — what a cell belongs to is said by the
+// lattice ruled over it and by what stands on it, and never by the earth.
+//
+// Only the sheet's **top-left** tile is taken — the plain grass, the one square on a page
+// of flowers, sand, water and shrubs that says nothing but ground — and it is cut out of
+// the sheet as it loads rather than pointed at inside it: a sub-rectangle of a larger
+// bitmap has no edges of its own to wrap at, and a tile that cannot wrap is one tile with
+// an empty cell around it.
 
 /** The vendored sheet the ground tile is cut from. */
 const GROUND_TILE_SHEET = '/assets/tiles/j-treecko252/assorted-ground.png';
@@ -858,7 +862,7 @@ export class MugenBoard {
 	private cellPaint = new Map<string, Graphics>();
 	/** Loaded aura frame textures, keyed by aura color name. */
 	private auraTextures = new Map<string, Texture[]>();
-	/** The single grass tile the red half is laid with, cut from the sheet on the way in
+	/** The single grass tile every cell is laid with, cut from the sheet on the way in
 	 * ({@link loadGround}). Held so it can be freed with the board: it is built here rather
 	 * than fetched through `Assets`, so nothing else is keeping it. */
 	private groundTexture: Texture | null = null;
@@ -1242,10 +1246,10 @@ export class MugenBoard {
 	 * guard rings and the orders stand on a field that is there to be seen. The fill's alpha
 	 * stays where the line's was, which is how the colour comes back if it is ever wanted.
 	 *
-	 * The **red** half's cells are the ones with ground under them: each is laid with the
-	 * grass tile ({@link layGround}), drawn below the lattice so the ruling stays on top of
-	 * it. A board whose tile could not be fetched simply has none, and is the bare ruled
-	 * field it was before there was any.
+	 * What every cell *does* have under it is ground: each is laid with the grass tile
+	 * ({@link layGround}), drawn below the lattice so the ruling stays on top of it. A board
+	 * whose tile could not be fetched simply has none, and is the bare ruled field it was
+	 * before there was any.
 	 */
 	private drawBoard(leftColor: number, rightColor: number, centerColor: number): void {
 		if (!this.app) return;
@@ -1256,7 +1260,7 @@ export class MugenBoard {
 			const side = cellSide(q);
 			const color = side === 'red' ? leftColor : side === 'blue' ? rightColor : centerColor;
 
-			if (side === 'red') this.layGround(q, r);
+			this.layGround(q, r);
 
 			graphics.poly(this.cellOutline(q, r));
 			graphics.fill({ color, alpha: 0 });
@@ -1270,12 +1274,13 @@ export class MugenBoard {
 	 * {@link GROUND_TILES_PER_CELL} times across and down, filling the cell corner to
 	 * corner and no further.
 	 *
-	 * One tiling per cell rather than one sheet of grass under the whole half, because what
-	 * is being painted is cells — the ground stops exactly where the ruled square does, so a
-	 * cell nobody laid (the white column, the blue half) is bare board and reads as bare
-	 * board. The tile count being whole is what keeps that from showing: neighbouring cells
-	 * lay the same tiles in the same places, so the seam between two of them is a ruled line
-	 * over continuous grass rather than a break in it.
+	 * Every cell of the field takes it, whichever half it belongs to: the grass is the
+	 * ground the fight is fought on and not a marking, so it stops at the outer edge of the
+	 * board and nowhere inside it. One tiling per cell rather than one sheet under the whole
+	 * field because what is drawn here is cells, and the tile count being whole is what
+	 * keeps that from showing: neighbouring cells lay the same tiles in the same places, so
+	 * the seam between two of them is a ruled line over continuous grass rather than a break
+	 * in it.
 	 */
 	private layGround(q: number, r: number): void {
 		if (!this.app || !this.groundTexture) return;

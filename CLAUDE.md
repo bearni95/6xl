@@ -170,7 +170,9 @@ interchangeable:
 `public/tiles/<artist>/` with the set's credit in `public/tiles/license.txt` — the same
 arrangement as the icons, and for the same reason: it is somebody's work, kept whole and
 unmodified beside the note saying whose. Today that is one sheet of 16px ground tiles, of
-which the board takes the top-left one (plain grass) for the red half's cells. It is cut
+which the board takes the top-left one (plain grass) for every cell of the field — it is
+ground and not a marking, so both halves and the column between them stand on the same
+earth, and which cell is whose is said by the red lattice ruled over it. It is cut
 out of the sheet as it loads (`createImageBitmap`'s own crop) rather than pointed at
 inside it, because a tile has to *wrap* to be tiled and a sub-rectangle of a larger bitmap
 has no edges of its own to wrap at. See `mugen-board.ts`'s ground section for how much of
