@@ -1515,19 +1515,27 @@
 						     are about at the far end of the panel from the buttons. They are read
 						     together, so they are drawn together, and the pair is what the thumb reaches
 						     the whole of without moving.
-						     Both rows are the same five columns, so a square is the same square on either
-						     and the two read as one block of five by three. The stack takes no pointer of
-						     its own — the gap between the rows would otherwise be a strip laid over the
-						     fighter — and each row turns them back on for itself. -->
+						     The rows are not ruled the same, and that is what keeps the two apart: the
+						     orders are three of five columns and the arrows are two of six, so an arrow
+						     is a smaller square than an order and stands further out than one ever
+						     reaches. A row of five under a row of five had the arrows exactly the size
+						     of the buttons beside them and exactly in line with the ends of that row,
+						     which reads as five orders of which two do something else. The stack takes
+						     no pointer of its own — the gap between the rows would otherwise be a strip
+						     laid over the fighter — and each row turns them back on for itself. -->
 						<div class="pointer-events-none absolute inset-x-2 bottom-2 flex flex-col gap-2">
-							<!-- The way back round the line and the way on round it, in the two columns the
-							     orders leave open, immediately above them. They are not orders — they are
-							     what the panel is turned by — so they keep a row of their own and their own
-							     outline rather than the orders' filled tile, and they stand at the ends of
-							     it where the orders never reach.
-							     Only the two buttons take the pointer, not the row: its three empty middle
+							<!-- The way back round the line and the way on round it, at the two ends of the
+							     row immediately above the orders. They are not orders — they are what the
+							     panel is turned by — so they keep a row of their own, their own outline
+							     rather than the orders' filled tile, and their own ruling: six columns to
+							     the orders' five, with the pair at the first and the last of them and four
+							     standing empty between. The extra column is what pulls them apart and cuts
+							     them down — a cell of six is smaller than a cell of five, and the ends of
+							     the row are further out than the row below ever reaches — so the two
+							     controls are never read as more of the same buttons.
+							     Only the two buttons take the pointer, not the row: its four empty middle
 							     cells would otherwise be a sheet laid over the fighter's picture. -->
-							<div class="grid grid-cols-5 gap-2">
+							<div class="grid grid-cols-6 gap-2">
 								<button
 									type="button"
 									class="pointer-events-auto col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
@@ -1544,7 +1552,7 @@
 								</button>
 								<button
 									type="button"
-									class="pointer-events-auto col-start-5 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
+									class="pointer-events-auto col-start-6 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
 									disabled={panelLocked}
 									aria-label={$_('combat.nextFighter')}
 									on:click={() => stepFighter(1)}
@@ -1561,9 +1569,10 @@
 							     Five columns for three buttons because the width of an order is settled by the
 							     row and not by what happens to be in it: the ends are held open (`col-start-2`
 							     on the first order) so the three are one size on every panel, whatever is
-							     drawn beside them and whether or not anything is. What is drawn beside them is
-							     the arrows, in the row above and in those very columns, so the two ends are
-							     kept open here for the same reason they are filled there.
+							     drawn beside them and whether or not anything is. Nothing is, now — the
+							     arrows are a row of their own above this and ruled in six (see there), so
+							     the two ends stay open for the reason they were opened rather than to leave
+							     room for anything.
 							     A plain button rather than a `btn` for the three: the glyphs are the canvas's
 							     own white artwork, so what they need is a dark tile under them in *every*
 							     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
