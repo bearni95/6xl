@@ -4,7 +4,7 @@
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import PlayerAvatar from '$components/core/PlayerAvatar.svelte';
 	import { combatFeedService } from '$services/combatFeed.service';
-	import { locationAdapter } from '$adapters/classes/location.adapter';
+	import restoreCatalanArticle from '$utils/string/restore-catalan-article';
 	import type { CombatFeedEntry } from '$types/combat-feed.type';
 	import type { CombatOutcome } from '$types/combat.type';
 
@@ -17,41 +17,36 @@
 	 *
 	 * The list is the service's and arrives by socket, so nothing is fetched here and there
 	 * is nothing to refresh: a fight that finishes while this sheet is up is drawn onto it
-	 * as it lands. The one thing that *is* fetched is the town names, and only the first
-	 * time the sheet is opened — the announcements name towns by geojson id, since the
-	 * server has no idea what a town is called, and the layer that does is the very one the
-	 * map draws. A missing layer leaves the ids standing, which is what the map does with a
-	 * town it cannot name either.
+	 * as it lands.
+	 *
+	 * **A fight names a town and never a code.** What travels on the channel is the geojson
+	 * feature id, because the server has no idea what a town is called — no table there holds
+	 * a place name; the layer the map is drawn from is the only thing that does. The service
+	 * reads that layer as the fight starts rather than as this sheet is raised (see its
+	 * `townNamesById`), so a name is in hand well before there is a line to put it on, and
+	 * what is printed is what the map would print: the gazetteer's trailing article moved back
+	 * to the front, the way every other place name in this game is set. The id is what is left
+	 * when the layer cannot be had at all, which is the same nothing the map would fall back
+	 * on.
 	 */
 	const entries = combatFeedService.entries;
+	const townNames = combatFeedService.townNamesById;
 
 	// The clock only: a feed is about what is happening now, and a date over every line of it
 	// would be the same date on all of them.
 	const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 
-	let names: Map<string, string> | null = null;
-	let asked = false;
+	// Both stores are named in the statement itself, so the lines are rebuilt when either the
+	// feed or the layer moves — a name that arrived into something only a helper could see
+	// would have left every line standing at the id it was first drawn with.
+	$: lines = $entries.map((entry) => ({
+		entry,
+		town: townName(entry, $townNames)
+	}));
 
-	// Asked for on mount, which is when the sheet is raised — the component only exists while
-	// it is up. Named nowhere else: the button and the counter never need a name.
-	loadNames();
-
-	async function loadNames(): Promise<void> {
-		if (asked) return;
-		asked = true;
-		try {
-			const response = await fetch('/data/geo/municipis.json');
-			const municipalities = (await response.json()) as GeoJSON.FeatureCollection;
-			names = locationAdapter.municipalityNames(municipalities);
-		} catch {
-			// The ids stand for themselves. A feed that says nothing because a map layer was
-			// not there would be worse than one naming a town by its number.
-			names = null;
-		}
-	}
-
-	function townName(entry: CombatFeedEntry): string {
-		return names?.get(entry.locationId) ?? entry.locationId;
+	function townName(entry: CombatFeedEntry, known: ReadonlyMap<string, string> | null): string {
+		const name = known?.get(entry.locationId);
+		return name ? restoreCatalanArticle(name) : entry.locationId;
 	}
 
 	// What a fight came to, in the colours the fight itself is counted in: the player's own
@@ -81,7 +76,7 @@
 	<!-- The list scrolls inside the sheet rather than the sheet scrolling, as the leaderboard's
 	     table does: the title bar stays put however far down the feed a fight sits. -->
 	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-box bg-base-200/50">
-		{#each $entries as entry (entry.id)}
+		{#each lines as { entry, town } (entry.id)}
 			<!-- One fight, read the way the game says one: whoever fought it on the left, wearing
 			     the avatar they wear everywhere else, then what they did and where, then the hour
 			     it happened at. -->
@@ -105,7 +100,7 @@
 						<span class={classNames('font-semibold', outcomeClasses[entry.outcome])}>
 							{outcomeLabel(entry)}
 						</span>
-						<span class="opacity-70">{townName(entry)}</span>
+						<span class="opacity-70">{town}</span>
 					</span>
 				</div>
 				<span class="flex-none text-xs opacity-60">{timeFormat.format(new Date(entry.at))}</span>

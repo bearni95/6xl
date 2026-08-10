@@ -2,6 +2,7 @@ import { writable, type Readable } from 'svelte/store';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient, isSupabaseConfigured } from '$services/supabase.client';
 import { combatFeedAdapter } from '$adapters/classes/combat-feed.adapter';
+import { locationAdapter } from '$adapters/classes/location.adapter';
 import {
 	COMBAT_FEED_EVENT,
 	COMBAT_FEED_LIMIT,
@@ -35,6 +36,11 @@ class CombatFeedService {
 	private readonly entriesStore = writable<CombatFeedEntry[]>([]);
 	private readonly unreadStore = writable(0);
 	private readonly openStore = writable(false);
+	/** What every town on the map is called, by geojson id — null until the layer lands, and
+	 * for good if it cannot be had. */
+	private readonly namesStore = writable<ReadonlyMap<string, string> | null>(null);
+	/** The layer, asked for once per page life however many times anybody listens. */
+	private townNames: Promise<ReadonlyMap<string, string> | null> | null = null;
 
 	/** The live subscription, while anybody is listening. */
 	private channel: RealtimeChannel | null = null;
@@ -66,6 +72,21 @@ class CombatFeedService {
 	}
 
 	/**
+	 * What the towns in the feed are called.
+	 *
+	 * An announcement names its town by geojson id and can do nothing else — no table on the
+	 * server holds a place name, and the only thing that does is the layer the map is drawn
+	 * from. So the feed reads that layer itself, and it reads it the moment anybody starts
+	 * listening rather than when the sheet is opened: it is two megabytes of geometry for the
+	 * sake of 1,790 names, and asked for at the press it would leave every line of the sheet
+	 * lettered with an id for as long as it took to arrive. Asked for at the top of a fight,
+	 * it has been in hand for minutes by the time there is anything to draw with it.
+	 */
+	get townNamesById(): Readable<ReadonlyMap<string, string> | null> {
+		return this.namesStore;
+	}
+
+	/**
 	 * Subscribe to the channel, and hand back the way off it.
 	 *
 	 * Meant to be called from a component's `onMount` and returned from it, which is what
@@ -75,6 +96,8 @@ class CombatFeedService {
 	listen(): () => void {
 		this.listeners += 1;
 		if (this.listeners === 1) this.subscribe();
+		// Alongside the socket, and never on the way to the sheet: see `townNamesById`.
+		void this.loadTownNames();
 		let released = false;
 		return () => {
 			if (released) return;
@@ -109,6 +132,26 @@ class CombatFeedService {
 		// been read the moment it is drawn, so counting it would leave a number standing
 		// over a list the player is looking straight at.
 		if (!this.showing) this.unreadStore.update((count) => count + 1);
+	}
+
+	/**
+	 * Read the municipality layer for its names, once. A layer that will not load leaves the
+	 * feed naming towns by id — which is what the map itself would be left with — and clears
+	 * the attempt, so the next fight to arrive is free to ask again.
+	 */
+	private loadTownNames(): Promise<ReadonlyMap<string, string> | null> {
+		this.townNames ??= fetch('/data/geo/municipis.json')
+			.then((response) => response.json() as Promise<GeoJSON.FeatureCollection>)
+			.then((municipalities) => {
+				const names = locationAdapter.municipalityNames(municipalities);
+				this.namesStore.set(names);
+				return names as ReadonlyMap<string, string>;
+			})
+			.catch(() => {
+				this.townNames = null;
+				return null;
+			});
+		return this.townNames;
 	}
 
 	private subscribe(): void {
