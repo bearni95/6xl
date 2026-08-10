@@ -409,28 +409,54 @@ const MOVE_SPEED = 260;
 // Across, the artwork and the movement say the same thing, and the pace reads as the
 // fighter pacing rather than as the picture being nudged.
 //
-// And it stays **inside the one cell**, paintwork and all: what the pace is pointing at is
-// that red square, so a fighter whose furthest pixel crossed the line would be pointing at
-// two of them. How far it may go is therefore the fighter's own — measured off the frames
-// it is pacing in rather than fixed, and nothing at all for a character already drawn as
-// wide as its cell ({@link MugenBoard.paceReach}).
+// It keeps **inside the one cell** wherever the fighter's own artwork leaves it the room to:
+// what the pace is pointing at is that red square, so a figure whose furthest pixel crossed
+// the line would be pointing at two of them. How far it may go is therefore the fighter's
+// own, measured off the frames it is pacing in rather than fixed ({@link
+// MugenBoard.paceReach}) — and measured **each way separately**. A fighter's mark is the
+// MUGEN axis its sheet was drawn around, shifted again to bring its head over the middle of
+// the cell ({@link Actor.crownShift}); the middle of its paintwork is neither of those and
+// is usually to one side of both. One reach about that mark therefore reads as a fighter
+// pacing off-centre — over the line at one end of the cell and never reaching the other —
+// which is exactly what it looks like. Two reaches, one per side, and the fighter walks from
+// the cell's left edge to its right edge whatever its sheet does with its axis.
+//
+// But it always moves. A good part of this roster is drawn as wide as its cell or wider, and
+// held strictly inside the square every one of those would stand perfectly still — so the
+// containment is a cap and never a floor ({@link MugenBoard.paceReach} has the figures).
 //
 // It is a *reading* and never a move: `actor.x` — where the fighter stands, and what its
 // aura and its own crown correction are hung off — is untouched, and the pace is carried by
 // the sprite alone. So the fighter is marked without the board believing it has gone
 // anywhere, and nothing that is hung off where it stands drifts with it.
 
-/** How far the paced fighter would walk off its standing mark, to either side, as a share
- * of a cell. It is what the pace *asks* for and never what it takes: what it takes is the
- * room the fighter's own artwork leaves inside its cell ({@link MugenBoard.paceReach}),
- * which for a character drawn as wide as its cell is nothing at all. */
+/** How far the paced fighter walks off its standing mark, to either side, as a share of a
+ * cell, where its own artwork leaves it the room. The most any fighter ever paces. */
 const PACE_REACH_RATIO = 0.2;
+/**
+ * How far it paces when the artwork leaves it no room at all — a character already drawn as
+ * wide as the cell it stands on, which is a good part of this roster (see the note above).
+ * The least any fighter ever paces, and the whole of what such a fighter adds to an overhang
+ * it is already standing there with.
+ *
+ * Small enough to be a fighter shifting its weight rather than one stepping off its ground,
+ * and large enough to be seen from across a board: a twelfth of a cell is some fifteen
+ * screen px each way on a phone-sized view, which on a still board is the only thing moving.
+ */
+const PACE_MIN_REACH_RATIO = 1 / 12;
 /** Speed (canvas px/s) of that walk. Slower than a fighter crossing the board
  * ({@link MOVE_SPEED}): this one is going nowhere, and a pace read as haste would say
  * something about the fight rather than about which fighter is being answered for. */
 const PACE_SPEED = 140;
 /**
- * How much faster a paced fighter's cycle runs than the sheet asks for.
+ * How much faster a paced fighter's **walk** runs than the sheet asks for.
+ *
+ * The walk, and never the pose it stands in. A fighter's walk cycles are not loaded when it
+ * is first placed — the board shows the whole line-up in its standing pose and warms the
+ * rest behind it ({@link MugenBoard.whenReady}) — so a pace asked for in those first moments
+ * has nothing to walk in and holds still in that pose. Run *that* at double and the mark
+ * arrives as a fighter twitching on the spot and then settling into a walk, which is two
+ * different things happening where one was meant to.
  *
  * The pace is a mark and not a performance, and a mark is read at a glance: the cycle a
  * MUGEN sheet times its walk at is the pace of a character crossing a stage, which on a
@@ -947,8 +973,14 @@ interface Actor {
 	 * signs {@link Actor.stepDir} uses, and they pick the same two cycles. Neither is added
 	 * to {@link Actor.x}: the fighter stands where it stood, and the offset is put on the
 	 * sprite when it is drawn.
+	 *
+	 * `walking` is whether the cycle it wants is actually loaded yet. Until it is, the pace
+	 * is on but goes nowhere and runs at no more than the sheet's own speed: a fighter still
+	 * standing in the pose it was placed in has nothing to walk in, and sliding it sideways
+	 * in that pose — or playing it at the pace's double rate — is a mark that says something
+	 * about the loading rather than about the fight.
 	 */
-	pace: { offset: number; dir: number } | null;
+	pace: { offset: number; dir: number; walking: boolean } | null;
 	/**
 	 * Whether this fighter has been taken down ({@link MugenBoard.fadeDefeated}). Once on
 	 * it never comes off, and it says two things about how the actor is drawn from then on:
@@ -2064,7 +2096,7 @@ export class MugenBoard {
 				// the pace picks up again when it arrives.
 				this.advanceFrame(
 					actor,
-					actor.pace && !actor.moving ? deltaMs * PACE_FRAME_RATE : deltaMs
+					actor.pace?.walking && !actor.moving ? deltaMs * PACE_FRAME_RATE : deltaMs
 				);
 			}
 			// Re-sort by feet-y each frame so a moving character passes in front of the
@@ -2184,12 +2216,15 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Advance the paced fighter one frame along its walk on the spot, turning it round at
-	 * either end of the reach ({@link PACE_REACH_RATIO}) and playing the walk cycle that
-	 * belongs to the way it is going — `move-left` walking left, `move-right` walking right,
-	 * exactly as a real step across the board picks them ({@link updateStep}). A fighter
-	 * with neither cycle loaded falls back to what it stands in, so it is at least still the
-	 * fighter that is moving.
+	 * Advance the paced fighter one frame along its walk on the spot, turning it round at each
+	 * end of the room it has ({@link paceReach}) and playing the walk cycle that belongs to
+	 * the way it is going — `move-left` walking left, `move-right` walking right, exactly as a
+	 * real step across the board picks them ({@link updateStep}).
+	 *
+	 * A fighter whose walk has not arrived yet does not walk: it stands in the pose it was
+	 * placed in, on its mark, at the sheet's own speed, until the board's warm hands it the
+	 * cycle. A figure sliding sideways in a standing pose is treading air, and the pace is
+	 * meant to be the fighter moving rather than the picture being dragged.
 	 *
 	 * The offset goes on the **sprite** and never on {@link Actor.x}. What a fighter's own
 	 * `x` carries is where it is standing, crown correction and all, and that is what the
@@ -2200,60 +2235,77 @@ export class MugenBoard {
 	private updatePace(actor: Actor, dt: number): void {
 		const pace = actor.pace;
 		if (!pace) return;
-		const reach = this.paceReach(actor);
-		if (reach <= 0) {
-			// Nowhere to go: this fighter is drawn as wide as the cell it stands on, so any
-			// step at all would put its far edge on its neighbour's ground. It walks on the
-			// spot without leaving the spot, which is still the one fighter moving on a board
-			// that is otherwise standing still — and the pace turns nowhere, so the cycle it
-			// is walking runs unbroken instead of flipping to the other one every frame.
+		const name = pace.dir < 0 ? actor.moveLeftAnim : actor.moveRightAnim;
+		pace.walking = !!actor.animations[name];
+		if (!pace.walking) {
 			pace.offset = 0;
 			actor.sprite.x = actor.x;
-		} else {
-			pace.offset += pace.dir * PACE_SPEED * dt;
-			if (pace.offset <= -reach) {
-				pace.offset = -reach;
-				pace.dir = 1;
-			} else if (pace.offset >= reach) {
-				pace.offset = reach;
-				pace.dir = -1;
-			}
-			actor.sprite.x = actor.x + pace.offset;
+			this.setAnimation(actor, this.standing(actor));
+			return;
 		}
-		const name = pace.dir < 0 ? actor.moveLeftAnim : actor.moveRightAnim;
-		this.setAnimation(actor, actor.animations[name] ? name : this.standing(actor));
+		const reach = this.paceReach(actor);
+		pace.offset += pace.dir * PACE_SPEED * dt;
+		if (pace.offset <= -reach.left) {
+			pace.offset = -reach.left;
+			pace.dir = 1;
+		} else if (pace.offset >= reach.right) {
+			pace.offset = reach.right;
+			pace.dir = -1;
+		}
+		actor.sprite.x = actor.x + pace.offset;
+		this.setAnimation(actor, name);
 	}
 
 	/**
-	 * How far the paced fighter may actually walk off its mark: the pace it asks for
-	 * ({@link PACE_REACH_RATIO}), or the room its own artwork leaves it inside its cell,
-	 * whichever is less — and never less than nothing.
+	 * How far the paced fighter may actually walk off its mark, **each way separately**: the
+	 * pace it asks for ({@link PACE_REACH_RATIO}), or the room its own artwork leaves it
+	 * before it reaches that side of its cell, whichever is less — and never less than
+	 * {@link PACE_MIN_REACH_RATIO}.
 	 *
 	 * What must not leave the red cell is not the fighter's axis but its **paintwork**: the
 	 * leftmost and rightmost pixels of any frame of the cycle it is pacing in
-	 * ({@link paceSpan}). The two are not the same measure and are not even symmetric — a
-	 * MUGEN axis sits wherever the author put it, so a sheet can reach much further one way
-	 * than the other, and the board then shifts the whole figure again to put its head over
-	 * the cell's middle ({@link Actor.crownShift}). So the room is worked out from the
-	 * cell's own edges inwards: how far the fighter can go before the near edge of its
-	 * artwork reaches the near edge of the cell, each way, and the smaller of the two taken
-	 * for both — a pace that leaned further one way than the other would read as a fighter
-	 * drifting off its ground rather than shifting its weight on it.
+	 * ({@link paceSpan}). The two are not the same measure and are not symmetric — a MUGEN
+	 * axis sits wherever the author put it, so a sheet can reach much further one way than
+	 * the other, and the board then shifts the whole figure again to bring its head over the
+	 * middle of the cell ({@link Actor.crownShift}). So each side is asked its own question,
+	 * from that side's edge inwards, and the answers are allowed to differ: one figure for
+	 * both would put the whole sweep off-centre, over the line at one end of the cell and
+	 * never reaching the other.
+	 *
+	 * The floor is what a fighter gets when the answer is *no room at all*, which on this
+	 * roster is a good part of it: a character is drawn at a cell's width times
+	 * {@link CHAR_HEIGHT_RATIO} over the reference height, so a sheet of about 115 source px
+	 * across already fills its cell standing still, and thirteen of the fifty-three here are
+	 * wider than that — Franky by a third of a cell, and the big ones (Fat Buu, the Eva
+	 * units, Zoro, most of the InuYasha cast) by up to a quarter. Held strictly inside the
+	 * square, every one of those would stand perfectly still, and the fighters a crowded
+	 * board most needs to pick out would be the only ones it never pointed at. So the
+	 * containment is a cap and not a floor: a fighter with room keeps politely inside its
+	 * cell, and one with none still paces a twelfth of a cell — added to an overhang it is
+	 * already standing there with, on a board drawn throughout with fighters over their
+	 * neighbours' ground.
 	 *
 	 * Nothing is cached: the fighter's own frames are a handful of numbers, the cell's width
 	 * follows the window, and the cycles the pace plays are still arriving behind the
 	 * finished board — so the room is asked for each frame and is right from the first frame
 	 * on which there is anything to ask about.
 	 */
-	private paceReach(actor: Actor): number {
+	private paceReach(actor: Actor): { left: number; right: number } {
 		const cell = this.cellWidth();
 		const half = cell / 2;
 		// Where this fighter's own mark sits relative to the middle of the cell it is
 		// standing on: its crown correction, and the drift a fallen one carries.
 		const drift = actor.x - this.cellMark(actor.column, actor.row).x;
 		const span = this.paceSpan(actor);
-		const room = Math.min(half + drift + span.left, half - drift - span.right);
-		return Math.max(0, Math.min(cell * PACE_REACH_RATIO, room));
+		// How far it can go each way before that side of its paintwork reaches that side of
+		// the cell. Negative for a fighter already over the line standing still, which is what
+		// the floor answers.
+		const hold = (room: number): number =>
+			Math.max(cell * PACE_MIN_REACH_RATIO, Math.min(cell * PACE_REACH_RATIO, room || 0));
+		return {
+			left: hold(half + drift + span.left),
+			right: hold(half - drift - span.right)
+		};
 	}
 
 	/**
@@ -2267,9 +2319,11 @@ export class MugenBoard {
 	 * `sprite.scale.x` is what keeps this in step with however the fighter was placed,
 	 * rather than restating the fit and the flip here.
 	 *
-	 * The walks are what is measured because the walks are what is drawn while pacing. A
-	 * fighter whose walks have not arrived yet is measured on what it is standing in, which
-	 * is what it will be pacing in until they do.
+	 * The walks are what is measured because the walks are what is drawn while pacing — both
+	 * of them, whichever way the fighter happens to be going this moment, so the room it has
+	 * is one figure for the whole pace and does not change under it when it turns round. A
+	 * fighter with neither loaded is not pacing at all ({@link updatePace}) and is measured on
+	 * what it stands in only so this is never asked a question with no frames in it.
 	 */
 	private paceSpan(actor: Actor): { left: number; right: number } {
 		const walks = [actor.moveLeftAnim, actor.moveRightAnim].filter(
@@ -2529,7 +2583,7 @@ export class MugenBoard {
 				// Leftwards first, which for the player's own half is the step towards the
 				// middle of the board: the fighter shifts its weight in the direction the
 				// fight is, and comes back.
-				actor.pace = { offset: 0, dir: -1 };
+				actor.pace = { offset: 0, dir: -1, walking: false };
 			} else {
 				actor.pace = null;
 				// Back on its mark at once. The sprite is the only thing the pace ever moved,
