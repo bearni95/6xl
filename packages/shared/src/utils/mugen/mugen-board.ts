@@ -229,11 +229,15 @@ const GROUND_FILL_TILES: SheetTile[] = [
  * the lower one its mirror, blades hanging off the bottom.
  *
  * They are boundary tiles — drawn to be laid where grass stops — so the field begins and
- * ends in a fringe rather than at a straight line nothing put there. Being boundaries,
- * half of each is not grass at all: both are laid over a square of {@link SKY_FILL}, so
- * what shows between the blades is sky, and not whatever the canvas happens to be standing
- * on. Which makes the field a band of ground with sky above it and below, and the fight is
- * played on the band.
+ * ends in a fringe rather than at a straight line nothing put there. Being boundaries, half
+ * of each is not grass at all, and what shows through that half is **not** the same in both
+ * places. The upper one has the sky row directly over it, so it is laid on a square of
+ * {@link SKY_FILL} and its gaps are that same sky carried down to the blades. The lower one
+ * has nothing over it and nothing under it: it is the last thing on the canvas, and its
+ * gaps are left clear so what shows between those blades is the page the board is drawn on
+ * — the canvas is transparent (`backgroundAlpha: 0`), so the board ends *into* whatever it
+ * has been put on rather than onto a colour of its own that would have to be kept in step
+ * with it.
  */
 const GROUND_TOP_EDGE_TILE: SheetTile = { column: 2, row: 2 };
 const GROUND_BOTTOM_EDGE_TILE: SheetTile = { column: 2, row: 0 };
@@ -1488,11 +1492,12 @@ export class MugenBoard {
 	 * **The field's first and last rows of squares break that alternation** and take the
 	 * sheet's two grass edges along their whole width — those rows are where the grass
 	 * starts and where it stops, and those are the tiles the sheet draws for exactly that.
-	 * Both are blades with sky between them, so each of those squares is filled sky first
-	 * and the fringe laid over it, and the fill is at a depth of its own below the grass
-	 * ({@link SKY_Z}) so it is behind the tile and not over it. The bottom one of those rows
-	 * is the apron and not a cell's, which is what keeps every square a fighter stands over
-	 * whole grass.
+	 * Both are blades with gaps between them, and only the top one is backed: its square is
+	 * filled sky first and the fringe laid over it, at a depth of its own below the grass
+	 * ({@link SKY_Z}) so the fill is behind the tile and not over it — the sky row is
+	 * directly above, and the blades have to come out of it. The bottom row is left clear
+	 * and shows the page through its gaps. The bottom row is also the apron and not a
+	 * cell's, which is what keeps every square a fighter stands over whole grass.
 	 */
 	private layGround(fill: Graphics, squares: GroundSquare[]): void {
 		if (!this.app) return;
@@ -1505,13 +1510,15 @@ export class MugenBoard {
 				continue;
 			}
 			if (fills.length === 0) continue;
-			const brink =
-				square.row === FIELD_TOP_SQUARE_ROW
-					? topEdge
-					: square.row === FIELD_BOTTOM_SQUARE_ROW
-						? bottomEdge
-						: null;
-			if (brink) {
+			const atTop = square.row === FIELD_TOP_SQUARE_ROW;
+			const brink = atTop
+				? topEdge
+				: square.row === FIELD_BOTTOM_SQUARE_ROW
+					? bottomEdge
+					: null;
+			// The top fringe comes out of the sky above it and is laid on it; the bottom one
+			// is the end of the canvas and is laid on nothing.
+			if (atTop && brink) {
 				fill.rect(square.x, square.y, square.width, square.height);
 				fill.fill({ color: SKY_FILL, alpha: 1 });
 			}
