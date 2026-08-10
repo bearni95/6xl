@@ -49,7 +49,7 @@
 			     swapped in the same box: a turn is a run of these, and text that simply
 			     changed under the eye read as one caption stuttering. -->
 			<p
-				class="max-w-md rounded-box bg-base-100/90 px-3 py-2 text-center text-sm font-medium text-balance shadow-lg sm:text-base"
+				class="max-w-md rounded-box bg-base-100/90 px-3 py-2 text-center text-xl font-medium text-balance shadow-lg"
 				in:fade={{ duration: 150 }}
 			>
 				{line}
