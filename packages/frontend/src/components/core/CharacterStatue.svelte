@@ -50,7 +50,10 @@
 	export let locationName: string | null = null;
 	// When this copy was minted, in whatever form the row carries it. It is said as a
 	// two-digit apostrophe year beside the place — 2026 reads '26 — since the panel has
-	// room for a mark, not a date. Null leaves the place standing on its own.
+	// room for a mark, not a date. Null leaves the place standing on its own — which is what
+	// a card out of the welcome or a level box arrives with, its second row saying that box's
+	// caption where a town would be, and a caption having no season to be from (see
+	// `claimMintedAt`, where the three surfaces that stand these up decide it).
 	export let spawnedAt: string | number | Date | null = null;
 	// What the second row says instead of a claim place, for a statue that is not of a copy:
 	// the album's, where the cell is a character and there is no town and no year to name. It

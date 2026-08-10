@@ -12,7 +12,7 @@
 	import { locationAdapter } from '$adapters/classes/location.adapter';
 	import { AuthStatus } from '$types/profile.type';
 	import { SpawnColor, type CharacterSpawn } from '$types/character-spawn.type';
-	import { claimPlaceName } from '$utils/spawn/team-lineup';
+	import { claimMintedAt, claimPlaceName } from '$utils/spawn/team-lineup';
 	import CharacterStatue from '$components/core/CharacterStatue.svelte';
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
@@ -455,7 +455,9 @@
 			// The stock the card was printed on, which is the ink the statue is drawn in.
 			box: spawn.box,
 			locationName: locationNameFor(spawn.locationId),
-			spawnedAt: spawn.createdAt,
+			// The year, where there is a claim place for it to stand beside; the boxes that
+			// belong to no town say their caption alone (see claimMintedAt).
+			spawnedAt: claimMintedAt(spawn.locationId, spawn.createdAt),
 			showId: showIdFor(spawn.characterId)
 		};
 	}

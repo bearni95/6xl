@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { SpawnBox, SpawnColor } from '$types/character-spawn.type';
 import { ULTRAMAR, ULTRAMAR_ID } from '$types/location.type';
 import {
+	claimMintedAt,
 	claimPlaceName,
 	teamLineupMembers,
 	type TeamLineupContext
@@ -46,6 +47,22 @@ describe('claimPlaceName', () => {
 	});
 });
 
+describe('claimMintedAt', () => {
+	const minted = '2026-01-02T03:04:05.000Z';
+
+	it('dates a card claimed on the map, and one whose town it cannot name', () => {
+		expect(claimMintedAt('ES_08028', minted)).toBe(minted);
+		expect(claimMintedAt(ULTRAMAR_ID, minted)).toBe(minted);
+		expect(claimMintedAt(null, minted)).toBe(minted);
+	});
+
+	it('dates nothing out of the two boxes that belong to no town', () => {
+		// Their panel says a caption where the place goes, and a caption has no season.
+		expect(claimMintedAt(WELCOME_BOX_ID, minted)).toBeNull();
+		expect(claimMintedAt(LEVEL_BOX_ID, minted)).toBeNull();
+	});
+});
+
 describe('teamLineupMembers', () => {
 	it('stands a card up from the registry, the assignment and the layer', () => {
 		const [member] = teamLineupMembers(
@@ -71,6 +88,23 @@ describe('teamLineupMembers', () => {
 			// The first show it belongs to, which is the one it flies.
 			showId: 37854
 		});
+	});
+
+	it('leaves a card out of a placeless box undated', () => {
+		const [member] = teamLineupMembers(
+			[
+				{
+					characterId: 'luffy',
+					color: SpawnColor.Red,
+					box: SpawnBox.White,
+					locationId: WELCOME_BOX_ID,
+					createdAt: '2026-01-02T03:04:05.000Z'
+				}
+			],
+			context()
+		);
+		expect(member.locationName).toBe(WELCOME_BOX_CAPTION);
+		expect(member.spawnedAt).toBeNull();
 	});
 
 	it('keeps the order it was handed — the lead first, as on the board', () => {

@@ -87,6 +87,26 @@ export function claimPlaceName(
 }
 
 /**
+ * When a copy was minted, as the statue's panel says it — or nothing at all for a
+ * card out of one of the two boxes that belong to no town.
+ *
+ * The year is said *beside a place*: it is which edition of that town's festa the
+ * copy came from, and it is half of "Barcelona '26". A welcome or a level box says
+ * its own caption where the place goes ({@link claimPlaceName}), and a caption is
+ * not an edition — "Benvinguda '26" dates a thing that has no seasons. The box
+ * itself has always drawn its head this way (see BoosterBox's `place`, where a
+ * caption replaces the pair outright rather than joining them); this is the same
+ * rule on the cards it dealt, so a card says exactly what the box it came out of
+ * said.
+ */
+export function claimMintedAt<T>(
+	locationId: string | null | undefined,
+	createdAt: T
+): T | null {
+	return isWelcomeLocation(locationId) || isLevelLocation(locationId) ? null : createdAt;
+}
+
+/**
  * The fielded cards as the row of statues draws them, in the order they were
  * handed over — the lead first, as on the board.
  *
@@ -108,8 +128,9 @@ export function teamLineupMembers(
 			// The box it was pulled from, which is the ink its statue is drawn in.
 			box: spawn.box,
 			locationName: claimPlaceName(spawn.locationId, context.municipalityNames),
-			// When the card was minted, said as an apostrophe year beside the place.
-			spawnedAt: spawn.createdAt,
+			// When the card was minted, said as an apostrophe year beside the place — and
+			// said by nothing at all where there is no place to say it beside.
+			spawnedAt: claimMintedAt(spawn.locationId, spawn.createdAt ?? null),
 			showId: context.showsByCharacter.get(spawn.characterId)?.[0] ?? null
 		};
 	});

@@ -1,6 +1,7 @@
 import { characters } from '@3xl/data';
 import { resolveCharacterFaceUrl } from '$utils/mugen/character-face';
 import { spawnKey } from '$utils/spawn/owned';
+import { claimMintedAt } from '$utils/spawn/team-lineup';
 import type { CharacterSpawn } from '$types/character-spawn.type';
 import type { ClaimPull } from './scene/pull.type';
 
@@ -64,7 +65,10 @@ export async function buildClaimPull(
 		rarity: context.rarityByCharacter.get(spawn.characterId) ?? null,
 		showName: context.showName,
 		locationName: context.locationName || null,
-		spawnedAt: spawn.createdAt,
+		// Dated only where the place beside it is a town: a card out of the welcome or a
+		// level box says its box's caption alone, exactly as that box's own head does
+		// (see claimMintedAt).
+		spawnedAt: claimMintedAt(spawn.locationId, spawn.createdAt),
 		isNew: !context.held.has(spawnKey(spawn.characterId, spawn.color, spawn.locationId))
 	};
 }
