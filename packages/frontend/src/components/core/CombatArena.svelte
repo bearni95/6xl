@@ -2,6 +2,7 @@
 	import classNames from 'classnames';
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
+	import CombatFeedButton from '$components/core/CombatFeedButton.svelte';
 	import CombatFlanks from '$components/core/CombatFlanks.svelte';
 	import CombatGround from '$components/core/CombatGround.svelte';
 	import CombatHead from '$components/core/CombatHead.svelte';
@@ -1559,15 +1560,19 @@
 						     it stands in is the near one. Laid over the panel rather than standing in it
 						     (`absolute`), so the fighter behind keeps the whole of the card's height —
 						     the same reason the orders are laid over the foot of it.
-						     The row is three columns wide and everything in it lives in the first of
-						     them, the other two standing empty. It is not a shrink-to-fit block any
+						     The row is three columns wide, the account in the first of them and the way
+						     into the feed in the last (below), the middle one standing empty. It is not
+						     a shrink-to-fit block any
 						     more, because what stands here changes: the card is one width and the pair
 						     of buttons it turns into is another, and a box as wide as whatever it
 						     happens to be holding would have changed size under the press. A third of
 						     the panel is a width neither of them decides, so both are drawn into the
-						     same room and nothing moves when one replaces the other. -->
-						{#if $profile}
-							<div class="absolute inset-x-2 top-2 z-10 grid grid-cols-3 gap-2">
+						     same room and nothing moves when one replaces the other.
+						     The row itself is drawn whether or not there is an account to name in it:
+						     the two corners are two different readings that happen to share a row, and
+						     the feed is not about who is playing. -->
+						<div class="absolute inset-x-2 top-2 z-10 grid grid-cols-3 gap-2">
+							{#if $profile}
 								<!-- The one cell that holds anything, and it holds both faces of it at once:
 								     the account, and the way out the account is pressed for. They are stacked
 								     in a single grid cell (`col-start-1 row-start-1` on each) rather than
@@ -1659,8 +1664,20 @@
 										</button>
 									</div>
 								</div>
-							</div>
-						{/if}
+							{/if}
+							<!-- The other corner: how many fights have finished everywhere else while this
+							     one has been going on, and the sheet that reads them out (see
+							     CombatFeedButton, which draws nothing until one has). It is across the row
+							     from the account because it is the same kind of thing — about the player
+							     rather than about the board — and because the two are the only readings on
+							     this panel that are not this fight. It stood at the end of the score banner
+							     in the head until that banner came off.
+							     Held against the far edge of its own cell, so it is the corner of the panel
+							     and not a mark a third of the way in: the cell is a third of the panel
+							     because the account across from it needs the room to change size in, and
+							     this one is a square. -->
+							<CombatFeedButton classes="col-start-3 justify-self-end" />
+						</div>
 						<!-- What the panel is worked by, at the foot of it: the way round the line, and
 						     then what may be asked of the fighter it is turned to. Two rows of one stack
 						     rather than two layers at opposite ends of the card — the arrows stood along

@@ -8,10 +8,11 @@
 	 * How many other fights have finished while this one has been going on, and the way to
 	 * see them.
 	 *
-	 * It stands at the end of the score banner in the head of the fight, past the player's own
-	 * count — the one row in the arena that is already a running account of how things stand,
-	 * which is what this is: the discs beside it are how this fight is going, and the number on
-	 * it is how many other fights have just finished.
+	 * It stands at the far corner of the player's own panel, across the row from the account
+	 * (see CombatArena): the panel is the side of the screen that is about the player rather
+	 * than about the fight, and what the rest of the game is doing meanwhile is news to the
+	 * player and not to the board. It stood at the end of the score banner in the head of the
+	 * fight until that banner came off, which is why nothing drew it for a while.
 	 *
 	 * Nothing is drawn until something has arrived. The feed has no history — it is what has
 	 * happened since this page opened (see `combat-feed.type`) — so an arena opened into a
@@ -26,15 +27,14 @@
 </script>
 
 {#if $entries.length > 0}
-	<!-- On the banner and not over it: a plate of its own would be a second thing floating on
-	     a row that is already one reading. The mark is drawn in the banner's own white, like
-	     the lane counts beside it, and the count rides its corner as a badge. -->
+	<!-- The outlined square the panel draws every one of its own presses as — the arrows that
+	     turn it, the way back from the concede — so a control that is not an order is the same
+	     shape wherever the panel puts one. Two marks and no words, like those: the catalogue's
+	     wording is the label, said to a screen reader and to a pointer resting on it.
+	     `relative` because daisyUI's button is not positioned, and the count rides its corner. -->
 	<button
 		type="button"
-		class={classNames(
-			'relative flex h-full items-center px-2 text-white transition-opacity hover:opacity-80',
-			classes
-		)}
+		class={classNames('btn relative btn-outline btn-square btn-sm', classes)}
 		aria-label={$_('combat.feed.open', { values: { count: $unread } })}
 		title={$_('combat.feed.title')}
 		on:click={() => combatFeedService.openFeed()}
@@ -43,9 +43,10 @@
 		{#if $unread > 0}
 			<!-- The number is a badge on the mark rather than a figure beside it: what it counts
 			     is how much of the feed is new, which is a thing that happens *to* the mark and
-			     goes away when the sheet is opened. -->
+			     goes away when the sheet is opened. Hung off the corner rather than inside it, the
+			     square being exactly the glyph's own room. -->
 			<span
-				class="badge badge-xs badge-error absolute top-0 right-0 px-1 font-semibold text-white"
+				class="badge badge-xs badge-error absolute -top-1 -right-1 px-1 font-semibold text-white"
 			>
 				{$unread}
 			</span>
