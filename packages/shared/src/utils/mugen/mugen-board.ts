@@ -828,10 +828,13 @@ export type OrderSide = 'left' | 'right';
  * ground:
  *
  * - `center` — the middle column, the ground neither side holds and both are playing for.
- *   Orders hung there stand still while the fighter they belong to walks off to fight.
- * - `fighter` — the very cell the fighter is standing on, so its orders are *on* it. They
- *   go where it goes, by the cell: a fighter that steps into the middle column to strike
- *   takes them with it and puts them back on the way home.
+ * - `fighter` — the fighter's **own** cell, the ground it holds, so its orders are *on* it.
+ *
+ * Either way the column stands on a cell and not on a sprite: it is put where that cell is
+ * and it stays there ({@link MugenBoard.updateOrders}). A strike run only ever borrows a
+ * fighter away from the ground it holds, and orders that walked off with it would be a
+ * column of buttons sliding across the board through the one part of a turn nobody is being
+ * asked anything.
  */
 export type OrderCell = 'center' | 'fighter';
 
@@ -846,6 +849,14 @@ interface OrderStrip {
 	container: Container;
 	buttons: BoardMark[];
 	placement: OrderPlacement;
+	/**
+	 * Nothing in this column can be tapped — every one of its marks is a reading
+	 * ({@link BoardOrder.readonly}) or an empty slot. It is what decides which side of its
+	 * own fighter the column is drawn ({@link MugenBoard.updateOrders}), read off the orders
+	 * themselves rather than told, so a column that is offered as an input cannot end up
+	 * behind the sprite that would hide it.
+	 */
+	readonly: boolean;
 }
 
 /** A character standing (and, during combat, running) on the board. */
@@ -3277,6 +3288,7 @@ export class MugenBoard {
 		const strip = actor.orders;
 		if (!strip) return;
 		strip.placement = placement;
+		strip.readonly = orders.every((order) => order.readonly || order.empty);
 		const size = this.orderSize();
 		orders.forEach((order, i) => {
 			const button = strip.buttons[i];
@@ -3357,7 +3369,12 @@ export class MugenBoard {
 			return button;
 		});
 
-		const strip: OrderStrip = { container, buttons, placement };
+		const strip: OrderStrip = {
+			container,
+			buttons,
+			placement,
+			readonly: orders.every((order) => order.readonly || order.empty)
+		};
 		actor.orders = strip;
 		this.layOutOrders(actor);
 		return strip;
@@ -3518,43 +3535,47 @@ export class MugenBoard {
 	 * ({@link OrderPlacement}) — the middle column or the fighter's own — on the fighter's
 	 * own row, inside that cell's left or right ruled side by {@link ORDER_PAD_RATIO}.
 	 *
-	 * A column is a whole cell tall ({@link ORDER_COLUMN_COUNT}, that padding included), so
-	 * it is stood on the cell's **floor** and not on the foot line its fighter stands on: a
-	 * fighter plants itself a quarter of a cell up from that floor ({@link cellFoot}), and a
-	 * full cell anchored there would hang the same quarter over the line into the row above.
-	 * The drop from the one to the other is measured off the grid itself — a cell's bottom
-	 * corner against its own foot line — so nothing here has to know what fraction of a
-	 * cell a figure stands at. Taking it off `actor.y` rather than off the row keeps it
-	 * with a fighter that is mid-step, whose feet are between two rows — and the fighter's
-	 * own drop comes off first, since a fighter tall enough to be standing on that floor
-	 * already ({@link Actor.footDrop}) is not a quarter of a cell above it.
+	 * **The cell is the ground the fighter holds, not wherever it has got to.** Both are read
+	 * off `homeColumn`/`homeRow` — the cell it was placed on, and the only thing that ever
+	 * moves them is a fighter taking new ground for good ({@link regroup}), which is a
+	 * fighter whose lane has been settled and whose column has therefore already been
+	 * cleared. So a column is put up where the fight opened it and stands there for the whole
+	 * of it: a fighter that walks out to strike, is knocked back a cell or paces its own
+	 * square leaves its orders behind, because a column sliding about the board is the last
+	 * thing a player should be following while a turn plays itself out.
 	 *
-	 * The x is the board's, so a strip is on a ruled line rather than wherever its sprite
-	 * happens to have got to: for a `center` placement that line never moves, and for a
-	 * `fighter` one it is the column the fighter is *recorded* on — which is the cell it is
-	 * stepping to from the moment the step starts, so the orders arrive on the new cell and
-	 * the fighter walks in under them rather than dragging them behind it. */
+	 * A column is a whole cell tall ({@link ORDER_COLUMN_COUNT}, its padding included), so it
+	 * is stood on the cell's **floor** and not on the foot line a fighter stands on: a figure
+	 * plants itself a quarter of a cell up from that floor ({@link cellFoot}), and a full
+	 * cell anchored there would hang the same quarter over the line into the row above. The
+	 * drop from the one to the other is measured off the grid itself — a cell's bottom corner
+	 * against its own foot line — so nothing here has to know what fraction of a cell a
+	 * figure stands at.
+	 */
 	private updateOrders(actor: Actor): void {
 		const strip = actor.orders;
 		if (!strip) return;
 		const { width } = this.orderSize();
 		const { cell, side } = strip.placement;
-		const edges = this.columnEdges(cell === 'fighter' ? actor.column : 0);
+		const edges = this.columnEdges(cell === 'fighter' ? actor.homeColumn : 0);
 		const pad = this.cellWidth() * ORDER_PAD_RATIO;
-		const floor = actor.y - actor.footDrop + footToFloor() * this.cellWidth();
+		const mark = this.cellMark(actor.homeColumn, actor.homeRow);
 		const reach = pad + width / 2;
 		strip.container.x = side === 'left' ? edges.left + reach : edges.right - reach;
-		strip.container.y = floor - pad;
+		strip.container.y = mark.y + footToFloor() * this.cellWidth() - pad;
 		// Above the board, below the callouts and the sparks — but which side of its own
-		// fighter it goes depends on whose cell it is standing in. Orders laid on the middle
-		// column are on ground nobody is standing on, so they go over everything on the
-		// board; orders standing on the fighter's own cell are *on the fighter*, and there
-		// the character is what a reader is looking at and the buttons are what is being
-		// said about it, so they pass behind its sprite (which sits at its own `y`) — over
-		// the charge aura under it, under the fighter itself. It is a reading either way:
-		// nothing behind a sprite is a thing to tap, and a rival's orders are not offered
-		// as one.
-		strip.container.zIndex = cell === 'fighter' ? actor.y - 0.25 : actor.y + 5000;
+		// fighter it goes depends on whether it is a thing to tap. A column that can be
+		// pressed goes over everything on the board, since a button a sprite is standing in
+		// front of is a button nobody can see to press. One that is only ever read passes
+		// behind its fighter — over the charge aura under it, under the figure itself — so
+		// the character stays what the reader is looking at and the buttons stay what is
+		// being said about it.
+		//
+		// Measured against where the fighter stands when it is home rather than where it is
+		// now, so the depth is settled by the same cell the column's place is, and a fighter
+		// away on a strike run does not drag its own column through the row behind it.
+		const stand = mark.y + actor.footDrop;
+		strip.container.zIndex = strip.readonly ? stand - 0.25 : stand + 5000;
 	}
 
 	/** Take a fighter's strip off the board. */
