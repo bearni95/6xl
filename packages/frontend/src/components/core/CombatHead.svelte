@@ -109,6 +109,7 @@
 				characterId={location.holder.characterId}
 				color={location.holder.color}
 				level={location.holder.level}
+				hint={$_('map.holder.title')}
 			/>
 		{:else}
 			<!-- Nobody holds the town, so nobody is named — and the cell stays, on the very surface

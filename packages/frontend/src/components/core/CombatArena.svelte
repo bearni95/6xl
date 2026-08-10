@@ -5,6 +5,7 @@
 	import CombatFlanks from '$components/core/CombatFlanks.svelte';
 	import CombatGround from '$components/core/CombatGround.svelte';
 	import CombatHead from '$components/core/CombatHead.svelte';
+	import CombatHost from '$components/core/CombatHost.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
@@ -1479,97 +1480,131 @@
 						<div class="h-full w-full">
 							<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
 						</div>
-						<!-- This fighter's three orders, at the foot of the panel: the middle three of
-						     five columns, the two end ones left standing empty. Columns of a grid rather
-						     than a row of fixed sizes, so the whole of it fits the narrowest phone and
-						     every square is the same square.
-						     Five columns for three buttons because the width of an order is settled by the
-						     row and not by what happens to be in it: the ends are held open (`col-start-2`
-						     on the first order) so the three are one size on every panel, whatever is
-						     drawn beside them and whether or not anything is. The arrows used to fill
-						     those two columns and are over the panel now (below), so had the row been cut
-						     to three, taking them off it would have made the orders half as wide again.
-						     A plain button rather than a `btn` for the three: the glyphs are the canvas's
-						     own white artwork, so what they need is a dark tile under them in *every*
-						     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
-						     button's face. So the tile stays and the states are said over it — the chosen
-						     order in the fighter's own colour, the rest dark, and one out of reach faded
-						     rather than dropped, as the board's own column greys it. -->
-						<div class="absolute inset-x-2 bottom-2 grid grid-cols-5 gap-2">
-							{#each row.orders as order, index (order.id)}
-								<!-- An order the fighter's colour hands it free is edged in that colour, exactly
-								     as the board edges it: a border round the whole button, because what is
-								     being said is about the whole of that order. On the one button *filled*
-								     with that very colour — the order the fighter has been given — a white
-								     seam is laid inside the border, which is the whole of what keeps the two
-								     apart; it is an inset ring rather than a second border so it costs the
-								     glyph no room and the three buttons stay one size whatever they wear.
-								     It comes and goes with the board's own, both being drawn off the same
-								     `gift` flag on the same list of orders, so it is only ever on the opening
-								     turn — the turn a gift is in hand for. -->
+						<!-- Whose side this is, at the corner of the panel that fields it: the same three
+						     facts the head says about the player holding the town, said about the player
+						     playing — the face they wear, the name they chose and the level they have
+						     reached (see CombatHost, which both are). A fight has two accounts in it and
+						     the arena named exactly one of them, which is the half that is somebody else.
+						     Read off the session rather than off the fight: the fight knows a team and
+						     three fighters, and who is fielding them is the account, so it is
+						     `authService.profile` here exactly as it is at the map's own corner. The
+						     level is taken off that profile rather than worked out again — it is derived
+						     from the experience once, where the account is read (`levelForExp`) — and the
+						     nameless account is worded, never stored, as the catalogue words it
+						     everywhere else.
+						     No plate: this is inside one already, and a plate on a plate is a second edge
+						     round a thing that has one. The picture leads the reading, since the corner
+						     it stands in is the near one. Laid over the panel rather than standing in it
+						     (`absolute`), so the fighter behind keeps the whole of the card's height —
+						     the same reason the orders are laid over the foot of it. -->
+						{#if $profile}
+							<CombatHost
+								name={$profile.username || $_('profile.username.none')}
+								characterId={$profile.avatarCharacterId}
+								color={$profile.avatarColor}
+								level={$profile.level}
+								plated={false}
+								faceFirst
+								classes="absolute top-2 left-2 z-10"
+							/>
+						{/if}
+						<!-- What the panel is worked by, at the foot of it: the way round the line, and
+						     then what may be asked of the fighter it is turned to. Two rows of one stack
+						     rather than two layers at opposite ends of the card — the arrows stood along
+						     the top edge for a while, which put the control that changes what the buttons
+						     are about at the far end of the panel from the buttons. They are read
+						     together, so they are drawn together, and the pair is what the thumb reaches
+						     the whole of without moving.
+						     Both rows are the same five columns, so a square is the same square on either
+						     and the two read as one block of five by three. The stack takes no pointer of
+						     its own — the gap between the rows would otherwise be a strip laid over the
+						     fighter — and each row turns them back on for itself. -->
+						<div class="pointer-events-none absolute inset-x-2 bottom-2 flex flex-col gap-2">
+							<!-- The way back round the line and the way on round it, in the two columns the
+							     orders leave open, immediately above them. They are not orders — they are
+							     what the panel is turned by — so they keep a row of their own and their own
+							     outline rather than the orders' filled tile, and they stand at the ends of
+							     it where the orders never reach.
+							     Only the two buttons take the pointer, not the row: its three empty middle
+							     cells would otherwise be a sheet laid over the fighter's picture. -->
+							<div class="grid grid-cols-5 gap-2">
 								<button
 									type="button"
-									class={classNames(
-										'relative flex aspect-square w-full items-center justify-center rounded-box border-2',
-										index === 0 && 'col-start-2',
-										orderFill(order),
-										order.gift
-											? SPAWN_BORDER_CLASSES[order.color as SpawnColor]
-											: 'border-transparent',
-										{
-											'opacity-40': order.disabled,
-											'ring-2 ring-white ring-inset': order.gift && order.selected
-										}
-									)}
-									disabled={order.disabled}
-									aria-label={ORDER_LABELS[order.id as CombatAction]}
-									aria-pressed={order.selected}
-									on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
+									class="pointer-events-auto col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
+									disabled={panelLocked}
+									aria-label={$_('combat.previousFighter')}
+									on:click={() => stepFighter(-1)}
 								>
-									<img src={order.icon} alt="" class="w-3/5" />
+									<!-- An inline triangle: this one is drawn in the document rather than onto
+									     the canvas, so it takes its colour from the text around it like every
+									     other mark in a page. -->
+									<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
+										<path d="M14 7l-5 5 5 5z" />
+									</svg>
 								</button>
-							{/each}
-						</div>
-						<!-- The way back round the line and the way on round it, laid over the whole
-						     panel rather than standing on the row of orders. They are not orders — they
-						     are what the panel is turned by — so they are drawn off that row entirely,
-						     against the fighter's own picture, one at either edge and along the top of
-						     it, the far end of the panel from the orders.
-						     Their own five columns over the same inset the orders are ruled by, with the
-						     middle three empty: it is the same grid, so an arrow stands exactly over the
-						     end column its row leaves open and the two layers are read as one row of five
-						     wherever they cross. `items-start` rather than a height, so the pair sits on
-						     the top edge of the panel whatever the panel came out at — the band under a
-						     board on a phone, the full height of the view lying down — and the picture
-						     runs on under it.
-						     The layer takes no pointer itself and only the two buttons do, or its three
-						     empty cells would be a sheet laid over the orders and the fighter under it. -->
-						<div class="pointer-events-none absolute inset-2 grid grid-cols-5 items-start gap-2">
-							<button
-								type="button"
-								class="pointer-events-auto col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
-								disabled={panelLocked}
-								aria-label={$_('combat.previousFighter')}
-								on:click={() => stepFighter(-1)}
-							>
-								<!-- An inline triangle: this one is drawn in the document rather than onto
-								     the canvas, so it takes its colour from the text around it like every
-								     other mark in a page. -->
-								<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
-									<path d="M14 7l-5 5 5 5z" />
-								</svg>
-							</button>
-							<button
-								type="button"
-								class="pointer-events-auto col-start-5 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
-								disabled={panelLocked}
-								aria-label={$_('combat.nextFighter')}
-								on:click={() => stepFighter(1)}
-							>
-								<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
-									<path d="M10 7l5 5-5 5z" />
-								</svg>
-							</button>
+								<button
+									type="button"
+									class="pointer-events-auto col-start-5 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
+									disabled={panelLocked}
+									aria-label={$_('combat.nextFighter')}
+									on:click={() => stepFighter(1)}
+								>
+									<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
+										<path d="M10 7l5 5-5 5z" />
+									</svg>
+								</button>
+							</div>
+							<!-- This fighter's three orders: the middle three of five columns, the two end
+							     ones left standing empty. Columns of a grid rather than a row of fixed sizes,
+							     so the whole of it fits the narrowest phone and every square is the same
+							     square.
+							     Five columns for three buttons because the width of an order is settled by the
+							     row and not by what happens to be in it: the ends are held open (`col-start-2`
+							     on the first order) so the three are one size on every panel, whatever is
+							     drawn beside them and whether or not anything is. What is drawn beside them is
+							     the arrows, in the row above and in those very columns, so the two ends are
+							     kept open here for the same reason they are filled there.
+							     A plain button rather than a `btn` for the three: the glyphs are the canvas's
+							     own white artwork, so what they need is a dark tile under them in *every*
+							     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
+							     button's face. So the tile stays and the states are said over it — the chosen
+							     order in the fighter's own colour, the rest dark, and one out of reach faded
+							     rather than dropped, as the board's own column greys it. -->
+							<div class="pointer-events-auto grid grid-cols-5 gap-2">
+								{#each row.orders as order, index (order.id)}
+									<!-- An order the fighter's colour hands it free is edged in that colour, exactly
+									     as the board edges it: a border round the whole button, because what is
+									     being said is about the whole of that order. On the one button *filled*
+									     with that very colour — the order the fighter has been given — a white
+									     seam is laid inside the border, which is the whole of what keeps the two
+									     apart; it is an inset ring rather than a second border so it costs the
+									     glyph no room and the three buttons stay one size whatever they wear.
+									     It comes and goes with the board's own, both being drawn off the same
+									     `gift` flag on the same list of orders, so it is only ever on the opening
+									     turn — the turn a gift is in hand for. -->
+									<button
+										type="button"
+										class={classNames(
+											'relative flex aspect-square w-full items-center justify-center rounded-box border-2',
+											index === 0 && 'col-start-2',
+											orderFill(order),
+											order.gift
+												? SPAWN_BORDER_CLASSES[order.color as SpawnColor]
+												: 'border-transparent',
+											{
+												'opacity-40': order.disabled,
+												'ring-2 ring-white ring-inset': order.gift && order.selected
+											}
+										)}
+										disabled={order.disabled}
+										aria-label={ORDER_LABELS[order.id as CombatAction]}
+										aria-pressed={order.selected}
+										on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
+									>
+										<img src={order.icon} alt="" class="w-3/5" />
+									</button>
+								{/each}
+							</div>
 						</div>
 					</div>
 				{/if}

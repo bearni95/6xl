@@ -32,25 +32,52 @@
 	// The level they have reached, worked out from their experience by whoever built the
 	// plate — never stored, and never recomputed here.
 	export let level: number;
+	// Whether the reading carries a plate of its own. It does in the head of the fight, where
+	// it is one cell of a block of chrome laid over the board and has to be read off its own
+	// surface. It does not where it stands *inside* something already printed on one — the
+	// player's own account at the corner of their orders panel — since a plate on a plate is a
+	// second edge drawn round a thing that already has one.
+	export let plated: boolean = true;
+	// Which end the picture is at. The face goes last where the reading is set against the
+	// far edge of its cell (the head's right-hand cell, facing the town's plate across the
+	// middle) and first where it stands at the near edge of what it is in, which is what the
+	// corner of the orders panel is: a picture reads as the start of an account, so at the
+	// left it comes first and the name follows it.
+	export let faceFirst: boolean = false;
+	// What the reading is a reading of, said to a pointer resting on it. The caller's, because
+	// only the caller knows: the same three facts are somebody else's account in the head of
+	// the fight and the player's own in their panel. Null carries no tooltip at all, which is
+	// the right answer for the one an account is looking at itself in.
+	export let hint: string | null = null;
 	export let classes: string = '';
 
 	$: initial = (name || '?').charAt(0).toUpperCase();
 </script>
 
-<!-- Read the other way round from the town's plate beside it: the reading first and the face
-	at the far end. This is the right-hand cell of the head, so the picture goes to the outer
-	edge of it and the type is set against the picture — the two cells then face each other
-	across the middle of the head, each with its portrait at its own end, rather than both
-	pointing the same way and leaving the head with a face in the middle of it.
-	`flex-1` on the reading is what pushes the avatar out there: the column takes whatever
-	width the cell has spare, so the face is at the end of the cell and not merely after the
-	name. `min-w-0` beside it is what lets a long username truncate rather than push the whole
-	head wider — a flex item's floor is its content otherwise. -->
-<div class={classNames(PLATE_FLUSH_CLASSES, classes)} title={$_('map.holder.title')}>
+<!-- In the head of the fight this is read the other way round from the town's plate beside
+	it: the reading first and the face at the far end. That is the right-hand cell of the head,
+	so the picture goes to the outer edge of it and the type is set against the picture — the
+	two cells then face each other across the middle of the head, each with its portrait at its
+	own end, rather than both pointing the same way and leaving the head with a face in the
+	middle of it. `flex-1` on the reading is what pushes the avatar out there: the column takes
+	whatever width the cell has spare, so the face is at the end of the cell and not merely
+	after the name. Turned round (`faceFirst`) there is nothing to push against — the box is as
+	wide as what is in it — so the reading takes its own width and the picture leads it.
+	`min-w-0` either way is what lets a long username truncate rather than push the whole head
+	wider: a flex item's floor is its content otherwise.
+	The level's line is faded rather than tinted (`opacity-70` and not `text-white/70`), so it
+	is seven tenths of whatever ink it is standing in — the plate's white in the head, and
+	whatever the panel is set in where this carries no plate. -->
+<div class={classNames(plated && PLATE_FLUSH_CLASSES, classes)} title={hint}>
 	<div class="flex items-center gap-2">
-		<div class="flex min-w-0 flex-1 flex-col text-right leading-tight">
+		<div
+			class={classNames(
+				'flex min-w-0 flex-col leading-tight',
+				faceFirst ? 'text-left' : 'flex-1 text-right'
+			)}
+		>
 			<span class="truncate text-sm font-semibold">{name}</span>
-			<span class="truncate text-xs font-medium text-white/70">
+			<span class="truncate text-xs font-medium opacity-70">
 				{$_('profile.levelBadge', { values: { level } })}
 			</span>
 		</div>
@@ -61,7 +88,7 @@
 			ownColors={false}
 			size="w-10"
 			textClasses="text-base font-bold"
-			classes="flex-none"
+			classes={classNames('flex-none', faceFirst && 'order-first')}
 		/>
 	</div>
 </div>
