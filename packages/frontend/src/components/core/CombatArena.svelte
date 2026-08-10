@@ -1497,17 +1497,18 @@
 						<!-- The way back round the line and the way on round it, laid over the whole
 						     panel rather than standing on the row of orders. They are not orders — they
 						     are what the panel is turned by — so they are drawn off that row entirely,
-						     against the fighter's own picture, one at either edge and level with the
-						     middle of it, where a thing that steps a picture along is looked for.
+						     against the fighter's own picture, one at either edge and along the top of
+						     it, the far end of the panel from the orders.
 						     Their own five columns over the same inset the orders are ruled by, with the
 						     middle three empty: it is the same grid, so an arrow stands exactly over the
 						     end column its row leaves open and the two layers are read as one row of five
-						     wherever they cross. `items-center` rather than a height, so the pair is
-						     centred on whatever the panel came out at — the band under a board on a phone,
-						     the full height of the view lying down.
+						     wherever they cross. `items-start` rather than a height, so the pair sits on
+						     the top edge of the panel whatever the panel came out at — the band under a
+						     board on a phone, the full height of the view lying down — and the picture
+						     runs on under it.
 						     The layer takes no pointer itself and only the two buttons do, or its three
 						     empty cells would be a sheet laid over the orders and the fighter under it. -->
-						<div class="pointer-events-none absolute inset-2 grid grid-cols-5 items-center gap-2">
+						<div class="pointer-events-none absolute inset-2 grid grid-cols-5 items-start gap-2">
 							<button
 								type="button"
 								class="pointer-events-auto col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
