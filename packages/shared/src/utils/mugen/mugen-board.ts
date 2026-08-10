@@ -577,14 +577,33 @@ interface MarkSize {
 	gap: number;
 }
 
-/** Which end of the board's central column a fighter's orders stand at. */
+/** Which of a cell's two ruled sides a column of orders stands flush inside. */
 export type OrderSide = 'left' | 'right';
+
+/**
+ * Which cell of the board a column of orders stands in — always on its fighter's own row,
+ * so a lane's orders are read across the lane, but not necessarily in its fighter's own
+ * ground:
+ *
+ * - `center` — the middle column, the ground neither side holds and both are playing for.
+ *   Orders hung there stand still while the fighter they belong to walks off to fight.
+ * - `fighter` — the very cell the fighter is standing on, so its orders are *on* it. They
+ *   go where it goes, by the cell: a fighter that steps into the middle column to strike
+ *   takes them with it and puts them back on the way home.
+ */
+export type OrderCell = 'center' | 'fighter';
+
+/** Where a fighter's column of orders is put: which cell, and which side of it. */
+export interface OrderPlacement {
+	cell: OrderCell;
+	side: OrderSide;
+}
 
 /** The column of order buttons standing for one fighter. */
 interface OrderStrip {
 	container: Container;
 	buttons: BoardMark[];
-	side: OrderSide;
+	placement: OrderPlacement;
 }
 
 /** A character standing (and, during combat, running) on the board. */
@@ -2475,25 +2494,25 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Give a fighter the orders it can be given, drawn as a column of square buttons a
-	 * cell tall ({@link ORDER_COLUMN_COUNT}) standing in the board's **central column** —
-	 * on the foot line its own fighter stands on, and flush inside one of the two lines
-	 * that column is ruled between ({@link centerColumnEdges}). So the orders belonging to
-	 * one lane are the two strips standing on that lane's own line, one against each
-	 * border, and a side's three are a straight run down the middle of the board instead of
-	 * a set of columns that drift with whatever their fighters are doing.
+	 * Give a fighter the orders it can be given, drawn as a column of square buttons that
+	 * fills one cell of the board ({@link ORDER_COLUMN_COUNT}), on the fighter's own row
+	 * and flush inside one of that cell's two ruled sides.
 	 *
-	 * `side` says which end of that column this fighter's strip stands at, and is the
-	 * caller's to decide because it is about the fight and not about the board: the two
-	 * teams hold the halves either side, and which border a team's orders are read against
-	 * is a thing about the game.
+	 * `placement` says which cell and which side ({@link OrderPlacement}), and is the
+	 * caller's to decide because it is about the fight and not about the board: whose
+	 * orders these are, whether they belong on the ground being played for or on the
+	 * fighter's own, and which border they are read against are all things about the game.
 	 *
 	 * Called on every change of the fight's state, so it rebuilds only when the *set*
 	 * of orders changes and otherwise just repaints the buttons it already has: a
 	 * strip torn down and rebuilt each time would drop the pointer state mid-tap and
 	 * flicker its glyphs while their textures reloaded. An empty list clears the strip.
 	 */
-	setOrders(actorId: string, orders: BoardOrder[], side: OrderSide = 'right'): void {
+	setOrders(
+		actorId: string,
+		orders: BoardOrder[],
+		placement: OrderPlacement = { cell: 'center', side: 'right' }
+	): void {
 		const actor = this.findActor(actorId);
 		if (!actor || !this.app) return;
 		if (orders.length === 0) {
@@ -2506,12 +2525,12 @@ export class MugenBoard {
 			actor.orders.buttons.every((button, i) => button.id === orders[i].id);
 		if (!sameSet) {
 			this.clearOrders(actor);
-			actor.orders = this.buildOrders(actor, orders, side);
+			actor.orders = this.buildOrders(actor, orders, placement);
 		}
 
 		const strip = actor.orders;
 		if (!strip) return;
-		strip.side = side;
+		strip.placement = placement;
 		const size = this.orderSize();
 		orders.forEach((order, i) => {
 			const button = strip.buttons[i];
@@ -2541,7 +2560,7 @@ export class MugenBoard {
 	}
 
 	/** Build a fighter's strip: one button per order, glyphs loaded as they arrive. */
-	private buildOrders(actor: Actor, orders: BoardOrder[], side: OrderSide): OrderStrip {
+	private buildOrders(actor: Actor, orders: BoardOrder[], placement: OrderPlacement): OrderStrip {
 		const container = new Container();
 		container.sortableChildren = false;
 		this.app!.stage.addChild(container);
@@ -2592,7 +2611,7 @@ export class MugenBoard {
 			return button;
 		});
 
-		const strip: OrderStrip = { container, buttons, side };
+		const strip: OrderStrip = { container, buttons, placement };
 		actor.orders = strip;
 		this.layOutOrders(actor);
 		return strip;
@@ -2691,26 +2710,22 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Screen x of the two lines the central column (q = 0) is ruled between — the shared
-	 * ground the two halves meet over, and the one column of this board that belongs to
-	 * neither side. Both ends of it are a border with a half, which is what makes it the
-	 * place to hang each side's orders against.
-	 *
-	 * A column's x owes nothing to which row it is taken on, the field being a rectangle,
-	 * so any row answers for the whole of it.
+	 * Screen x of the two lines the column `q` is ruled between. A column's x owes nothing
+	 * to which row it is taken on, the field being a rectangle, so any row answers for the
+	 * whole of it.
 	 */
-	private centerColumnEdges(): { left: number; right: number } {
-		const middle = cellCenter(0, 0).x;
+	private columnEdges(q: number): { left: number; right: number } {
+		const middle = cellCenter(q, 0).x;
 		return { left: this.project(middle - 0.5, 0).x, right: this.project(middle + 0.5, 0).x };
 	}
 
 	/**
 	 * Stack the buttons in a column and size their glyphs to fit. The column is laid out
-	 * upward from its own origin — the foot line its fighter stands on
-	 * ({@link updateOrders}) — so the bottom button sits on the ground the fighter is
-	 * standing on and the rest rise from it, while the list still reads top to bottom in
-	 * the order it was handed in. Three buttons and their gaps are a cell tall
-	 * ({@link ORDER_COLUMN_COUNT}), so the column is as high off that line as a cell.
+	 * upward from its own origin — the floor of the cell it stands in
+	 * ({@link updateOrders}) — so the bottom button sits on the line under that cell and
+	 * the rest rise from it, while the list still reads top to bottom in the order it was
+	 * handed in. Three buttons and their gaps are a cell tall ({@link ORDER_COLUMN_COUNT}),
+	 * so the top one finishes on the line over it and the column is the cell.
 	 */
 	private layOutOrders(actor: Actor): void {
 		const strip = actor.orders;
@@ -2728,29 +2743,33 @@ export class MugenBoard {
 		});
 	}
 
-	/** Keep a fighter's column standing at the end of the central column it was given, on
-	 * the very line its fighter is standing on.
+	/** Keep a fighter's column of orders standing in the cell it was placed in
+	 * ({@link OrderPlacement}) — the middle column or the fighter's own — on the fighter's
+	 * own row, and flush inside that cell's left or right ruled side.
 	 *
-	 * The x is the board's and not the fighter's — flush inside the left or the right line
-	 * ({@link centerColumnEdges}) — so a side's orders are on one vertical line whatever
-	 * their fighters are doing, and a fighter walking to a duel no longer drags its orders
-	 * across the board with it.
+	 * A column is a whole cell tall ({@link ORDER_COLUMN_COUNT}), so it is stood on the
+	 * cell's **floor** and not on the foot line its fighter stands on: a fighter plants
+	 * itself a quarter of a cell up from that floor ({@link cellFoot}), and a full cell
+	 * anchored there would hang the same quarter over the line into the row above. The
+	 * drop from the one to the other is measured off the grid itself — a cell's bottom
+	 * corner against its own foot line — so nothing here has to know what fraction of a
+	 * cell a figure stands at. Taking it off `actor.y` rather than off the row keeps it
+	 * with a fighter that is mid-step, whose feet are between two rows.
 	 *
-	 * The y is the fighter's own: `actor.y` is the foot line of the cell it is in
-	 * ({@link cellFoot}, three quarters of the way down rather than the bottom edge), the
-	 * buttons stack upward from it, so the column of orders is planted on the ground its
-	 * fighter is planted on and the two read as standing on one line across the lane. It is
-	 * a cell tall ({@link ORDER_COLUMN_COUNT}), and a fighter stands a quarter of a cell up
-	 * from the floor, so the top of the column reaches that same quarter over the line into
-	 * the row above — which is what standing on the ground rather than filling the cell
-	 * costs, and is why the lanes have a row of plain board above them to reach into. */
+	 * The x is the board's, so a strip is on a ruled line rather than wherever its sprite
+	 * happens to have got to: for a `center` placement that line never moves, and for a
+	 * `fighter` one it is the column the fighter is *recorded* on — which is the cell it is
+	 * stepping to from the moment the step starts, so the orders arrive on the new cell and
+	 * the fighter walks in under them rather than dragging them behind it. */
 	private updateOrders(actor: Actor): void {
 		const strip = actor.orders;
 		if (!strip) return;
 		const { width } = this.orderSize();
-		const edges = this.centerColumnEdges();
-		strip.container.x = strip.side === 'left' ? edges.left + width / 2 : edges.right - width / 2;
-		strip.container.y = actor.y;
+		const { cell, side } = strip.placement;
+		const edges = this.columnEdges(cell === 'fighter' ? actor.column : 0);
+		const footToFloor = (cellCorners(0, 0)[2].y - cellFoot(0, 0).y) * this.cellWidth();
+		strip.container.x = side === 'left' ? edges.left + width / 2 : edges.right - width / 2;
+		strip.container.y = actor.y + footToFloor;
 		// Above the board and its own fighter, below the callouts and the sparks.
 		strip.container.zIndex = actor.y + 5000;
 	}
