@@ -4,6 +4,7 @@
 	import { _ } from 'svelte-i18n';
 	import CombatFlanks from '$components/core/CombatFlanks.svelte';
 	import CombatGround from '$components/core/CombatGround.svelte';
+	import CombatHost from '$components/core/CombatHost.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import TownPlate from '$components/core/TownPlate.svelte';
@@ -1366,9 +1367,10 @@
 			     are both there now on every screen, which is what they were always meant to be —
 			     one order given on either is drawn on both.
 			     One fighter at a time, whichever way up: the character on
-			     show, and under it one row of five squares — an arrow, this fighter's three
-			     orders, an arrow — so everything the panel can be pressed for is on one line and
-			     the same size. A phone is a screen with room for one thing, so it is given one
+			     show, this fighter's three orders squared off at the foot of it, and an arrow at
+			     either edge of the picture — so everything the panel can be pressed for is one
+			     square of the same size, ruled by one grid of five columns whether it is drawn on
+			     the row or over it. A phone is a screen with room for one thing, so it is given one
 			     thing, at the size a thing that has to be hit wants to be — where laying all
 			     three fighters out at once meant nine buttons over the width of a phone, each a
 			     third of a third of it.
@@ -1400,10 +1402,10 @@
 			     and no other, walks on the spot on its own cell while it is waiting to be told
 			     something (see `syncPacing`). So the panel names one of the three and the picture
 			     points at the same one, and neither has to describe the other.
-			     The row of five is then laid *over* the foot of that picture rather than under
-			     it, which is what lets the picture have the whole band: the buttons are what has
-			     to be reached, so they take the end of the screen the thumb is at, and the
-			     character stands behind them.
+			     The orders are then laid *over* the foot of that picture rather than under it,
+			     which is what lets the picture have the whole band: the buttons are what has to
+			     be reached, so they take the end of the screen the thumb is at, and the character
+			     stands behind them. The arrows are over the picture too, at its own middle height.
 			     On its own fill: it is the foot of the sheet, where the page is graded down to
 			     nine tenths and the town is faintly through it, so the orders read off their own
 			     ground rather than off whatever is under there.
@@ -1441,26 +1443,16 @@
 						<div class="h-full w-full">
 							<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
 						</div>
-						<!-- Everything that can be pressed, on one row of five squares: the way back
-						     round the line, this fighter's three orders, and the way on round it. Five
-						     columns of a grid rather than a row of fixed sizes, so the whole of it fits
-						     the narrowest phone and every square is the same square — which is what puts
-						     the arrows *on* the panel's own line instead of holding it between them.
-						     It is two grids over one box and not one grid: the orders are laid on the
-						     panel and the arrows are laid over them, both `grid-cols-5` across the same
-						     inset, so the five columns are the same five columns and a square in either
-						     layer lands exactly where the other layer's would. The orders take the middle
-						     three (`col-start-2` on the first of them) and leave the end columns standing
-						     empty, which is the whole reason for the split: the three are the width five
-						     columns give them whether or not an arrow is drawn beside them, so nothing on
-						     this row resizes when a fighter is handed no orders — down, or having taken
-						     its lane, exactly as its strip on the board is cleared — and the arrows are
-						     still there to walk past it with. The arrows' layer takes no pointer itself,
-						     only its two buttons do, or the three empty cells between them would be a
-						     sheet laid over the orders underneath.
-						     They are outlined rather than filled, because they are not orders: a filled
-						     square on this row is an order, and the one in the fighter's own colour is
-						     the order it has been given.
+						<!-- This fighter's three orders, at the foot of the panel: the middle three of
+						     five columns, the two end ones left standing empty. Columns of a grid rather
+						     than a row of fixed sizes, so the whole of it fits the narrowest phone and
+						     every square is the same square.
+						     Five columns for three buttons because the width of an order is settled by the
+						     row and not by what happens to be in it: the ends are held open (`col-start-2`
+						     on the first order) so the three are one size on every panel, whatever is
+						     drawn beside them and whether or not anything is. The arrows used to fill
+						     those two columns and are over the panel now (below), so had the row been cut
+						     to three, taking them off it would have made the orders half as wide again.
 						     A plain button rather than a `btn` for the three: the glyphs are the canvas's
 						     own white artwork, so what they need is a dark tile under them in *every*
 						     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
@@ -1502,12 +1494,20 @@
 								</button>
 							{/each}
 						</div>
-						<!-- The arrows, laid over the row rather than in it: their own five columns across
-						     the same inset, so each keeps the end column it always kept and the three cells
-						     between them are simply left empty for the orders beneath to show through. The
-						     layer itself is not pressable — only the two buttons are — since those three
-						     empty cells lie directly over the orders. -->
-						<div class="pointer-events-none absolute inset-x-2 bottom-2 grid grid-cols-5 gap-2">
+						<!-- The way back round the line and the way on round it, laid over the whole
+						     panel rather than standing on the row of orders. They are not orders — they
+						     are what the panel is turned by — so they are drawn off that row entirely,
+						     against the fighter's own picture, one at either edge and level with the
+						     middle of it, where a thing that steps a picture along is looked for.
+						     Their own five columns over the same inset the orders are ruled by, with the
+						     middle three empty: it is the same grid, so an arrow stands exactly over the
+						     end column its row leaves open and the two layers are read as one row of five
+						     wherever they cross. `items-center` rather than a height, so the pair is
+						     centred on whatever the panel came out at — the band under a board on a phone,
+						     the full height of the view lying down.
+						     The layer takes no pointer itself and only the two buttons do, or its three
+						     empty cells would be a sheet laid over the orders and the fighter under it. -->
+						<div class="pointer-events-none absolute inset-2 grid grid-cols-5 items-center gap-2">
 							<button
 								type="button"
 								class="pointer-events-auto col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
@@ -1563,6 +1563,22 @@
 				class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
 			>
 				<div class="flex flex-col">
+					<!-- Whose town it is, above the town itself — and only where somebody holds it.
+					     A fight over a taken town is a fight with the player sitting on it: the line-up
+					     on the other side of the board is theirs, so who they are is read before what
+					     the place is called. A town still on its seeded house team belongs to nobody and
+					     gets no panel at all, which is what an absent holder means (see MapMarker's).
+					     The plate below already names them on a row of its own, as every pin does; this
+					     is the account — face, name and level — which is how this game says a player
+					     wherever it says one. -->
+					{#if location?.holder}
+						<CombatHost
+							name={location.holder.name}
+							characterId={location.holder.characterId}
+							color={location.holder.color}
+							level={location.holder.level}
+						/>
+					{/if}
 					<!-- The town, on the very plate its pin carries on the map: the same mark, drawn
 					     the same way, showing what was pressed to get here. Only the challenge button
 					     is missing, and the caller is what leaves it out — a fight already under way
