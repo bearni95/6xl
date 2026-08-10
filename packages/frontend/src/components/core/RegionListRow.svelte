@@ -49,14 +49,20 @@
 	// radio's play/pause, stood on the crumb's own tile, and the song at the far end — for the
 	// same reason the box is out here: a button does not hold a button. Then the mark and the
 	// song became that row's second line, handed in through a slot, and the row itself was the
-	// press. Both are gone with the radio, which is the middle of the band across the top of the
-	// page now (see MusicBanner): every row this game draws is one press that opens a place, and
-	// what stands under the name is the show it flies.
+	// press. Both are gone with the radio, which is a row of its own along the map's bottom edge
+	// now, its play/pause a square on the band under that (see MusicBanner, MusicToggle): every
+	// row this game draws is one press that opens a place, and what stands under the name is the
+	// show it flies.
 </script>
 
+<!-- `min-w-0` because the list that draws most of these lays them two to a line (see
+	RegionLocationList), and a grid track is floored at its content's own width unless the item
+	standing in it says otherwise — without it a long town name widens its column instead of
+	truncating inside it, and the two columns stop being halves. It costs the flex rows that draw
+	this elsewhere nothing: they hand it a share of their own width already. -->
 <div
 	class={classNames(
-		'flex items-stretch rounded-md',
+		'flex min-w-0 items-stretch rounded-md',
 		marked ? 'bg-primary text-primary-content hover:bg-primary/90' : 'hover:bg-white/10'
 	)}
 >

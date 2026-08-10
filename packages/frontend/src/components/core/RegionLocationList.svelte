@@ -109,7 +109,11 @@
 					<span>{$_(REGION_TYPE_KEYS[group.type])}</span>
 					<span class="opacity-60 tabular-nums">{group.rows.length}</span>
 				</summary>
-				<div class="flex flex-col gap-0.5">
+				<!-- Two to a line, as the level below is: what is under a tier's heading is the same
+					kind of thing listed the same way, and a search that answered in one column while
+					the level answers in two would read as a different list rather than as the same
+					list of places asked a question. -->
+				<div class="grid grid-cols-2 gap-0.5">
 					{#each group.rows as row (row.key)}
 						<RegionListRow
 							{row}
@@ -128,15 +132,26 @@
 		<!-- The level itself: every place the open region divides into, or the ones flying the show
 			picked on the shares row above. The row that is the place the map is open on
 			takes the fill, so it can be found among its sisters without being counted along them —
-			only a town is ever among its own level, so there is at most one of them. -->
-		{#each visibleRows as row (row.key)}
-			<RegionListRow
-				{row}
-				current={row.key === current?.key}
-				marked={row.key === current?.key}
-				boxWidth={REGION_ROW_BOX_WIDTH}
-				onSelect={(key) => dispatch('select', { key })}
-			/>
-		{/each}
+			only a town is ever among its own level, so there is at most one of them.
+			Two to a line at every width (`grid-cols-2`), and not a column that becomes two on a
+			wide screen: a comarca is forty towns and a province several hundred, and a single file
+			of them is a scroller a reader drags through to find one name. Two columns halve that
+			run at every size, and the entries are short — a tile, a name, the show under it — so
+			half a panel is a box a name fits in rather than one it is cut to. Reading order is
+			unchanged: a grid fills its first row before its second, so the names still run in the
+			order they were handed over, left to right and then down.
+			`gap-0.5` in both directions, which is the gap the run of rows already had between
+			them — the same list, folded, and not a table of cards. -->
+		<div class="grid grid-cols-2 gap-0.5">
+			{#each visibleRows as row (row.key)}
+				<RegionListRow
+					{row}
+					current={row.key === current?.key}
+					marked={row.key === current?.key}
+					boxWidth={REGION_ROW_BOX_WIDTH}
+					onSelect={(key) => dispatch('select', { key })}
+				/>
+			{/each}
+		</div>
 	{/if}
 </div>
