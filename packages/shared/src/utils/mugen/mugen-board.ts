@@ -393,6 +393,35 @@ const VIEWPORT_HEIGHT = '100dvh';
 
 /** Horizontal speed (canvas px/s) a character runs between cells during combat. */
 const MOVE_SPEED = 260;
+
+// --- Pacing: the fighter the orders are being given to ------------------------
+// One of the player's fighters is the one being answered for at any moment — the one the
+// document's panel is turned to — and this is how the board says which. It walks on the
+// spot: to one side of its own cell and back across it, in the two walk cycles it already
+// owns (`move-left` going left, `move-right` coming back right), so what marks it is the
+// fighter itself moving rather than a mark drawn near it. Nothing is added to the picture,
+// nothing is drawn over the board, and a fighter that is moving is the one thing on a still
+// board that cannot be missed.
+//
+// It is walked **across** its cell and not up and down it, which is the axis the two cycles
+// were drawn on: a character walking left is drawn stepping leftwards, so a sprite carried
+// downwards under it is a figure treading air in one direction while it slides in another.
+// Across, the artwork and the movement say the same thing, and the pace reads as the
+// fighter pacing rather than as the picture being nudged.
+//
+// It is a *reading* and never a move: `actor.x` — where the fighter stands, and what its
+// aura and its own crown correction are hung off — is untouched, and the pace is carried by
+// the sprite alone. So the fighter is marked without the board believing it has gone
+// anywhere, and nothing that is hung off where it stands drifts with it.
+
+/** How far the paced fighter walks off its standing mark, to either side, as a share of a
+ * cell. Kept well inside the cell: the fighter is stepping about on its own ground, not
+ * leaving it — the red cell it is ruled by is exactly what is being pointed at. */
+const PACE_REACH_RATIO = 0.2;
+/** Speed (canvas px/s) of that walk. Slower than a fighter crossing the board
+ * ({@link MOVE_SPEED}): this one is going nowhere, and a pace read as haste would say
+ * something about the fight rather than about which fighter is being answered for. */
+const PACE_SPEED = 70;
 /** Frames of an aura animation (static/auras/<color>/1..N.png). */
 const AURA_FRAMES = 4;
 /** How long each aura frame shows (ms). */
@@ -890,6 +919,18 @@ interface Actor {
 	moving: boolean;
 	/** Direction of the in-progress step: -1 left, +1 right, 0 when stationary. */
 	stepDir: number;
+	/**
+	 * The walk on the spot that says this is the fighter being answered for
+	 * ({@link MugenBoard.setPacing}), or null when it simply stands there.
+	 *
+	 * `offset` is where in that walk it currently is: screen px off its cell's standing
+	 * mark, positive rightwards, always within {@link PACE_REACH_RATIO} of a cell either
+	 * way. `dir` is which way it is going, -1 leftwards and +1 rightwards — the same two
+	 * signs {@link Actor.stepDir} uses, and they pick the same two cycles. Neither is added
+	 * to {@link Actor.x}: the fighter stands where it stood, and the offset is put on the
+	 * sprite when it is drawn.
+	 */
+	pace: { offset: number; dir: number } | null;
 	/**
 	 * Whether this fighter has been taken down ({@link MugenBoard.fadeDefeated}). Once on
 	 * it never comes off, and it says two things about how the actor is drawn from then on:
@@ -1804,6 +1845,7 @@ export class MugenBoard {
 			targetY: stand.y,
 			moving: false,
 			stepDir: 0,
+			pace: null,
 			defeated: false
 		};
 		this.applyFrame(actor);
@@ -2106,8 +2148,45 @@ export class MugenBoard {
 			}
 		} else {
 			actor.stepDir = 0;
-			this.setAnimation(actor, this.standing(actor));
+			// Standing still is the only place a pace happens, and while one is on it is the
+			// whole of what the actor is doing: it walks its own cell instead of settling
+			// into what it stands in. A fighter that has somewhere to be goes there — the
+			// branch above owns the sprite for as long as it is walking — and the pace picks
+			// up again from wherever it left off once the fighter has arrived.
+			if (actor.pace) this.updatePace(actor, dt);
+			else this.setAnimation(actor, this.standing(actor));
 		}
+	}
+
+	/**
+	 * Advance the paced fighter one frame along its walk on the spot, turning it round at
+	 * either end of the reach ({@link PACE_REACH_RATIO}) and playing the walk cycle that
+	 * belongs to the way it is going — `move-left` walking left, `move-right` walking right,
+	 * exactly as a real step across the board picks them ({@link updateStep}). A fighter
+	 * with neither cycle loaded falls back to what it stands in, so it is at least still the
+	 * fighter that is moving.
+	 *
+	 * The offset goes on the **sprite** and never on {@link Actor.x}. What a fighter's own
+	 * `x` carries is where it is standing, crown correction and all, and that is what the
+	 * aura round it and every walk it is later sent on are measured from — a mark that
+	 * drifted with the pace would leave the fighter half a step off its cell the moment it
+	 * stopped.
+	 */
+	private updatePace(actor: Actor, dt: number): void {
+		const pace = actor.pace;
+		if (!pace) return;
+		const reach = this.cellWidth() * PACE_REACH_RATIO;
+		pace.offset += pace.dir * PACE_SPEED * dt;
+		if (pace.offset <= -reach) {
+			pace.offset = -reach;
+			pace.dir = 1;
+		} else if (pace.offset >= reach) {
+			pace.offset = reach;
+			pace.dir = -1;
+		}
+		const name = pace.dir < 0 ? actor.moveLeftAnim : actor.moveRightAnim;
+		this.setAnimation(actor, actor.animations[name] ? name : this.standing(actor));
+		actor.sprite.x = actor.x + pace.offset;
 	}
 
 	/**
@@ -2325,6 +2404,36 @@ export class MugenBoard {
 		graphics.zIndex = 0.5; // above the base grid (0), below the actors
 		this.app.stage.addChild(graphics);
 		this.cellPaint.set(k, graphics);
+	}
+
+	/**
+	 * Say which fighter is the one being answered for, by walking it on the spot on its own
+	 * cell — across it and back, in the two walk cycles it already owns. Every other fighter
+	 * stands still, so exactly one of them is ever moving on a board between turns, and
+	 * `null` is nobody: the board goes still the moment the turn is out of the player's
+	 * hands (see {@link PACE_REACH_RATIO} for what the pace is and what it deliberately is
+	 * not).
+	 *
+	 * Idempotent per fighter — asking again for the one already pacing leaves it mid-stride
+	 * rather than snapping it back to its mark, which is what makes this safe to push from a
+	 * reactive statement that re-runs on every turn of the fight.
+	 */
+	setPacing(id: string | null): void {
+		for (const actor of this.actors) {
+			const paced = actor.id === id;
+			if (paced === !!actor.pace) continue;
+			if (paced) {
+				// Leftwards first, which for the player's own half is the step towards the
+				// middle of the board: the fighter shifts its weight in the direction the
+				// fight is, and comes back.
+				actor.pace = { offset: 0, dir: -1 };
+			} else {
+				actor.pace = null;
+				// Back on its mark at once. The sprite is the only thing the pace ever moved,
+				// so putting it back is the whole of stopping.
+				actor.sprite.x = actor.x;
+			}
+		}
 	}
 
 	/** Walk an actor back to the cell it started on — the ground it holds, which a

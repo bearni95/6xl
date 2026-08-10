@@ -690,6 +690,36 @@
 	 */
 	$: panelLocked = !state || state.phase !== 'planning' || state.ready || !!state.outcome;
 
+	/**
+	 * Mark the fighter the panel is turned to on the board itself, by walking it on the spot
+	 * on its own cell ({@link MugenBoardEngine.setPacing}).
+	 *
+	 * The panel and the board are two ways of reaching the same three orders, and the one
+	 * thing the panel could not say was *which* of the fighters on the canvas it was
+	 * speaking for. Now the canvas says it: whichever fighter is showing in the panel is the
+	 * only one moving on a board that is otherwise standing still, so the answer is on the
+	 * picture and not in a caption under it.
+	 *
+	 * It is off exactly when the panel is ({@link panelLocked}): the moment the last order is
+	 * given the turn is taken out of the player's hands and played out, and a fighter still
+	 * pacing through it would be saying it is waiting to be told something. The board goes
+	 * still, the turn happens, and the pace comes back on the fighter the next turn opens on.
+	 * A fighter with nothing left to be asked — down, or holding the ground its lane was
+	 * played for — is never paced either: it keeps its row in the panel because it is still
+	 * one of the player's three, and there is nothing to answer for it.
+	 *
+	 * Every name is spelled out so Svelte's legacy reactive tracking sees all three.
+	 */
+	$: syncPacing(board, shownRow, panelLocked);
+
+	function syncPacing(
+		engine: MugenBoardEngine | null,
+		row: PlayerRow | null,
+		locked: boolean
+	): void {
+		engine?.setPacing(!locked && row && row.orders.length > 0 ? row.fighter.id : null);
+	}
+
 	// What each of the three orders is called, for a button that is otherwise a picture. The
 	// board never needs them — a glyph on a canvas has nobody to say itself to — so they are
 	// the one part of an order that only the document asks for.
@@ -1314,14 +1344,28 @@
 					</div>
 				{/if}
 			</div>
-			<!-- The player's line as a list, under the board, on a phone and nowhere else.
-			     The orders are drawn beside their fighters on the board, which is the right place
-			     for them on a screen the board is large on: the button is next to the thing it is
-			     an order to, and a column read down the board's own edge is the whole team's plan.
-			     On a phone the same three buttons are a fraction of the canvas — the board there is
-			     limited by the width and the columns are drawn at whatever scale is left over — so
-			     they are also the one part of the picture that has to be hit rather than looked at.
-			     Here they are the document's own, and one fighter at a time: the character on
+			<!-- The player's line as a list, beside the board or under it — whichever way up the
+			     screen is. It is the same panel either way, and it is the one thing the board
+			     cannot draw for itself: the orders on the canvas are drawn at whatever scale the
+			     board came out at, and they are the one part of the picture that has to be hit
+			     rather than looked at.
+			     Where it stands is the room the canvas did not take, which is the axis the canvas
+			     did not run out on. **Standing up** — a phone — the board is limited by the width
+			     and leaves a band under itself, so the panel is the flex item that grows into it,
+			     the head at the top of the view and the orders at the foot under the thumb that
+			     presses them. **Lying down** — anything wider than it is tall, a turned phone and
+			     every desktop alike — the board is limited by its height and takes the whole of it,
+			     and what is left is a band at each end: the panel takes the right-hand one, out of
+			     the flow entirely (`absolute`, so the board is never sized against it) and the full
+			     height of the view, exactly as wide as the gap between the canvas's right edge and
+			     the screen's — `(100vw − the canvas's own nine squares) / 2`, the figures spelled
+			     again in CSS as `CombatFlanks` and `CombatGround` spell them, since a class is a
+			     literal.
+			     It is not `sm:`-scoped any more, which is what used to stand in for this: on a wide
+			     screen the panel was simply gone and the only orders were the canvas's own. The two
+			     are both there now on every screen, which is what they were always meant to be —
+			     one order given on either is drawn on both.
+			     One fighter at a time, whichever way up: the character on
 			     show, and under it one row of five squares — an arrow, this fighter's three
 			     orders, an arrow — so everything the panel can be pressed for is on one line and
 			     the same size. A phone is a screen with room for one thing, so it is given one
@@ -1342,15 +1386,20 @@
 			     nowhere to go: the turn commits itself and the panel closes to input, faded but
 			     still showing the fighter it was left on, since the plan is the thing being
 			     played out and taking it off the screen at that moment is exactly wrong.
-			     It takes whatever the board leaves and not a fixed height of its own: the canvas
-			     is `min(100vw, 100dvh × aspect)` and on a phone the width is what runs out, so
-			     what is under the board is however much of the view a board that shape did not
-			     need. The panel is the flex item that grows into it, the head and the board being
-			     sized by what is in them, and the character is drawn at the full height of what
-			     is left — so a tall phone gives the fighter a tall picture and a short one gives
-			     it a short one, with nothing between the foot of the board and the foot of the
-			     screen going spare. `min-h-0` so that on a view with nothing left over the panel
-			     yields rather than pushing the board off the bottom.
+			     Standing up it takes whatever the board leaves and not a fixed height of its own:
+			     the canvas is `min(100vw, 100dvh × aspect)` and on a phone the width is what runs
+			     out, so what is under the board is however much of the view a board that shape did
+			     not need. The panel is the flex item that grows into it, the head and the board
+			     being sized by what is in them, and the character is drawn at the full height of
+			     what is left — so a tall phone gives the fighter a tall picture and a short one
+			     gives it a short one, with nothing between the foot of the board and the foot of
+			     the screen going spare. `min-h-0` so that on a view with nothing left over the
+			     panel yields rather than pushing the board off the bottom. Lying down none of that
+			     applies: the panel is out of the flow, and the height it is drawn at is the view's.
+			     Which fighter it is turned to is said on the board as well as here — that fighter,
+			     and no other, walks on the spot on its own cell while it is waiting to be told
+			     something (see `syncPacing`). So the panel names one of the three and the picture
+			     points at the same one, and neither has to describe the other.
 			     The row of five is then laid *over* the foot of that picture rather than under
 			     it, which is what lets the picture have the whole band: the buttons are what has
 			     to be reached, so they take the end of the screen the thumb is at, and the
@@ -1362,12 +1411,22 @@
 			     spread end to end (above), so a block that arrived with the fight would have let
 			     the board settle at the bottom of the view first and then jump up as the orders
 			     came in. An empty one holds the place they are coming to. -->
-			<div class="relative min-h-0 w-full flex-1 p-3 sm:hidden">
+			<div
+				class="relative min-h-0 w-full flex-1 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:w-[calc((100vw_-_9*min(100vw/9,100dvh/11))/2)]"
+			>
 				<!-- What the band stands on: the board's own ground, carried on into the document
 				     past the last row the canvas had room to draw. It is laid under the whole of
 				     the panel, padding included, so the field runs out of the picture and into the
-				     page rather than stopping at a plate's edge. -->
-				<CombatGround />
+				     page rather than stopping at a plate's edge.
+				     Under the panel standing below the board and nowhere else: the band beside the
+				     board already has its ground, drawn by `CombatFlanks` across the whole sheet,
+				     and earth laid over that would be a second floor on top of the grass. The box
+				     is what carries the scope, since the ground itself has no say in where it is
+				     drawn — it is absolute, so this one is too, and its `inset-0` is what the
+				     ground's own then means. -->
+				<div class="absolute inset-0 landscape:hidden" aria-hidden="true">
+					<CombatGround />
+				</div>
 				{#if shownRow}
 					{@const row = shownRow}
 					<div
