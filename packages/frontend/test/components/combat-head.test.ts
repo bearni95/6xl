@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { addMessages, init, waitLocale } from 'svelte-i18n';
 import CombatHead from '$components/core/CombatHead.svelte';
@@ -7,8 +7,8 @@ import ca from '../../src/services/i18n/locales/ca.json';
 /**
  * The head of the fight, as a block that can be put in either of two places (over the board
  * standing up, at the top of the orders panel lying down). What it must do wherever it is put
- * is say the four things it is for — the town, whoever holds it, the way out, and how the
- * fight stands — off the props it is handed and nothing else.
+ * is say the three things it is for — the town, whoever holds it, and how the fight stands —
+ * off the props it is handed, and nothing else at all.
  *
  * The one that has already gone wrong once: the town's plate, the holder's account and the
  * siege bar all hang off `location`, so a head handed a card and drawing none of the three is
@@ -48,18 +48,13 @@ describe('the head of the fight', () => {
 		expect(container.querySelectorAll('[role="progressbar"]').length).toBe(2);
 	});
 
-	it('offers the way out only while there is a fight to give up', async () => {
-		const concede = vi.fn();
-		const { queryByLabelText } = render(CombatHead, { props: { location: town } });
-		expect(queryByLabelText(ca.combat.concede)).toBeNull();
-
-		const { getByLabelText } = render(CombatHead, {
-			props: { location: town, wins: { info: 0, error: 0 }, concedeReady: true },
-			events: { concede }
+	it('is a reading and offers nothing to press', () => {
+		const { container } = render(CombatHead, {
+			props: { location: town, wins: { info: 1, error: 1 } }
 		});
-		const flag = getByLabelText(ca.combat.concede);
-		expect((flag as HTMLButtonElement).disabled).toBe(false);
-		flag.click();
-		expect(concede).toHaveBeenCalledTimes(1);
+		// The way out of the fight stood on the seam between the two cells and is asked for on
+		// the player's own card in the orders panel now. A head with a button in it is that
+		// control back in the middle of a reading of the other side.
+		expect(container.querySelectorAll('button').length).toBe(0);
 	});
 });

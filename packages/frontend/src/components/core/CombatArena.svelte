@@ -1480,9 +1480,7 @@
 					<CombatHead
 						{location}
 						wins={state && !state.outcome ? state.wins : null}
-						concedeReady={state?.phase === 'planning'}
 						classes="relative shrink-0"
-						on:concede={() => controller?.concede()}
 					/>
 				{/if}
 				{#if shownRow}
@@ -1764,9 +1762,7 @@
 					<CombatHead
 						{location}
 						wins={state && !state.outcome ? state.wins : null}
-						concedeReady={state?.phase === 'planning'}
 						classes="sm:w-auto"
-						on:concede={() => controller?.concede()}
 					/>
 				</div>
 			{/if}

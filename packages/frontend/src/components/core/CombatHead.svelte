@@ -1,13 +1,15 @@
 <script lang="ts">
 	/**
-	 * The head of the fight: what it is over, who it is with, the way out of it, and how it
-	 * stands.
+	 * The head of the fight: what it is over, who it is with, and how it stands.
 	 *
-	 * One block of chrome and not four things that happen to be near each other — the town's
-	 * plate and the account holding it side by side, the flag laid on the seam between them,
-	 * and the score banner across the foot of both, every row the width of the block. It is a
-	 * reading, and every reading in it is somebody else's: what a town is called and whose it
-	 * is are the map's, the score is the controller's, and nothing here is worked out.
+	 * One block of chrome and not three things that happen to be near each other — the town's
+	 * plate and the account holding it side by side, and the score banner across the foot of
+	 * both, every row the width of the block. It is a reading and nothing but: what a town is
+	 * called and whose it is are the map's, the score is the controller's, nothing here is
+	 * worked out, and there is nothing on it to press. The way out of the fight stood on the
+	 * seam between the two cells for a while and is asked for on the player's own card at the
+	 * corner of the orders panel now (see CombatArena) — a control belongs with the side it
+	 * acts for, not in the middle of a reading of the other one.
 	 *
 	 * It is drawn in two entirely different places and that is why it is its own file. Standing
 	 * up, it is laid over the board's top edge (or at the head of the column on a phone), where
@@ -18,16 +20,14 @@
 	 * being drawn in rather than over room it is. Which of the two is mounted is `CombatArena`'s
 	 * call, and it is a real conditional there rather than a `hidden` class: a head laid over
 	 * the board and a head in the sidebar are not the same box seen twice, and mounting both
-	 * would put two of every plate, avatar and flag on the screen for one fight.
+	 * would put two of every plate and avatar on the screen for one fight.
 	 *
 	 * Where it stands is therefore never settled here. The component is the block; the caller
 	 * gives it its place, and `classes` is how (see both call sites).
 	 */
 	import classNames from 'classnames';
-	import { createEventDispatcher } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import CombatHost from '$components/core/CombatHost.svelte';
-	import GameGlyph from '$components/core/GameGlyph.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
 	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
 	import { TEAM_SIZE } from '$services/team.service';
@@ -42,19 +42,11 @@
 	// The standing, while there is a fight to have one: how many lanes each side has taken.
 	// Null is a fight that has not begun or one already decided — a decided fight reads its
 	// score off the panel in the middle of the board, and the same score at both ends of one
-	// canvas would be one score too many. It is what the whole lower half of the head hangs on,
-	// the way out included: a fight with no score to show is a fight there is nothing to give up
-	// in.
+	// canvas would be one score too many — and it is what the whole banner hangs on, the siege
+	// bar it stands on included.
 	export let wins: { info: number; error: number } | null = null;
 
-	// Whether the way out may be pressed. It is drawn either way while there is a fight (above),
-	// and greyed out rather than taken away for the moment a turn is being carried out: a turn
-	// already under way settles itself.
-	export let concedeReady = false;
-
 	export let classes: string = '';
-
-	const dispatch = createEventDispatcher<{ concede: void }>();
 
 	// The lanes of the fight, 1..n, for the score: one square per lane, filled once that many
 	// have been taken. A lane is a fighter of each side and the white cell between them, so
@@ -81,10 +73,10 @@
 	     house team — the second is the same plate with nothing printed on it. It stood as a
 	     single wide column for a while, on the reading that an empty plate says there is a
 	     player and we have lost them; what it actually says is that there is nobody over there
-	     to name, which is the truth about a seeded town. And the head has a middle to keep: the
-	     way out of the fight is laid on the seam between the two cells (below), so a row that is
-	     sometimes one cell wide is a mark that moves depending on who holds the place. -->
-	<div class="relative grid grid-cols-2 items-stretch">
+	     to name, which is the truth about a seeded town. A row of two whoever holds the place
+	     is also a row that does not change shape as the place changes hands, which is the whole
+	     of what a head laid over a board should be doing. -->
+	<div class="grid grid-cols-2 items-stretch">
 		<!-- The town, on the very plate its pin carries on the map: the same mark, drawn the same
 		     way, showing what was pressed to get here. Only the challenge button is missing, and
 		     the caller is what leaves it out — a fight already under way has nothing left to
@@ -118,40 +110,6 @@
 			     with two halves says it. -->
 			<div class={PLATE_FLUSH_CLASSES}></div>
 		{/if}
-		<!-- The way out of the fight, laid over the seam between the two cells: the place and
-		     whoever holds it are what the fight is about, and giving it up is the one thing on this
-		     screen that is about the fight as a whole rather than a part of playing it. So it
-		     stands at the middle of that row, absolutely — over both cells at once and belonging to
-		     neither, which is the one spot in a two-cell row that is not part of either reading.
-		     A picture and no words: a flag flown is a sentence nobody has to read. The label it used
-		     to carry is still said in words, to a screen reader and to a pointer resting on it.
-		     A red disc with the flag drawn white on it: a mark on its own over two plates is a
-		     picture, and what makes it read as a thing to press is a filled shape with an edge of
-		     its own. Round, because the button is as wide as it is tall — a shape with no words in
-		     it has no side to be the longer one — and because it is laid on the seam of two squared
-		     cells, where a circle is the one outline that belongs to neither. The glyph is inlined
-		     rather than served as a picture precisely so the white it is drawn in can reach it (see
-		     GameGlyph).
-		     It had two copies before this — one in the middle of the score banner, out of sight
-		     until the pointer was on the plate, and a full-width row under it for the phone, which
-		     has no pointer to hide a control behind. One mark standing in the open answers both, so
-		     both are gone.
-		     Between turns only, as it always was: a turn already being carried out settles itself,
-		     and a fight already decided has nothing left to give up — the result panel's Close is
-		     the way out of that one. Its own pointer, since laid over the board the head takes no
-		     taps otherwise. -->
-		{#if wins}
-			<button
-				type="button"
-				class="pointer-events-auto absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-red-500 bg-red-500 btn text-white btn-circle btn-sm"
-				disabled={!concedeReady}
-				title={$_('combat.concede')}
-				aria-label={$_('combat.concede')}
-				on:click={() => dispatch('concede')}
-			>
-				<GameGlyph name="lorc/flying-flag" classes="[&>svg]:size-6" />
-			</button>
-		{/if}
 	</div>
 	<!-- The standing used to be a third cell across the foot of this grid. It is on the banner
 	     below now, in the middle of the score, which is where the fight is counted: what this one
@@ -165,8 +123,8 @@
 		     filled white as that side takes it. A number said how many; these say which of a known
 		     three, and they are cells of a board rather than a length being filled, which is what
 		     the thing being counted is. Each side's three sit over the half of the board that side
-		     holds — the rivals' to the left, the player's to the right. Between them the room the
-		     way out is reached for in, and *under* all three of them — the plate's whole width and
+		     holds — the rivals' to the left, the player's to the right. Between them plain room,
+		     and *under* both of them — the plate's whole width and
 		     its whole depth — how far the town itself has been taken: the count this one fight is
 		     one of, which is why it is read with the score rather than up with the two things the
 		     fight is about. The banner is one row deep for that: the bar is the ground the counts
@@ -202,10 +160,11 @@
 			     that bar is measuring.
 			     Squared and stretched to the plate by the variants below, which reach past the bar's
 			     own `h-6` — a height meant for the plate of a pin, where this one is the banner
-			     itself. It takes no pointer — there is nothing on this row to press: the way out of
-			     the fight, which used to stand in the middle of it and hid these figures whenever the
-			     pointer came near, is a mark at the middle of the head above now. So the figures stand
-			     in the middle of the plate and stay there. -->
+			     itself. It takes no pointer, and neither does anything else in this head: the way out
+			     of the fight stood in the middle of this very row once and hid these figures whenever
+			     the pointer came near, then moved up to the seam above, and is off the head
+			     altogether now — it is asked for on the player's own card in the orders panel. So the
+			     figures stand in the middle of the plate and stay there. -->
 			{#if location?.challenge}
 				<TownChallenge
 					siege={location.challenge.siege}
@@ -254,9 +213,9 @@
 			<!-- The room between the two counts, and it is deliberately empty. Two things have stood
 			     here and neither belonged: the turn number, a figure nothing on the screen was
 			     waiting for, and after it the way out of the fight, out of sight until the pointer
-			     was on the plate. The way out is one mark at the middle of the head now (above),
-			     where it is seen without being reached for and where a phone can reach it too — so
-			     what is left here is the room itself, which is what the middle of a score is.
+			     was on the plate. The way out has left the head entirely — it is asked for on the
+			     player's own card in the orders panel, which is the side it acts for — so what is
+			     left here is the room itself, which is what the middle of a score is.
 			     It is what gives as the head gets wider (`flex-1`), the counts keeping the width they
 			     are drawn at: a count is three cells of the board and means nothing stretched, where
 			     the space between two counts is only ever space. -->
