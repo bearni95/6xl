@@ -38,11 +38,11 @@
 	// player's own account at the corner of their orders panel — since a plate on a plate is a
 	// second edge drawn round a thing that already has one.
 	export let plated: boolean = true;
-	// Which end the picture is at. The face goes last where the reading is set against the
-	// far edge of its cell (the head's right-hand cell, facing the town's plate across the
-	// middle) and first where it stands at the near edge of what it is in, which is what the
-	// corner of the orders panel is: a picture reads as the start of an account, so at the
-	// left it comes first and the name follows it.
+	// Which end the picture is at. The face goes last where the reading fills its cell and is
+	// set against the picture (the head's left-hand cell, whose far end is the middle of the
+	// head and the town's plate across it) and first where it stands at the near edge of what
+	// it is in, which is what the corner of the orders panel is: a picture reads as the start
+	// of an account, so at the left it comes first and the name follows it.
 	export let faceFirst: boolean = false;
 	// What the reading is a reading of, said to a pointer resting on it. The caller's, because
 	// only the caller knows: the same three facts are somebody else's account in the head of
@@ -55,14 +55,15 @@
 </script>
 
 <!-- In the head of the fight this is read the other way round from the town's plate beside
-	it: the reading first and the face at the far end. That is the right-hand cell of the head,
-	so the picture goes to the outer edge of it and the type is set against the picture — the
-	two cells then face each other across the middle of the head, each with its portrait at its
-	own end, rather than both pointing the same way and leaving the head with a face in the
-	middle of it. `flex-1` on the reading is what pushes the avatar out there: the column takes
-	whatever width the cell has spare, so the face is at the end of the cell and not merely
-	after the name. Turned round (`faceFirst`) there is nothing to push against — the box is as
-	wide as what is in it — so the reading takes its own width and the picture leads it.
+	it: the reading first and the face at the far end. That is the left-hand cell of the head,
+	whose far end is the middle of it, so the picture goes onto the seam the town's tile stands
+	on and the type is set against the picture — the two cells then read outwards from that
+	middle, each with its own mark on it, rather than both pointing the same way and leaving the
+	head with a face at one outer corner and a glyph at the other. `flex-1` on the reading is
+	what pushes the avatar out there: the column takes whatever width the cell has spare, so the
+	face is at the end of the cell and not merely after the name. Turned round (`faceFirst`)
+	there is nothing to push against — the box is as wide as what is in it — so the reading takes
+	its own width and the picture leads it.
 	`min-w-0` either way is what lets a long username truncate rather than push the whole head
 	wider: a flex item's floor is its content otherwise.
 	The level's line is faded rather than tinted (`opacity-70` and not `text-white/70`), so it
