@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import CombatArena from '$components/core/CombatArena.svelte';
+	import CombatFeedModal from '$components/core/CombatFeedModal.svelte';
+	import { combatFeedService } from '$services/combatFeed.service';
 	import { stagedFight, leaveCombat } from '$services/combat';
 	import { territoryService } from '$services/territory.service';
 	import {
@@ -41,6 +43,20 @@
 	// asked here. A visit with nothing staged never reaches this page, and neither does one
 	// carrying a staging left over from a fight that has since been reported.
 	onMount(() => void readTerritory());
+
+	// The game's own channel, open for as long as this page is. Every fight that finishes
+	// anywhere is broadcast onto one Supabase Realtime topic (see `combat-feed.type`), and
+	// this is where the arena listens: the socket is opened on mount and dropped when the
+	// player leaves, so nothing is held open behind the map. It is pushed and never polled —
+	// there is no request here at all — and the count of what has arrived rides the head of
+	// the fight, where pressing it raises the sheet at the foot of this file.
+	//
+	// The listener stands on the page rather than inside the arena because the arena is
+	// remounted whenever the line-up keys change, and a socket that came and went with a
+	// `{#key}` would drop the very fights it was mounted to hear.
+	onMount(() => combatFeedService.listen());
+
+	const feedOpen = combatFeedService.open;
 
 	// --- Whose town this is, read here rather than taken on trust ------------------------
 	//
@@ -141,11 +157,16 @@
 		waits on the fight reaching the server — and both it and the sheet leave the same way,
 		for the map. `territory` is not listened to here: what a settled fight did to a town is
 		the map's reading, and the map re-reads its occupancy when it is walked back onto. -->
+	<!-- Held shut while the feed is being read, as well as while a report is in flight. Every
+		sheet in this app binds Escape to the window, so a sheet raised over another is two
+		listeners on one key: an Escape meant for the feed would close the feed *and* walk the
+		player out of the fight underneath it. Shutting the arena's own way out for as long as
+		something is standing over it is what makes that one press mean one thing. -->
 	<FullScreenModal
 		title="Combat"
 		bare
 		closeLabel="Close combat"
-		closeDisabled={reporting}
+		closeDisabled={reporting || $feedOpen}
 		on:close={() => void leaveCombat()}
 	>
 		<!-- Keyed on the town and the generation as well as the line-up: challenging a different
@@ -163,4 +184,12 @@
 			/>
 		{/key}
 	</FullScreenModal>
+{/if}
+
+<!-- The other fights, when they are asked for. Written after the arena's own sheet so it is
+     mounted after it and therefore drawn over it — which is how two of these stack (see
+     FullScreenModal) — and outside the `{#if}` above, since a feed being read is not about
+     there being a fight staged to read it over. It closes back onto the board. -->
+{#if $feedOpen}
+	<CombatFeedModal />
 {/if}

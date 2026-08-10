@@ -71,6 +71,15 @@
 -- where a team is proved instead (`start_battle` in battles.sql), which is the only
 -- place the answer is any use to the player.
 --
+-- Finishing a fight is also what ANNOUNCES it. The last thing the RPC does is put the
+-- result on one Supabase Realtime channel — `combat-results`, a constant, so every game
+-- end in the project lands on the same topic and an arena subscribes once to hear all of
+-- them. It is a WebSocket push and not a table anybody reads: `realtime.send` writes the
+-- message into `realtime.messages` and the Realtime service forwards it off the WAL, so
+-- nothing polls anything and a fight settled anywhere arrives in every open arena as it
+-- happens. See the send at the foot of the function for what it carries and why it can
+-- never cost the fight.
+--
 -- Territory is also where the challenge cooldown is *set*: settling a fight is
 -- what shuts that town to its challenger for the next hour, timed from this
 -- report rather than from when the fight opened, so a long fight is never also a
@@ -258,6 +267,18 @@ declare
 	-- them when the fight was opened.
 	v_location text;
 	v_fought int;
+	-- The row this fight is filed as, and the moment it was filed. The announcement at
+	-- the foot of this function carries exactly what was written down — it names the
+	-- record rather than restating it, so a client that hears the same fight twice can
+	-- tell that it is one fight.
+	v_result_id uuid;
+	v_fought_at timestamptz;
+	-- Who fought it, as this game says a player: the name they chose and the avatar they
+	-- wear. Read off player_profiles, which is where municipality_holders_public reads the
+	-- same three fields from — already public to anyone who opens the map.
+	v_name text;
+	v_avatar_character text;
+	v_avatar_color text;
 begin
 	if v_uid is null then
 		raise exception 'You must be signed in to earn experience.';
@@ -374,7 +395,8 @@ begin
 
 	insert into public.combat_results
 		(user_id, outcome, survivors, fielded, rivals_defeated, level, level_span, exp_awarded)
-		values (v_uid, p_outcome, v_standing, v_owned, v_felled, v_level, v_span, v_award);
+		values (v_uid, p_outcome, v_standing, v_owned, v_felled, v_level, v_span, v_award)
+		returning id, fought_at into v_result_id, v_fought_at;
 
 	if v_award > 0 then
 		insert into public.player_profiles (user_id, exp)
@@ -554,6 +576,61 @@ begin
 	-- reject a report raise, which rolls this back along with the experience, so a
 	-- refused report leaves the player still in the battle they were in.
 	delete from public.battles where user_id = v_uid;
+
+	-- And it is announced. One channel takes every game end there is (`combat-results`,
+	-- a constant), and it is a *public* topic — `private => false` — because what goes out
+	-- on it is what anyone who opens the map can already read off a town: a player's
+	-- chosen name, the avatar they wear, and what they did to a place. Nothing about the
+	-- account behind it and nothing about the cards.
+	--
+	-- Sent from the end of the RPC rather than from a trigger on the insert above,
+	-- because a fight is not finished until the town has been settled: whether it changed
+	-- hands is decided below the row that records the award, and it is the most
+	-- interesting thing the feed has to say.
+	--
+	-- The whole of it is swallowed on failure. A broadcast is a copy of the fight going
+	-- out, not the fight: an announcement that could not be made must never roll back the
+	-- experience, the ground taken and the closing of the battle it was announcing — so a
+	-- project whose Realtime extension is missing or unwilling still fights, in silence.
+	begin
+		select p.username, p.avatar_character_id, p.avatar_color
+			into v_name, v_avatar_character, v_avatar_color
+			from public.player_profiles p where p.user_id = v_uid;
+
+		perform realtime.send(
+			jsonb_build_object(
+				-- The record this announcement is of, so one fight heard twice reads as one.
+				'id', v_result_id,
+				'at', v_fought_at,
+				'outcome', p_outcome,
+				-- What it paid, and what it was paid on.
+				'exp', v_award,
+				'survivors', v_standing,
+				'fielded', v_owned,
+				'rivals', v_felled,
+				-- The town, and what the fight did to it. A stale fight took nothing and says
+				-- so, rather than passing for a fight against the team sitting there now.
+				'town', v_location,
+				'captured', v_captured,
+				'stale', v_stale,
+				'player', jsonb_build_object(
+					'id', v_uid,
+					'name', v_name,
+					'character_id', v_avatar_character,
+					'color', v_avatar_color,
+					-- The level they are on *after* this fight, which is the level the fight
+					-- left them at — read off the same stored experience everything else is.
+					'level', public.level_for_exp(coalesce(v_total, v_exp))
+				)
+			),
+			'fight',
+			'combat-results',
+			false
+		);
+	exception
+		when others then
+			raise warning 'combat feed: % (%)', sqlerrm, sqlstate;
+	end;
 
 	awarded_exp := v_award;
 	total_exp := coalesce(v_total, v_exp);

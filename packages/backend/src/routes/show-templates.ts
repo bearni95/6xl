@@ -1572,6 +1572,15 @@ export function ensureTables(): Promise<void> {
 							-- recorded them when the fight was opened.
 							v_location text;
 							v_fought int;
+							-- The row this fight is filed as and the moment it was filed, plus who
+							-- fought it as the map already says a player: name and worn avatar, off
+							-- player_profiles. All of it for the announcement at the foot of this
+							-- function; see ../../supabase/combat_results.sql for the reasoning.
+							v_result_id uuid;
+							v_fought_at timestamptz;
+							v_name text;
+							v_avatar_character text;
+							v_avatar_color text;
 					begin
 							if v_uid is null then
 								raise exception 'You must be signed in to earn experience.';
@@ -1678,7 +1687,8 @@ export function ensureTables(): Promise<void> {
 								(user_id, outcome, survivors, fielded, rivals_defeated,
 									level, level_span, exp_awarded)
 								values (v_uid, p_outcome, v_standing, v_owned, v_felled,
-									v_level, v_span, v_award);
+									v_level, v_span, v_award)
+								returning id, fought_at into v_result_id, v_fought_at;
 							if v_award > 0 then
 								insert into player_profiles (user_id, exp)
 									values (v_uid, v_award)
@@ -1832,6 +1842,46 @@ export function ensureTables(): Promise<void> {
 							-- another. Every rejection above raises, which rolls this back with the
 							-- experience — a refused report leaves them in the battle they were in.
 							delete from battles where user_id = v_uid;
+							-- And it is announced, on the one channel every game end in the project
+							-- lands on: the combat-results topic. A public one — private => false — since
+							-- it carries only what municipality_holders_public already publishes
+							-- about a player, and it is pushed over WebSockets off the WAL rather
+							-- than read out of a table by anybody. Sent from here and not from a
+							-- trigger on the insert, because a fight is not finished until the town
+							-- has been settled; swallowed on failure, because an announcement that
+							-- could not be made must not roll back the fight it was announcing.
+							begin
+								select p.username, p.avatar_character_id, p.avatar_color
+									into v_name, v_avatar_character, v_avatar_color
+									from player_profiles p where p.user_id = v_uid;
+								perform realtime.send(
+									jsonb_build_object(
+										'id', v_result_id,
+										'at', v_fought_at,
+										'outcome', p_outcome,
+										'exp', v_award,
+										'survivors', v_standing,
+										'fielded', v_owned,
+										'rivals', v_felled,
+										'town', v_location,
+										'captured', v_captured,
+										'stale', v_stale,
+										'player', jsonb_build_object(
+											'id', v_uid,
+											'name', v_name,
+											'character_id', v_avatar_character,
+											'color', v_avatar_color,
+											'level', level_for_exp(coalesce(v_total, v_exp))
+										)
+									),
+									'fight',
+									'combat-results',
+									false
+								);
+							exception
+								when others then
+									raise warning 'combat feed: % (%)', sqlerrm, sqlstate;
+							end;
 							awarded_exp := v_award;
 							total_exp := coalesce(v_total, v_exp);
 							at_level := v_level;

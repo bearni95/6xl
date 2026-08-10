@@ -5,11 +5,17 @@
 	 * One block of chrome and not three things that happen to be near each other — the account
 	 * holding the town and the town's own plate side by side, each set against the middle they
 	 * meet on, and the score banner across the foot of both, every row the width of the block. It is a reading and nothing but: what a town is
-	 * called and whose it is are the map's, the score is the controller's, nothing here is
-	 * worked out, and there is nothing on it to press. The way out of the fight stood on the
+	 * called and whose it is are the map's, the score is the controller's, and nothing here is
+	 * worked out. The way out of the fight stood on the
 	 * seam between the two cells for a while and is asked for on the player's own card at the
 	 * corner of the orders panel now (see CombatArena) — a control belongs with the side it
 	 * acts for, not in the middle of a reading of the other one.
+	 *
+	 * The one press on it is at the far end of the score banner, and it is a press about the
+	 * reading rather than about the fight: how many other fights have finished anywhere in the
+	 * game while this one has been going on, opening the sheet that lists them (see
+	 * CombatFeedButton). It decides nothing about this fight, which is what lets it stand in a
+	 * block that decides nothing.
 	 *
 	 * It is drawn in two entirely different places and that is why it is its own file. Standing
 	 * up, it is laid over the board's top edge (or at the head of the column on a phone), where
@@ -27,6 +33,7 @@
 	 */
 	import classNames from 'classnames';
 	import { _ } from 'svelte-i18n';
+	import CombatFeedButton from '$components/core/CombatFeedButton.svelte';
 	import CombatHost from '$components/core/CombatHost.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
 	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
@@ -254,6 +261,15 @@
 					</span>
 				{/each}
 			</div>
+			<!-- Past the player's own count, at the far end of the bar: how many other fights have
+			     finished anywhere in the game while this one has been going on, and the way to read
+			     them. It stands on the siege bar with everything else on this row, which is the
+			     sense of putting it here — the bar is how far *this* town has been taken and the
+			     number beside it is how many other towns have just been fought over, so the row is
+			     one reading of the map's afternoon rather than two.
+			     `relative` for the same reason the counts carry it: the bar behind is positioned
+			     and would otherwise paint over it. -->
+			<CombatFeedButton classes="relative" />
 		</div>
 	{/if}
 </div>
