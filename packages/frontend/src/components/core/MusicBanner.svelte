@@ -36,22 +36,29 @@
 	$: state = $music;
 </script>
 
-<!-- The slot the song stands in: `min-w-0 flex-1` takes whatever the row it is given comes to,
-	which is the box the title is measured against and nothing of the title's own doing. -->
-<div class={classNames('flex min-w-0 flex-1 items-center', classes)}>
+<!-- The slot the song stands in. It takes no share of anything and asks for none: the plate
+	around it is as narrow as what is in it and capped at half the viewport (see +page.svelte's
+	radio row), so the width flows from the title outward and is stopped by the cap rather than
+	handed down from a row. Which is why there is no `flex-1` here — a slot that grew to fill its
+	parent, in a parent measuring itself by that slot, is the width asking itself. `min-w-0` so
+	the cap can make it narrower than the line it holds, which is the moment the banner starts
+	running. -->
+<div class={classNames('flex min-w-0 items-center', classes)}>
 	{#if state.track}
 		<!-- The song. A banner rather than a truncation (see MarqueeText): a name of a place can be
 			recognised from its head, but a song on a radio is being announced and half an
 			announcement is not one. It is lettered straight onto the plate in the plate's own ink,
 			having no fill and no press of its own.
 			`text-right`, which is the end of the plate the plate itself is held against and the
-			end the play/pause square on the band below stands at: a short title left-aligned
-			drifts away from the mark it belongs to and leaves the gap on the side the two are
-			read from. It settles the still line only — a title too long for the plate is a
-			running track as wide as it needs, and has no end to be put against. -->
+			end the play/pause square on the band below stands at. It decides nothing while the
+			plate is the width of the line — a box with no slack in it has no end to put a line
+			against — and it decides nothing at the cap either, where the line is a running track
+			wider than the box. It is kept for the hair of slack sub-pixel layout can leave at the
+			cap, and because it is the answer this plate should give if it is ever handed a width
+			again: the anchored end is the one the reading is set against. -->
 		<MarqueeText
 			text={state.track.title}
-			classes="min-w-0 flex-1 text-right text-xs font-medium opacity-70"
+			classes="min-w-0 text-right text-xs font-medium opacity-70"
 		/>
 	{/if}
 </div>

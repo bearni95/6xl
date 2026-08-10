@@ -3641,17 +3641,26 @@
 								flow, first in the document and so above the band, which is what this strip being
 								anchored to the map's bottom edge already gives: it grows upward over the terrain
 								and costs the band below nothing.
-								Three fifths of the width (`w-3/5`), because a song title is the shorter reading
-								of the two and a banner as wide as the map would be a line of mostly nothing —
-								and because the terrain beside it stays visible. Held against the map's far edge
-								(`ml-auto`) rather than centred, over the end of the band below, where the
-								play/pause square stands: the control and the title it letters are one corner of
-								the map read together, instead of a mark at one end of a row and its reading in
-								the middle of another. So it is a plate rather than a band — against the map's
-								right edge and standing on the row under it, clear on the left, which is the one
-								corner it rounds (`rounded-tl-lg`). Same surface as that band (`bg-base-100/80`,
-								TownPlate's PLATE_SURFACE), the two of them being one thing laid along the same
-								edge.
+								As narrow as the title in it (`w-fit`) and never wider than half the viewport
+								(`max-w-[50vw]`). A written-down share of the map was a plate the same size for a
+								two-word title and a long one — mostly empty for the first, and for the second a
+								line running past inside a box that had no reason to be that width either. A
+								plate the width of what is on it says how much there is to say, and the cap is
+								where that stops being useful: past half the screen a title is no longer a mark
+								in a corner of the map but a band across it, so at the cap the plate holds still
+								and the line runs instead (see MarqueeText, which starts only where the line is
+								wider than the box measures — the box is now the title's own width until the cap
+								takes it, and so it is only ever the cap that sets a title running).
+								Held against the map's far edge (`ml-auto`) rather than centred, over the end of
+								the band below where the play/pause square stands: the control and the title it
+								letters are one corner of the map read together, instead of a mark at one end of
+								a row and its reading in the middle of another. A plate that changes width has to
+								be anchored at one end or it moves under the reader with every song, and that end
+								is this one for the same reason. So it is a plate rather than a band — against
+								the map's right edge and standing on the row under it, clear on the left, which
+								is the one corner it rounds (`rounded-tl-lg`). Same surface as that band
+								(`bg-base-100/80`, TownPlate's PLATE_SURFACE), the two of them being one thing
+								laid along the same edge.
 								Nothing on this row is pressed. The whole of it was the press for a while, the
 								mark at the head of the line and the title after it; the play/pause is a square
 								at the far end of the band below now (see MusicToggle), because a play/pause is a
@@ -3662,7 +3671,7 @@
 								place. Nothing at all until a song is loaded, and the band under it is anchored
 								to the map's edge, so it never moves for what happens above it. -->
 							<div
-								class="pointer-events-auto ml-auto flex w-3/5 min-w-0 items-center rounded-tl-lg bg-base-100/80 px-3 py-2 shadow-xl"
+								class="pointer-events-auto ml-auto flex w-fit max-w-[50vw] items-center rounded-tl-lg bg-base-100/80 px-3 py-2 shadow-xl"
 							>
 								<MusicBanner />
 							</div>
