@@ -28,9 +28,7 @@ const COMBAT_COLOR_HEX: Record<string, number> = {
 /** Hex for a combat colour name, defaulting to white for anything unknown. */
 export const combatColorHex = (color: string): number => COMBAT_COLOR_HEX[color] ?? 0xffffff;
 
-/**
- * The red every line of the board's grid is ruled in, and the red its callouts, guards and
- * sparks are tinted with — one value, so the lattice and the marks standing on it can never
- * drift apart.
- */
-export const GRID_LINE = combatColorHex('red');
+// There was a `GRID_LINE` here — the red every line of the board's lattice was ruled in,
+// named beside the marks it shared its value with so the two could not drift apart. The
+// lattice is gone (`mugen-board.ts`'s drawBoard): the board is ruled in the ground's own
+// squares, in this table's yellow, and red is a fighter's colour again like every other.

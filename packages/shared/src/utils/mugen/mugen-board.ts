@@ -10,7 +10,7 @@ import {
 	Texture
 } from 'pixi.js';
 import { destroyPixiApp } from '../pixi/release-context';
-import { combatColorHex, GRID_LINE } from '../color/combat-color';
+import { combatColorHex } from '../color/combat-color';
 import {
 	GROUND_BOTTOM_EDGE_TILE,
 	GROUND_BROW_SQUARES,
@@ -173,9 +173,13 @@ export interface MugenBoardOptions {
 	cellSize?: number;
 	/** Outer padding around the grid, in pixels. */
 	padding?: number;
-	/** Colour of the central column (q = 0), the shared ground between the halves. */
-	centerColor?: number;
 }
+// A half's colour is a fill and no longer a wash under its cells: the board painted every
+// cell in the colour of the side it belonged to (and the column between them in a
+// `centerColor` of its own), at alpha 0 — invisible, and kept only so the colour could be
+// turned back on. Both went with the lattice. The colours a half is fielded in are still
+// its own and still drawn: on the fighters, their auras, their callouts and the overlay a
+// claimed cell takes ({@link MugenBoard.paintCell}).
 
 const DEFAULTS = {
 	// A cell's width in canvas px. Six columns of it is the whole board's width, so this is
@@ -183,8 +187,7 @@ const DEFAULTS = {
 	// viewport it is drawn in ({@link VIEWPORT_WIDTH}) — is nearly always being scaled
 	// *down* rather than up, which is what keeps the pixel art crisp.
 	cellSize: 220,
-	padding: 40,
-	centerColor: 0xffffff // white
+	padding: 40
 };
 
 // --- Board layout (a field of squares) --------------------------------------
@@ -194,13 +197,17 @@ const DEFAULTS = {
 // walk into. Where a cell *is* comes from the grid module — `cellCenter`,
 // `cellFoot` and `cellCorners`, all in cell widths off the grid's top-left corner —
 // so the only arithmetic here is the scale by `cellSize` and the translation into
-// the canvas ({@link MugenBoard.project}). Cells left of centre are the first
-// grid's colour, cells to the right the second's.
+// the canvas ({@link MugenBoard.project}).
 
-// The colour every line of the grid is drawn in ({@link GRID_LINE}) is the same red the
-// canvas's callouts, guards and sparks are tinted with, and is read off the one table
-// rather than written out again beside it: the lattice is not a side's marking, it is the
-// board itself, so it is one colour all the way across and that colour is combat's own red.
+// **The board is ruled once, in the ground's own squares** ({@link GROUND_LINE}). A red
+// lattice was drawn over them, one line to a cell, and it is gone: the field is ruled in
+// the finer grid alone, so there is one grid on this canvas and every square of it is the
+// same size. What a cell is is still what the fight is played on — the rules, the walks and
+// the lanes are all written in cells ({@link file://./grid.ts}) — it is simply not drawn as
+// a border any more, and what stands on a cell is what says whose it is. Everything that
+// stood in the lattice's place stands in the ruling's now: it is drawn at the depth the
+// lattice held, and a claimed cell's overlay ({@link MugenBoard.paintCell}) still comes
+// over it.
 
 // --- The ground the fight is fought on ---------------------------------------------
 //
@@ -211,16 +218,35 @@ const DEFAULTS = {
 // the same ground below the canvas without dragging Pixi in behind it.
 //
 // It is ground rather than a marking, so it is the same ground on both halves and in the
-// column between them: what a cell belongs to is said by the lattice ruled over it and by
-// what stands on it, and never by the earth.
+// column between them: what a cell belongs to is said by what stands on it, and never by
+// the earth.
 
 /**
- * The yellow the ground's own subdivision is ruled in — read off the same table the
- * lattice's red comes from, so the board is drawn in combat's colours and not in colours
- * of its own. It is the finer of the two rulings and is drawn under the red: a cell is the
- * thing the fight is played on, and its nine tiles are the ground inside it.
+ * The yellow the ground's squares are ruled in — read off combat's own table, so the board
+ * is drawn in the fight's colours and not in colours of its own. It is the board's only
+ * ruling: every square of ground is bordered in it, and the nine that make up a cell are
+ * bordered exactly like the three of the apron under them.
  */
 const GROUND_LINE = combatColorHex('yellow');
+
+/**
+ * The type each square's number is set in: black, and a third of the square deep, which is
+ * the size the number keeps however large the board is finally drawn — the label is laid out
+ * in the board's own space and scaled with everything else on the canvas.
+ *
+ * Black rather than the ruling's yellow: the number is not part of the ruling, it is what the
+ * square is called, and grass is what it is read against.
+ */
+const SQUARE_NUMBER_FILL = 0x000000;
+const SQUARE_NUMBER_HEIGHT = 1 / 3;
+
+/**
+ * How many squares of ground the board is ruled into across its whole width — every cell's
+ * {@link GROUND_TILES_PER_CELL} taken over every column. It is the width the numbering wraps
+ * on: a square's number is counted from the board's own top-left corner, one to the right and
+ * on to the next row when a row runs out ({@link MugenBoard.numberGround}).
+ */
+const SQUARES_ACROSS = BOARD_WIDTH * GROUND_TILES_PER_CELL;
 
 // **The sky is not the canvas's.** The board's top row is the one no line opens on
 // ({@link FIRST_LANE_ROW}) — board the lanes have over them, walked over and measured
@@ -244,10 +270,9 @@ const GROUND_LINE = combatColorHex('yellow');
  * and the fringe goes on that: the three squares under each of those fighters are whole
  * grass, and the grass runs out below them, past the last line anything is played on.
  *
- * It belongs to no cell. Nothing walks on it, nothing is claimed on it and the red lattice
- * does not rule it — it is ruled in the ground's own yellow like every other square of
- * ground, because that is what it is. In cell widths, since that is what the projection
- * takes.
+ * It belongs to no cell. Nothing walks on it and nothing is claimed on it — it is ruled and
+ * numbered like every other square of ground, because that is what it is. In cell widths,
+ * since that is what the projection takes.
  */
 export const APRON_DEPTH = 1 / GROUND_TILES_PER_CELL;
 
@@ -295,7 +320,7 @@ const BROW_DEPTH = GROUND_BROW_SQUARES / GROUND_TILES_PER_CELL;
 const FIELD_TOP_SQUARE_ROW = (FIRST_LANE_ROW - FIRST_ROW) * GROUND_TILES_PER_CELL;
 const FIELD_BOTTOM_SQUARE_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL;
 
-/** Below the ruled lattice (0), and so below everything that stands on the board. */
+/** Below the ruling (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
 
 /** Below the grass itself: where whatever the grass is laid *on* is drawn, which on this
@@ -305,8 +330,15 @@ const GROUND_Z = -1;
  * is laid on the sky, which is the page and is behind the whole canvas already.) */
 const BACKING_Z = -1.5;
 
-/** Between the two: over the grass it rules, under the lattice that rules the cells. */
-const GROUND_LINE_Z = -0.5;
+/**
+ * Where the board's ruling is drawn: over the grass it rules, under everything that stands
+ * on it. It is the depth the cells' lattice held while there was one — the ruling took its
+ * place rather than staying under where it used to be, so a claimed cell's overlay (0.5) and
+ * the fighters above that are laid over the same board they always were.
+ *
+ * The numbers go at the same depth, being one more thing the ruling says about a square.
+ */
+const GROUND_LINE_Z = 0;
 
 /** The sheet's tiles as the board holds them: the fills it alternates over the field, the
  * two fringes it finishes the top and the bottom of the field with, and the earths it lays
@@ -410,8 +442,8 @@ const MOVE_SPEED = 260;
 // fighter pacing rather than as the picture being nudged.
 //
 // It keeps **inside the one cell** wherever the fighter's own artwork leaves it the room to:
-// what the pace is pointing at is that red square, so a figure whose furthest pixel crossed
-// the line would be pointing at two of them. How far it may go is therefore the fighter's
+// what the pace is pointing at is the ground of that one cell, so a figure whose furthest
+// pixel crossed into the next would be pointing at two of them. How far it may go is therefore the fighter's
 // own, measured off the frames it is pacing in rather than fixed ({@link
 // MugenBoard.paceReach}) — and measured **each way separately**. A fighter's mark is the
 // MUGEN axis its sheet was drawn around, shifted again to bring its head over the middle of
@@ -1060,9 +1092,10 @@ export function contentCrop(span: GridSpan): {
 
 /**
  * Renders the board — a field of squares, drawn face-on — on a PixiJS
- * canvas. Cells left of centre take the first grid colour, cells to the right the
- * second, and the shared central column the centre colour. Two MUGEN characters loop
- * (idle by default) standing upright, one on each half.
+ * canvas: grass laid over every cell that is fought on, ruled into the ground's own
+ * squares and numbered off the board's top-left corner. Two MUGEN characters loop
+ * (idle by default) standing upright, one on each half — the first grid's on the left, the
+ * second's on the right, which is the whole of what says a cell is anybody's.
  *
  * Nothing is tilted: a cell is the same square wherever it is on the board, so a
  * character's size says something about the character and nothing about where it
@@ -1225,13 +1258,8 @@ export class MugenBoard {
 		this.groundTiles = await ground;
 		if (this.destroyed) return;
 
-		// One rectangular board: cells left of centre take the left leader's colour, right
-		// the right leader's, the shared centre column white.
-		this.drawBoard(
-			this.options.grids[0].color,
-			this.options.grids[1].color,
-			this.options.centerColor
-		);
+		// One rectangular board, laid with grass and ruled into the ground's own squares.
+		this.drawBoard();
 
 		// The lead character of each half stands where its grid asks, or on the half's
 		// default lead cell: the left one in its own outer column (unflipped), the right
@@ -1486,57 +1514,37 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Draw the board: one square per cell, laid out face-on. Cells left
-	 * of the central column take `leftColor`, cells to the right `rightColor`, and the
-	 * central column (q = 0) — the shared ground both sides can enter — is painted
-	 * `centerColor`. Iterates the exact cell list from the shared grid utility, so every
-	 * occupiable cell is drawn and nothing else is.
+	 * Draw the board, laid out face-on: every cell's ground laid with grass
+	 * ({@link layGround}) — bar the row no line opens on, which is left clear for the sky the
+	 * page is painted — ruled into that ground's own squares ({@link ruleGround}) and each of
+	 * those squares numbered ({@link numberGround}). Iterates the exact cell list from the
+	 * shared grid utility, so every occupiable cell is laid and nothing else is.
 	 *
-	 * Only the fills are the halves' own: every line of the grid is drawn in
-	 * {@link GRID_LINE}, so the lattice reads as one board rather than as two colours
-	 * meeting, and a cell's side is said by the ground inside it alone.
-	 *
-	 * The colours themselves are drawn in nothing — alpha 0, so a half's colour is carried
-	 * by what stands on it rather than by a wash under it — and the lines are drawn: the
-	 * cells are ruled across the canvas and the fighters, the claimed cells' overlays, the
-	 * guard rings and the orders stand on a field that is there to be seen. The fill's alpha
-	 * stays where the line's was, which is how the colour comes back if it is ever wanted.
-	 *
-	 * What every cell *does* have under it is ground: each is laid with grass
-	 * ({@link layGround}) — bar the row no line opens on, which is left clear for the sky
-	 * the page is painted — and ruled into that ground's own squares ({@link ruleGround}),
-	 * both below the lattice so the cells' red stays on top of them. A board whose tiles
-	 * could not be fetched keeps both rulings and loses the grass alone: the subdivision is
+	 * **The cells themselves are drawn in nothing.** A red lattice was ruled over the ground
+	 * here, one square to a cell, and both it and the alpha-0 fill under it are gone: the
+	 * board is ruled once, in the ground's own finer squares, and what says a cell is
+	 * anybody's is what stands on it and the overlay a claim puts there
+	 * ({@link paintCell}) — never a border of its own. A board whose tiles could not be
+	 * fetched keeps the ruling and the numbers and loses the grass alone: the subdivision is
 	 * the board's and not the artwork's.
 	 *
 	 * **The apron is ground with no cell over it** ({@link APRON_DEPTH}): one row of squares
-	 * below the last cell, laid and ruled exactly as any other row of ground and left out of
-	 * the lattice entirely, since there is no cell there to rule. It is drawn from a second
-	 * pass over the columns rather than from `boardCells`, which is the list of cells and
-	 * should stay it.
+	 * below the last cell, laid, ruled and numbered exactly as any other row of ground. It is
+	 * drawn from a second pass over the columns rather than from `boardCells`, which is the
+	 * list of cells and should stay it.
 	 *
-	 * The yellow is a **second** Graphics rather than more calls on this one, because
-	 * adjacent cells share their edges: drawn together, the yellow of a cell laid later
-	 * would go over the red of the cell beside it, one border at a time. Two objects at two
-	 * depths is every red line over every yellow one, whatever order the cells come in.
+	 * One Graphics for every border on the board, at the depth the lattice held: adjacent
+	 * squares share their edges, so a line drawn per cell would be a border laid over its
+	 * neighbour's one square at a time, and there is nothing left for it to be laid *under*.
 	 */
-	private drawBoard(leftColor: number, rightColor: number, centerColor: number): void {
+	private drawBoard(): void {
 		if (!this.app) return;
-		const graphics = new Graphics();
 		const groundLines = new Graphics();
 		for (const { q, r } of boardCells()) {
-			// q alone decides the side; the central column (q = 0) is the shared
-			// white ground.
-			const side = cellSide(q);
-			const color = side === 'red' ? leftColor : side === 'blue' ? rightColor : centerColor;
-
 			const squares = this.groundSquares(q, r);
 			this.layGround(squares);
 			this.ruleGround(groundLines, squares);
-
-			graphics.poly(this.cellOutline(q, r));
-			graphics.fill({ color, alpha: 0 });
-			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 1 });
+			this.numberGround(squares);
 		}
 		// The strip of ground under the board: the first row of squares of the row of cells
 		// that would come next, and nothing else of it.
@@ -1546,10 +1554,47 @@ export class MugenBoard {
 			);
 			this.layGround(apron);
 			this.ruleGround(groundLines, apron);
+			this.numberGround(apron);
 		}
 		groundLines.zIndex = GROUND_LINE_Z;
 		this.app.stage.addChild(groundLines);
-		this.app.stage.addChild(graphics);
+	}
+
+	/**
+	 * Write each of the given squares' number in it: **0 at the board's own top-left square**,
+	 * one more for every square to the right, and on to the left-hand end of the next row when
+	 * a row runs out — which is {@link SQUARES_ACROSS} squares to a row, the whole width of the
+	 * board rather than of any one cell.
+	 *
+	 * It is counted off the square's own place in the board's grid ({@link GroundSquare}), the
+	 * same pair the tiles are alternated by, so a square's number is a fact about where it is
+	 * and not about which cell handed it over or in what order: the apron numbers on from the
+	 * last row of cells exactly as another row of cells would have.
+	 *
+	 * The first two rows of the board are above the crop ({@link BROW_DEPTH}) and are numbered
+	 * all the same — the numbering is of the board and not of the picture taken out of it, and
+	 * a square that is cut off keeps the number the squares under it are counted from.
+	 */
+	private numberGround(squares: GroundSquare[]): void {
+		if (!this.app) return;
+		for (const square of squares) {
+			const label = new Text({
+				text: String(square.row * SQUARES_ACROSS + square.column),
+				style: {
+					fill: SQUARE_NUMBER_FILL,
+					fontSize: square.height * SQUARE_NUMBER_HEIGHT,
+					fontFamily: 'system-ui, sans-serif',
+					align: 'center'
+				}
+			});
+			// Anchored in the middle of the label and placed in the middle of the square, so a
+			// number stands where its square is whatever that number is wide.
+			label.anchor.set(0.5);
+			label.x = square.x + square.width / 2;
+			label.y = square.y + square.height / 2;
+			label.zIndex = GROUND_LINE_Z;
+			this.app.stage.addChild(label);
+		}
 	}
 
 	/**
@@ -1557,14 +1602,14 @@ export class MugenBoard {
 	 * ground-line object the caller hands over. A cell's own nine squares, or the strip of
 	 * apron under a column — the ruling has no idea which, ground being ground.
 	 *
-	 * Every square is bordered, the ones against a cell's own edge included — so the
-	 * subdivision is a grid of squares and not a cross inside a square. What that costs is a
-	 * yellow line under each red one, which is what the depths are for: the red is drawn over
-	 * it at twice the width, and the cell's border stays the cell's.
+	 * Every square is bordered, the ones against a cell's own edge included — so the board is
+	 * a grid of squares and not a cross inside each cell. The lines a cell's edge falls on are
+	 * therefore drawn once and in the same yellow as the rest: nothing on the board says where
+	 * one cell stops any more, and where a fighter may go is the rules' business rather than
+	 * the ruling's.
 	 *
-	 * The finer line is 1px to the lattice's 2 at the size the board is laid out, so the
-	 * two rulings stay a ruling and a sub-ruling however far the finished canvas is then
-	 * scaled — both are geometry in the same space and go through the same scale.
+	 * 1px at the size the board is laid out, and geometry in that same space, so the ruling
+	 * stays a hairline however far the finished canvas is then scaled.
 	 */
 	private ruleGround(graphics: Graphics, squares: GroundSquare[]): void {
 		for (const square of squares) {
@@ -1753,10 +1798,12 @@ export class MugenBoard {
 	}
 
 	/**
-	 * The cell at [q, r] as a closed screen-space outline: its six corners projected in
-	 * order, flattened to the `[x, y, x, y, …]` list Pixi draws a polygon from. Every
-	 * square on this board — the ruled grid, a claimed cell's overlay — is drawn from
-	 * this one path, so the paint can never sit a hair off the line under it.
+	 * The cell at [q, r] as a closed screen-space outline: its four corners projected in
+	 * order, flattened to the `[x, y, x, y, …]` list Pixi draws a polygon from. It is what a
+	 * claimed cell's overlay is drawn from ({@link paintCell}) — the one thing left that is
+	 * drawn a cell at a time — and it is the same corners the cell's nine squares of ground
+	 * are measured off ({@link groundSquares}), so a claim lands exactly on the ruled lines
+	 * round its ground.
 	 */
 	private cellOutline(q: number, r: number): number[] {
 		return cellCorners(q, r).flatMap((corner) => {
@@ -2547,9 +2594,10 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Tint a cell in one side's colour while an occupant holds it, or restore the
-	 * base board colour with null. The overlay redraws the cell's fill and outline
-	 * above the base grid but beneath the characters.
+	 * Tint a cell in one side's colour while an occupant holds it, or take the tint off again
+	 * with null. The overlay is the cell's own square, filled and outlined over the ruling but
+	 * beneath the characters — which since the cells stopped being ruled themselves is the
+	 * only border any one cell is ever drawn with.
 	 */
 	paintCell(cell: Cell, side: 'red' | 'blue' | null): void {
 		if (!this.app) return;
@@ -2565,11 +2613,11 @@ export class MugenBoard {
 		const color = side === 'red' ? this.options.grids[0].color : this.options.grids[1].color;
 		const graphics = new Graphics();
 		graphics.poly(this.cellOutline(cell.q, cell.r));
-		// The one cell on the board that is painted at all: the grid under it is drawn in
-		// nothing (see drawBoard), so a takeover is the whole of what a cell's ground says.
+		// The one cell on the board that is drawn as a cell at all: nothing rules them any
+		// more (see drawBoard), so a takeover is the whole of what a cell's ground says.
 		graphics.fill({ color, alpha: 0.35 });
 		graphics.stroke({ width: 2, color, alpha: 1 });
-		graphics.zIndex = 0.5; // above the base grid (0), below the actors
+		graphics.zIndex = 0.5; // above the ruling (0), below the actors
 		this.app.stage.addChild(graphics);
 		this.cellPaint.set(k, graphics);
 	}
