@@ -1148,7 +1148,7 @@
 			     drawn on. It takes no pointer either: it is a colour, not a surface. The head,
 			     the board and the ground below the board all stand on it. -->
 			<div
-				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(9*min(100vw/9,100dvh/12))] -translate-x-1/2 bg-sky-300"
+				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(9*min(100vw/9,100dvh/11))] -translate-x-1/2 bg-sky-300"
 				aria-hidden="true"
 			></div>
 			<!-- The board, and nothing round it. No card, no body, no column, and no border: the

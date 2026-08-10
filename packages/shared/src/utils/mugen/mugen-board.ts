@@ -255,22 +255,25 @@ export const APRON_DEPTH = 1 / GROUND_TILES_PER_CELL;
 const APRON_ROW = LAST_ROW + 1;
 
 /**
- * The **brow**: the board's topmost row of ground squares, which the canvas is cut below.
- * A third of a cell, the apron's depth taken off the other end — so the picture is twelve
- * squares deep where the board is thirteen, and the whole of it is three cells by four.
+ * The **brow**: the board's topmost rows of ground squares, which the canvas is cut below.
+ * Two of them — two thirds of a cell — so the picture is eleven squares deep where the
+ * board is thirteen.
  *
- * Nothing is lost with it. That row is the top third of the row no line opens on, and since
- * the sky became the page's ({@link layGround}) there is nothing drawn on it at all: it was
- * a strip of empty picture over a picture that is scaled to whatever room it is given, which
- * is scale taken off the fight for nothing.
+ * What they are is the top two thirds of the row no line opens on, and since the sky became
+ * the page's ({@link layGround}) there is nothing drawn on any of it: empty picture on a
+ * picture that is scaled to whatever room it is given, which is scale taken off the fight
+ * for nothing.
  *
- * What the row above the lanes is *for* survives the cut, which is the thing to check before
- * making it: it is headroom for the line standing on the first lane row, and a fighter is
- * drawn {@link CHAR_HEIGHT_RATIO} cells tall standing three quarters of the way down its own
- * cell, so the tallest of them reaches 0.55 of a cell above that cell's top edge. Two thirds
- * of a cell are left there. The head still clears.
+ * **It costs the tallest fighters the top of their heads, and that is the trade.** What the
+ * row above the lanes was for is headroom for the line standing on the first lane row: a
+ * fighter is drawn {@link CHAR_HEIGHT_RATIO} cells tall standing three quarters of the way
+ * down its own cell, so the tallest reaches 0.55 of a cell over that cell's top edge, and
+ * one third of a cell is what is left up there. The overhang is cut at the canvas edge, as
+ * a limb sweeping past an outer column already is. The first cut (one row) cleared every
+ * head; this one does not, and it is the size of the board on the screen that is bought
+ * with it — every row taken off the picture is the rest of it drawn larger.
  */
-const BROW_DEPTH = APRON_DEPTH;
+const BROW_DEPTH = 2 / GROUND_TILES_PER_CELL;
 
 /**
  * The field's first and last rows of squares, counted in ground squares down from the top
@@ -1193,10 +1196,11 @@ export class MugenBoard {
 	 * drawn. What running the board out to every canvas edge costs is on
 	 * {@link contentCrop}.
 	 *
-	 * The two thirds of a cell are the picture's ends and not the board's: the brow's squares
+	 * The brow and the apron are the picture's ends and not the board's: the brow's squares
 	 * are ruled and the apron's are laid like every other, and the crop is the one thing that
 	 * decides which of what is drawn is seen — as it already does for a fighter's limbs at
-	 * the sides and for the half-cell a beaten one is pushed out by.
+	 * the sides, for the half-cell a beaten one is pushed out by, and now for the head of a
+	 * tall fighter on the first lane row ({@link BROW_DEPTH}).
 	 */
 	private fitToContent(): void {
 		if (!this.app) return;
@@ -1225,9 +1229,10 @@ export class MugenBoard {
 	 * never stretched, only scaled.
 	 *
 	 * Two terms and no third: a host has no say in this at all, and the same two figures
-	 * answer every screen. The picture is three columns by four rows — the board's twelve
-	 * square-rows less the brow and plus the apron, which come to the same — so it is taller
-	 * than it is wide and a wide screen is limited by its height, a phone by its width; either
+	 * answer every screen. The picture is nine squares across and eleven down — the board's
+	 * thirteen, less the two the brow takes off the top and plus the one the apron adds at
+	 * the foot — so it is taller than it is wide and a wide screen is limited by its height,
+	 * a phone by its width; either
 	 * way the whole field is on the view, at the largest size that fits, with the axis that
 	 * did not run out spending what is left over on the room round the board rather than on
 	 * board nobody can see. (The host used to be able to push a column off the sides; see
