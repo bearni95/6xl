@@ -1,5 +1,12 @@
-Ground tiles, one sub-folder per artist — the same arrangement as ../icons.
+Ground tiles the combat board lays its cells with.
+
+- grass-16x16.png — a 256x256 sheet of 16x16 tiles, dropped in whole and unmodified. The
+  board takes the first two of its left-hand column, the plain grass fills, and lays them
+  alternating. Author and licence unrecorded: fill them in here before the game ships,
+  the way ../icons/license.txt credits the sets it holds.
+
+Previously here, and no longer used by anything:
 
 - j-treecko252, https://www.deviantart.com/j-treecko252
-  assorted-ground.png — "Assorted Ground Tiles" (deviation demrcnc), downloaded whole
-  and unmodified. A 256x480 sheet of 16x16 tiles; the board takes its top-left one.
+  assorted-ground.png — "Assorted Ground Tiles" (deviation demrcnc). Removed when the
+  grass above replaced it; it is in the history if it is ever wanted back.

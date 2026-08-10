@@ -28,6 +28,7 @@ import {
 	cellSide,
 	type CellSide,
 	FIRST_COLUMN,
+	FIRST_ROW,
 	findClosestApproach,
 	findMeleeMeeting,
 	findPath,
@@ -188,24 +189,25 @@ const DEFAULTS = {
 // both halves and in the column between them — what a cell belongs to is said by the
 // lattice ruled over it and by what stands on it, and never by the earth.
 //
-// What is taken is the sheet's **first row**, which is where its plain grass is: seven
-// squares that differ only in where the blades fall, on a page that goes on to flowers,
-// sand, water and shrubs. One of the seven is drawn into each square of the ground, picked
-// at random, so a field of a hundred and eight of them is grass rather than one stamp
-// repeated a hundred and eight times.
+// What is taken is the top of the sheet's **left-hand column**, which is where its plain
+// grass fills are — the rest of the page is edges, corners and tufts, tiles drawn to meet
+// something that is not grass, and this board has nothing for them to meet. The two are
+// laid alternating rather than one of them everywhere: they are the same green, one bare
+// and one with a few blades in it, so a board of them is grass that goes on rather than a
+// stamp repeated.
 
 /** The vendored sheet the ground tiles are cut from. */
-const GROUND_TILE_SHEET = '/assets/tiles/j-treecko252/assorted-ground.png';
+const GROUND_TILE_SHEET = '/assets/tiles/grass-16x16.png';
 
 /** The sheet's pitch: it is ruled into squares this size from its top-left corner. */
 const GROUND_TILE_PX = 16;
 
 /**
- * How many of the first row's tiles are plain grass, counted from the left: the seven the
- * ground may be laid with. The eighth is where the row starts turning into the dithered
- * ground that borders on something else, and is not one square of grass among others.
+ * How many tiles are taken off the top of that column, in the order they lie on it: two,
+ * the plain fill and the one with blades. The third is a flowered fill and the fourth
+ * changes palette — both grass, neither a thing to alternate a plain fill with.
  */
-const GROUND_TILE_CHOICES = 7;
+const GROUND_TILE_CHOICES = 2;
 
 /**
  * How many of those tiles a cell is laid with, across and down — nine to a cell, three
@@ -240,6 +242,11 @@ interface GroundSquare {
 	y: number;
 	width: number;
 	height: number;
+	/** Where the square sits in the board's own grid of squares, counted from its top-left
+	 * corner across every cell rather than restarting inside each — which is what lets the
+	 * tiles alternate over the whole field instead of over one cell at a time. */
+	column: number;
+	row: number;
 }
 
 /**
@@ -891,7 +898,7 @@ export class MugenBoard {
 	private cellPaint = new Map<string, Graphics>();
 	/** Loaded aura frame textures, keyed by aura color name. */
 	private auraTextures = new Map<string, Texture[]>();
-	/** The grass tiles a square of ground may be laid with, cut from the sheet's first row
+	/** The grass tiles the ground is laid with, cut from the top of the sheet's first column
 	 * on the way in ({@link loadGround}) — empty if it could not be had. Held so they can be
 	 * freed with the board: they are built here rather than fetched through `Assets`, so
 	 * nothing else is keeping them. */
@@ -1347,16 +1354,18 @@ export class MugenBoard {
 	 * as long as the arithmetic does. Nine sprites is one answer. It costs nine quads a cell
 	 * — a hundred and eight on a board — which is nothing beside one MUGEN fighter.
 	 *
-	 * **Which** of the seven grass tiles a square gets is drawn at random and kept nowhere:
-	 * they are seven ways of saying grass, so no square wants a particular one and nothing
-	 * later reads back what it was given. A board is built once when the arena opens and
-	 * torn down when it closes, so a fight is fought on one field throughout; the next one
-	 * is somewhere else in the same meadow.
+	 * **Which** tile a square gets is its place on the board and nothing else: the tiles are
+	 * taken in turn along both axes, which with two of them lays them alternating like a
+	 * checkerboard, every square differing from the four it touches. Counted over the whole
+	 * field rather than per cell ({@link groundSquares}), so the alternation runs through
+	 * the cell borders instead of restarting at each. Nothing is drawn and nothing is
+	 * stored: the same board is the same field every time it is built, which is what a
+	 * pattern is and a scatter is not.
 	 */
 	private layGround(q: number, r: number): void {
 		if (!this.app || this.groundTextures.length === 0) return;
 		for (const square of this.groundSquares(q, r)) {
-			const tile = this.groundTextures[Math.floor(Math.random() * this.groundTextures.length)];
+			const tile = this.groundTextures[(square.column + square.row) % this.groundTextures.length];
 			const grass = new Sprite(tile);
 			grass.position.set(square.x, square.y);
 			// The tile is 16px of artwork stretched over a ninth of a cell — sampled
@@ -1378,28 +1387,43 @@ export class MugenBoard {
 	 * from its own two corners projected — never a corner plus a width — so neighbouring
 	 * squares share an edge exactly and the row of them ends precisely on the cell's own
 	 * border, with no gap left by a third of a cell not dividing evenly into pixels.
+	 *
+	 * Each one is also told where it sits in the *board's* grid of squares rather than in
+	 * its cell's — the cell's own column and row, counted off the first of them, times the
+	 * three squares a cell holds. Three being odd, a count that restarted at every cell
+	 * would put two of the same tile side by side across every cell border and the
+	 * alternation would break exactly on the lines it should run through.
 	 */
 	private groundSquares(q: number, r: number): GroundSquare[] {
 		const [topLeft] = cellCorners(q, r);
 		const step = 1 / GROUND_TILES_PER_CELL;
+		const firstColumn = (q - FIRST_COLUMN) * GROUND_TILES_PER_CELL;
+		const firstRow = (r - FIRST_ROW) * GROUND_TILES_PER_CELL;
 		const squares: GroundSquare[] = [];
 		for (let row = 0; row < GROUND_TILES_PER_CELL; row++) {
 			for (let col = 0; col < GROUND_TILES_PER_CELL; col++) {
 				const at = this.project(topLeft.x + col * step, topLeft.y + row * step);
 				const beyond = this.project(topLeft.x + (col + 1) * step, topLeft.y + (row + 1) * step);
-				squares.push({ x: at.x, y: at.y, width: beyond.x - at.x, height: beyond.y - at.y });
+				squares.push({
+					x: at.x,
+					y: at.y,
+					width: beyond.x - at.x,
+					height: beyond.y - at.y,
+					column: firstColumn + col,
+					row: firstRow + row
+				});
 			}
 		}
 		return squares;
 	}
 
 	/**
-	 * Fetch the ground sheet and cut the grass out of its first row: one texture per tile,
-	 * in the order they lie on the sheet, {@link GROUND_TILE_CHOICES} of them.
+	 * Fetch the ground sheet and cut the grass out of its left-hand column: one texture per
+	 * tile, top down, {@link GROUND_TILE_CHOICES} of them.
 	 *
 	 * One fetch and one blob, cut as many times as there are tiles — the sheet is a single
-	 * small file, and asking for it once per tile would be seven requests for seven
-	 * rectangles of the same picture.
+	 * small file, and asking for it once per tile would be one request per rectangle of the
+	 * same picture.
 	 *
 	 * `createImageBitmap` takes the crop rectangle itself, so a tile is the whole of the
 	 * bitmap that reaches the GPU and no other part of the sheet is uploaded with it.
@@ -1426,7 +1450,7 @@ export class MugenBoard {
 			const sheet = await response.blob();
 			const tiles = await Promise.all(
 				Array.from({ length: GROUND_TILE_CHOICES }, (_, index) =>
-					createImageBitmap(sheet, index * GROUND_TILE_PX, 0, GROUND_TILE_PX, GROUND_TILE_PX)
+					createImageBitmap(sheet, 0, index * GROUND_TILE_PX, GROUND_TILE_PX, GROUND_TILE_PX)
 				)
 			);
 			return tiles.map(
