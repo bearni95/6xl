@@ -1,9 +1,11 @@
 /**
- * A character's authored render scale, fetched for the surface that is drawing it.
+ * What a character says about its own size, fetched for the surface that is drawing it:
+ * its render scale, and whether it lets its width size it.
  *
- * The correction itself lives in the character's own definition JSON
- * (`CharacterDefinition.renderScale`) — that is where it is authored, committed and
- * read back by the admin. What this module does is get it to the code that sizes
+ * The corrections themselves live in the character's own definition JSON
+ * (`CharacterDefinition.renderScale`, `CharacterDefinition.widthCap`) — that is where they
+ * are authored, committed and read back by the admin. What this module does is get them to
+ * the code that sizes
  * sprites, which everywhere in this app knows a character by its *frames folder*
  * (`/assets/<id>/frames`) and nothing else: a statue is handed one, a card model
  * carries one, the board loads its animations from one. So the folder is what is
@@ -23,6 +25,7 @@ import {
 	RENDER_SCALE_MIN,
 	type CharacterDefinition
 } from '../../types/character-definition.type';
+import { readWidthCap } from '../card/character-fit';
 import { loadDefinition } from './character-assets';
 
 /**
@@ -66,4 +69,17 @@ export function readRenderScale(definition: Partial<CharacterDefinition> | null)
  */
 export function loadRenderScale(basePath: string | null): Promise<number> {
 	return loadDefinition(characterIdFromFramesPath(basePath)).then(readRenderScale);
+}
+
+/**
+ * Whether the character whose frames live at `basePath` lets its width size it, defaulting
+ * to yes for a character that said nothing (and for any failure to read it — the cap is
+ * what every character has).
+ *
+ * The other half of what a character says about its own size, fetched exactly as the scale
+ * above is: the two read the one definition, which is one request per page between them
+ * ({@link loadDefinition}), so a surface asking for both is asking once.
+ */
+export function loadWidthCap(basePath: string | null): Promise<boolean> {
+	return loadDefinition(characterIdFromFramesPath(basePath)).then(readWidthCap);
 }

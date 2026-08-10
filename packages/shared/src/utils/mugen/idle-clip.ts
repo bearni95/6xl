@@ -108,6 +108,14 @@ export interface IdleClipPlacing {
 	 * drawn up by the same amount everywhere.
 	 */
 	renderScale?: number;
+	/**
+	 * Whether the character's own width may size it (default true) — the other thing its
+	 * definition JSON says about its size (see `loadWidthCap`). Passed by every surface
+	 * for the same reason the scale is: a sheet whose sweep is arms rather than size is
+	 * that everywhere, and a statue that kept the cap would draw a character its card
+	 * does not.
+	 */
+	widthCap?: boolean;
 }
 
 /**
@@ -155,8 +163,10 @@ export function placeIdleClip(
 
 	// The whole of the sizing is the cards' (see characterFitScale) — and it is the sheet
 	// measured just above that its width cap measures, so what is fitted here is the very
-	// rectangle this surface then centres.
-	const scale = characterFitScale(frames, room, placing.renderScale);
+	// rectangle this surface then centres. A character that waives the cap is the one case
+	// where that sheet comes out wider than the surface: it is still centred on it, so what
+	// hangs over hangs over both edges alike.
+	const scale = characterFitScale(frames, room, placing.renderScale, placing.widthCap);
 	const sheet: PlacedBox = {
 		left: (surface.width - sheetWidth * scale) / 2,
 		// Feet on the baseline, not floating above it: a row of these is a line-up, and

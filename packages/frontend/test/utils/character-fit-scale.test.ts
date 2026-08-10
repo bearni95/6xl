@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { characterFitScale, REFERENCE_SOURCE_HEIGHT } from '$utils/card/character-fit';
+import { characterFitScale, readWidthCap, REFERENCE_SOURCE_HEIGHT } from '$utils/card/character-fit';
+import { DEFAULT_WIDTH_CAP } from '$types/character-definition.type';
 
 /** A one-frame idle cycle of the given native size, its body axis centred. */
 const frame = (width: number, height: number, anchorX = 0.5) => [{ width, height, anchorX }];
@@ -115,6 +116,61 @@ describe('characterFitScale', () => {
 		const plain = characterFitScale(goku, CARD_BOX);
 		for (const bad of [undefined, 0, -1, NaN, Infinity, 40, 0.01]) {
 			expect(characterFitScale(goku, CARD_BOX, bad as number)).toBeCloseTo(plain, 10);
+		}
+	});
+
+	it('sizes a character that waives the width cap by its height alone', () => {
+		// Franky's shape: as tall as his castmates and drawn with his arms out, so the sweep
+		// the cap measures is his pose rather than the room he needs. Waiving it puts him on
+		// the shared ratio like anybody else, and lets him hang over his box.
+		const armsOut = frame(195, 156);
+		const capped = characterFitScale(armsOut, BOARD_BOX);
+		const waived = characterFitScale(armsOut, BOARD_BOX, 1, false);
+		expect(waived).toBeCloseTo(BOARD_BOX.height / 156, 10);
+		expect(waived).toBeGreaterThan(capped);
+		expect(195 * waived).toBeGreaterThan(BOARD_BOX.width);
+	});
+
+	it('stands a waiving character level with a narrow one of its own height', () => {
+		// The whole point of the waiver: Franky and Nico Robin are the same 156 px tall and
+		// nothing but a sweep of 195 against 43 stood between them.
+		const franky = characterFitScale(frame(195, 156), BOARD_BOX, 1, false) * 156;
+		const robin = characterFitScale(frame(43, 156), BOARD_BOX) * 156;
+		expect(franky).toBeCloseTo(robin, 10);
+	});
+
+	it('leaves the other two caps standing for a character that waives the width one', () => {
+		// Only the width cap is waived. A character over the reference height is still
+		// brought back to its box, and one under it still takes its own share of the ratio.
+		const tall = frame(300, 185);
+		expect(185 * characterFitScale(tall, BOARD_BOX, 1, false)).toBeCloseTo(BOARD_BOX.height, 10);
+		const short = frame(300, 81);
+		expect(characterFitScale(short, BOARD_BOX, 1, false)).toBeCloseTo(
+			BOARD_BOX.height / REFERENCE_SOURCE_HEIGHT,
+			10
+		);
+	});
+
+	it('caps the width by default, however the argument is left out', () => {
+		const armsOut = frame(195, 156);
+		const capped = characterFitScale(armsOut, BOARD_BOX);
+		expect(characterFitScale(armsOut, BOARD_BOX, 1, true)).toBeCloseTo(capped, 10);
+		expect(characterFitScale(armsOut, BOARD_BOX, 1, DEFAULT_WIDTH_CAP)).toBeCloseTo(capped, 10);
+		expect(195 * capped).toBeCloseTo(BOARD_BOX.width, 10);
+	});
+});
+
+describe('readWidthCap', () => {
+	it('waives the cap only where a definition says so outright', () => {
+		expect(readWidthCap({ widthCap: false })).toBe(false);
+	});
+
+	it('caps every character that says nothing, or says something unreadable', () => {
+		expect(readWidthCap(null)).toBe(DEFAULT_WIDTH_CAP);
+		expect(readWidthCap({})).toBe(DEFAULT_WIDTH_CAP);
+		expect(readWidthCap({ widthCap: true })).toBe(DEFAULT_WIDTH_CAP);
+		for (const bad of [0, '', 'false', null]) {
+			expect(readWidthCap({ widthCap: bad as unknown as boolean })).toBe(DEFAULT_WIDTH_CAP);
 		}
 	});
 });

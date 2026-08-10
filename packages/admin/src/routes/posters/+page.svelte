@@ -10,7 +10,8 @@
 
 	// The whole roster, idling side by side, drawn the way the combat board draws it:
 	// one shared source→screen ratio per cell box, each character's own `renderScale`
-	// on top of it, and the crown shift that stands it by its head. Which is what makes
+	// on top of it, whether its width is allowed to size it (`widthCap`), and the crown
+	// shift that stands it by its head. Which is what makes
 	// the screen worth having — a correction can only be judged against the others.
 	const roster = characters.map(({ id, basePath }) => ({ id, basePath }));
 
@@ -125,7 +126,8 @@
 			<p class="text-sm opacity-70">
 				Every imported character's idle animation on one canvas, sized exactly as the game's
 				combat board sizes it — the shared fit, the character's own
-				<code class="font-mono">renderScale</code>, and the crown alignment that stands it by its
+				<code class="font-mono">renderScale</code>, its
+				<code class="font-mono">widthCap</code>, and the crown alignment that stands it by its
 				head. They stand on a field of hexagons, filled outward from the middle in
 				registry order and laid at whichever width comes out nearest a square, each on its
 				cell's foot line, so heights compare across the wall. The field itself is never

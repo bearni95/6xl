@@ -23,8 +23,8 @@
 		placeIdleClip,
 		type IdleClipFrame
 	} from '$utils/mugen/idle-clip';
-	import { loadRenderScale } from '$utils/mugen/character-render-scale';
-	import { DEFAULT_RENDER_SCALE } from '$types/character-definition.type';
+	import { loadRenderScale, loadWidthCap } from '$utils/mugen/character-render-scale';
+	import { DEFAULT_RENDER_SCALE, DEFAULT_WIDTH_CAP } from '$types/character-definition.type';
 
 	// One character's looping idle animation, drawn in the document: an <img> per
 	// frame, stacked in the box and swapped on the clip's own timings, filling whatever
@@ -84,6 +84,10 @@
 	// both are facts about the character's art, and the caller hands over the frames
 	// folder that identifies it, not the character.
 	let renderScale = DEFAULT_RENDER_SCALE;
+	// Whether this character's width may size it, from the same definition (see
+	// loadWidthCap) and loaded on the same breath: the pair is what its own file says
+	// about how big it is drawn.
+	let widthCap = DEFAULT_WIDTH_CAP;
 
 	// The veil: a rectangle the size the sheet is about to be, tiled with grey squares that
 	// blur themselves into place, held over the picture until the picture is actually there
@@ -182,15 +186,21 @@
 		frames = null;
 		frameIndex = 0;
 		renderScale = DEFAULT_RENDER_SCALE;
+		widthCap = DEFAULT_WIDTH_CAP;
 		// A character already revealed is not covered at all: no veil goes up, and the picture
 		// is there as soon as its geometry is. Unless this surface has asked for the reveal
 		// whatever the session has seen (see `alwaysReveal`) — or has asked for no veil at all,
 		// which no session memory can argue with (see `veiled`).
 		if (!veiled || (!alwaysReveal && path && revealedPaths.has(path))) veil = 'down';
-		const [clip, scale] = await Promise.all([loadIdleClip(path), loadRenderScale(path)]);
+		const [clip, scale, cap] = await Promise.all([
+			loadIdleClip(path),
+			loadRenderScale(path),
+			loadWidthCap(path)
+		]);
 		// A different character may have come forward while this one was loading.
 		if (path !== loadedPath) return;
 		renderScale = scale;
+		widthCap = cap;
 		frames = clip;
 		schedule();
 	}
@@ -223,7 +233,7 @@
 			? placeIdleClip(
 					frames,
 					{ width: boxWidth, height: boxHeight },
-					{ flipped, baseline: boxHeight * baseline, renderScale }
+					{ flipped, baseline: boxHeight * baseline, renderScale, widthCap }
 				)
 			: null;
 

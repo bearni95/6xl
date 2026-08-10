@@ -12,7 +12,12 @@ import {
 import { destroyPixiApp } from '../pixi/release-context';
 import { combatColorHex, GRID_LINE } from '../color/combat-color';
 import type { Manifest } from './mugen-player';
-import { CHAR_HEIGHT_RATIO, characterFitScale, REFERENCE_SOURCE_HEIGHT } from '../card/character-fit';
+import {
+	CHAR_HEIGHT_RATIO,
+	characterFitScale,
+	readWidthCap,
+	REFERENCE_SOURCE_HEIGHT
+} from '../card/character-fit';
 import { characterIdFromFramesPath, readRenderScale } from './character-render-scale';
 import { loadDefinition, loadManifest } from './character-assets';
 import { crownDrift, crownOffset, type CrownFrame, readCrownAlign } from './character-crown';
@@ -1715,11 +1720,16 @@ export class MugenBoard {
 		// crossing is the smaller thing: every fighter here already stands a third taller
 		// than its cell and over the row behind it ({@link CHAR_HEIGHT_RATIO}), so a limb
 		// reaching past the cell is the overlap this board is drawn with throughout.
+		// Which is also what a character waiving the cap outright is asking for, and why it
+		// is a thing a character may ask ({@link readWidthCap}): a sheet drawn with its arms
+		// out sweeps a cell and a half at the height it is meant to stand at, and holding it
+		// to the cell shrinks the whole fighter to fit its arms.
 		const box = this.cellWidth();
 		const fitScale = characterFitScale(
 			baseFrames,
 			{ width: box, height: box * CHAR_HEIGHT_RATIO },
-			readRenderScale(definition)
+			readRenderScale(definition),
+			readWidthCap(definition)
 		);
 
 		// Where the character's head is, relative to the axis it is drawn around — the

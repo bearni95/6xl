@@ -54,5 +54,6 @@
 		"x": 0,
 		"y": 0,
 		"size": 705
-	}
+	},
+	"widthCap": false
 }

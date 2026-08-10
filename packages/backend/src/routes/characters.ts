@@ -240,6 +240,14 @@ function validate(id: string, body: unknown): CharacterDefinition {
 			? rawScale
 			: undefined;
 
+	// Whether this character's width is allowed to size it. Carried through a save exactly
+	// as the two above are, and for the same reason: it is authored in the JSON, and a
+	// character that lost its waiver on an unrelated edit would go back to being shrunk to
+	// the width of its own outstretched arms. Only an explicit `false` is kept — the field
+	// exists to turn the cap off, and writing back the `true` that omission already means
+	// would put a line in every file to say what every file says by saying nothing.
+	const widthCap = def.widthCap === false ? false : undefined;
+
 	// Whether the board stands this character by its crown or by its sheet's own axis —
 	// like the scale above, authored in the JSON rather than in this editor, so all this
 	// does is carry it through a save. Only an explicit `false` is kept: the field exists
@@ -260,6 +268,7 @@ function validate(id: string, body: unknown): CharacterDefinition {
 	if (face) result.face = face;
 	if (faceCrop) result.faceCrop = faceCrop;
 	if (renderScale !== undefined) result.renderScale = renderScale;
+	if (widthCap !== undefined) result.widthCap = widthCap;
 	if (crownAlign !== undefined) result.crownAlign = crownAlign;
 	return result;
 }

@@ -4,14 +4,14 @@
  * Every character in the registry stood up at once, idling, on **one** PixiJS canvas —
  * the admin's `/posters` screen. What it is for is comparison: a character's size is
  * not a property of its artwork but of the corrections authored for it
- * (`renderScale`, `crownAlign`), and those are only judged against the rest of the
- * roster. So this draws each character exactly as the combat board draws it and puts
- * them side by side.
+ * (`renderScale`, `widthCap`, `crownAlign`), and those are only judged against the rest
+ * of the roster. So this draws each character exactly as the combat board draws it and
+ * puts them side by side.
  *
  * "Exactly as the board" is not a resemblance, it is the same calls. The size is
  * {@link characterFitScale} over a box of {@link CHAR_HEIGHT_RATIO} cell widths, with
- * the character's own {@link readRenderScale}, shifted by {@link crownCorrection} where
- * its definition asks for it. Nothing here decides a size or a place; if a poster and a
+ * the character's own {@link readRenderScale} and {@link readWidthCap}, shifted by
+ * {@link crownCorrection} where its definition asks for it. Nothing here decides a size or a place; if a poster and a
  * fighter ever disagree it is because one of them stopped calling these.
  *
  * The **ground** is the wall's own: a field of pointy-topped hexagons off
@@ -85,7 +85,7 @@
  */
 
 import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
-import { CHAR_HEIGHT_RATIO, characterFitScale } from '../card/character-fit';
+import { CHAR_HEIGHT_RATIO, characterFitScale, readWidthCap } from '../card/character-fit';
 import { crownCorrection, readCrownAlign } from './character-crown';
 import { readRenderScale } from './character-render-scale';
 import type { GridPoint } from './grid';
@@ -161,6 +161,8 @@ interface Poster extends CycleCursor {
 	frames: LoadedFrame[];
 	/** The character's authored render scale, read once from its definition. */
 	renderScale: number;
+	/** Whether it lets its width size it, read once from the same definition. */
+	widthCap: boolean;
 	/**
 	 * How far its crown sits from the axis it is drawn around, in its **own source
 	 * pixels** — the correction at scale 1. Kept unscaled because the correction is
@@ -808,6 +810,7 @@ export class MugenPosterGrid {
 			frameIndex: 0,
 			frameElapsed: 0,
 			renderScale: readRenderScale(definition),
+			widthCap: readWidthCap(definition),
 			crownOffset
 		};
 		this.applyFrame(poster);
@@ -936,7 +939,7 @@ export class MugenPosterGrid {
 			const flipped = flips[index];
 			// The fit is asked again per layout because the box it answers has just been
 			// decided; it is the same question the board asks, of the same function.
-			const fitScale = characterFitScale(poster.frames, box, poster.renderScale);
+			const fitScale = characterFitScale(poster.frames, box, poster.renderScale, poster.widthCap);
 			const foot = onCanvas(latticeFoot(centre));
 			// A negative x-scale mirrors the sprite about its anchor, in place.
 			poster.sprite.scale.set(flipped ? -fitScale : fitScale, fitScale);

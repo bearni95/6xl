@@ -10,7 +10,8 @@ vi.mock('$utils/mugen/idle-clip', () => ({
 	placeIdleClip: () => null
 }));
 vi.mock('$utils/mugen/character-render-scale', () => ({
-	loadRenderScale: () => Promise.resolve(1)
+	loadRenderScale: () => Promise.resolve(1),
+	loadWidthCap: () => Promise.resolve(true)
 }));
 
 /**

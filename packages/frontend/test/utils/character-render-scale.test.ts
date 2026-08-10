@@ -3,7 +3,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { characters } from '@3xl/data';
 import { characterIdFromFramesPath, readRenderScale } from '$utils/mugen/character-render-scale';
-import { characterFitScale, type FitFrame } from '$utils/card/character-fit';
+import {
+	CHAR_HEIGHT_RATIO,
+	characterFitScale,
+	readWidthCap,
+	type FitFrame
+} from '$utils/card/character-fit';
 import {
 	DEFAULT_RENDER_SCALE,
 	RENDER_SCALE_MAX,
@@ -49,7 +54,13 @@ const STATUE_SQUARE = 300;
 function statueHeight(id: string): number {
 	const frames = idleFrames(id);
 	const room = { width: STATUE_SQUARE, height: (STATUE_SQUARE * 5) / 6 };
-	const scale = characterFitScale(frames, room, readRenderScale(definitionOf(id)));
+	const definition = definitionOf(id);
+	const scale = characterFitScale(
+		frames,
+		room,
+		readRenderScale(definition),
+		readWidthCap(definition)
+	);
 	return Math.max(...frames.map((frame) => frame.height)) * scale;
 }
 
@@ -239,5 +250,72 @@ describe('authored render scales', () => {
 		const axisBound =
 			Math.min(characterFitScale(frames, room, RENDER_SCALE_MAX), room.width / axisWidth) * height;
 		expect(axisBound).toBeLessThan(statueHeight('eb-trunks'));
+	});
+});
+
+// Everyone whose width is not allowed to size them. Franky alone: his idle is drawn with
+// his arms out, so the sweep the cap reads as the room he needs is 195 source px against
+// Nico Robin's 43 at the very same 156 px of height, and the cap alone stood him at three
+// fifths of a castmate he is drawn level with. No renderScale could have reached him — a
+// cap is the smaller of what it and the reference give, at any scale.
+const WIDTH_WAIVED = ['franky'];
+
+/** How tall a character is actually drawn on the combat board, in cell widths: the box a
+ * cell gives is its own width by {@link CHAR_HEIGHT_RATIO} of it, and the height is the
+ * tallest frame of the idle at the fit that box gives. */
+function boardHeight(id: string): number {
+	const frames = idleFrames(id);
+	const definition = definitionOf(id);
+	const scale = characterFitScale(
+		frames,
+		{ width: 1, height: CHAR_HEIGHT_RATIO },
+		readRenderScale(definition),
+		readWidthCap(definition)
+	);
+	return Math.max(...frames.map((frame) => frame.height)) * scale;
+}
+
+describe('authored width waivers', () => {
+	it('holds every other character to its box', () => {
+		// Like the scale, not a knob anyone reaches for: a character whose cycle is as wide
+		// as the room it needs says nothing at all.
+		for (const character of characters) {
+			if (WIDTH_WAIVED.includes(character.id)) continue;
+			expect(definitionOf(character.id).widthCap, character.id).toBeUndefined();
+		}
+	});
+
+	it('stands Franky level with Nico Robin', () => {
+		// What the waiver is for, measured off the real manifests on the surface it was asked
+		// for. The two sheets are the same height, so level is exactly level.
+		expect(boardHeight('franky')).toBeCloseTo(boardHeight('robin'), 10);
+		expect(boardHeight('franky') / boardHeight('robin')).toBeCloseTo(1, 10);
+	});
+
+	it('would leave Franky short of her at any render scale, which is why the waiver exists', () => {
+		// The pair of decisions and not either one alone: with the cap on, the sweep of his
+		// arms holds him under his castmate however high the scale is taken.
+		const frames = idleFrames('franky');
+		const capped =
+			characterFitScale(frames, { width: 1, height: CHAR_HEIGHT_RATIO }, RENDER_SCALE_MAX) *
+			Math.max(...frames.map((frame) => frame.height));
+		expect(capped).toBeLessThan(boardHeight('robin'));
+	});
+
+	it('draws Franky wider than his cell, which is what waiving the cap buys with it', () => {
+		// Stated rather than discovered: the waiver is a character overlapping its
+		// neighbours, and that is the trade it was made for.
+		const frames = idleFrames('franky');
+		const definition = definitionOf('franky');
+		const scale = characterFitScale(
+			frames,
+			{ width: 1, height: CHAR_HEIGHT_RATIO },
+			readRenderScale(definition),
+			readWidthCap(definition)
+		);
+		const sweep =
+			Math.max(...frames.map((frame) => frame.anchorX * frame.width)) +
+			Math.max(...frames.map((frame) => (1 - frame.anchorX) * frame.width));
+		expect(sweep * scale).toBeGreaterThan(1);
 	});
 });

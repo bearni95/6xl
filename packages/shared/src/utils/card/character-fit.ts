@@ -10,8 +10,10 @@
 
 import {
 	DEFAULT_RENDER_SCALE,
+	DEFAULT_WIDTH_CAP,
 	RENDER_SCALE_MAX,
-	RENDER_SCALE_MIN
+	RENDER_SCALE_MIN,
+	type CharacterDefinition
 } from '../../types/character-definition.type';
 
 /**
@@ -72,18 +74,29 @@ export interface FitFrame {
  *     statues centre it, the board pins the axis on a cell's mark and lets the sweep sit
  *     where it falls — and none of that changes how wide the thing being placed is.
  *
- * `renderScale` is the one thing a character may say about this for itself, read from
- * its own definition JSON (see `CharacterDefinition.renderScale`): the whole scheme
- * assumes every sheet is drawn at the same pixels-per-person, and MUGEN authors do
- * not agree on one, so a set drawn small says so and is drawn up by that much. It
- * lowers the height the character is *measured against* rather than raising the box,
- * which is why the two caps still hold: a scaled-up character that would now stand
- * taller than its box stops at the box, exactly as an over-tall one always has.
+ * A character may say two things about this for itself, both read from its own definition
+ * JSON:
+ *
+ * `renderScale` (see `CharacterDefinition.renderScale`): the whole scheme assumes every
+ * sheet is drawn at the same pixels-per-person, and MUGEN authors do not agree on one, so
+ * a set drawn small says so and is drawn up by that much. It lowers the height the
+ * character is *measured against* rather than raising the box, which is why the caps
+ * still hold: a scaled-up character that would now stand taller than its box stops at the
+ * box, exactly as an over-tall one always has.
+ *
+ * `widthCap: false` (see `CharacterDefinition.widthCap`) drops the width cap for the one
+ * kind of sheet it reads wrong — a character drawn with its arms out, whose sweep is not
+ * the room it needs but the pose it holds. Such a character is sized by its height alone,
+ * as the roster's sizing means it to be, and is drawn wider than its box. It is deliberately
+ * *not* something `renderScale` could have done: the caps are the smaller of what they and
+ * the reference give, so a character the width cap holds is held there at any scale, and
+ * the way past a cap is to say the cap is wrong.
  */
 export function characterFitScale(
 	frames: FitFrame[],
 	box: { width: number; height: number },
-	renderScale: number = DEFAULT_RENDER_SCALE
+	renderScale: number = DEFAULT_RENDER_SCALE,
+	widthCap: boolean = DEFAULT_WIDTH_CAP
 ): number {
 	const maxHeight = Math.max(...frames.map((frame) => frame.height));
 	// How far the cycle reaches either side of its axis, at its native size. Neither
@@ -105,6 +118,20 @@ export function characterFitScale(
 	return Math.min(
 		box.height / (REFERENCE_SOURCE_HEIGHT / scale),
 		box.height / maxHeight,
-		box.width / sourceWidth
+		// The one cap a character may waive. Infinity rather than a branch on the min, so
+		// the waiver reads as "this sheet's width does not bind" and the other two caps are
+		// untouched by it.
+		widthCap ? box.width / sourceWidth : Infinity
 	);
+}
+
+/**
+ * Whether this character's width is allowed to size it. Only an explicit `false` waives
+ * the cap — a definition that says nothing, one that predates the field, and one whose
+ * value is some other thing entirely all get the cap, because keeping art inside its box
+ * is what every character is meant to have and an unreadable file is not a reason to let
+ * one out of it.
+ */
+export function readWidthCap(definition: Partial<CharacterDefinition> | null): boolean {
+	return definition?.widthCap === false ? false : DEFAULT_WIDTH_CAP;
 }

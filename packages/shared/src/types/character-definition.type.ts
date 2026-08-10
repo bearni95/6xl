@@ -147,6 +147,27 @@ export interface CharacterDefinition {
 	 */
 	renderScale?: number;
 	/**
+	 * Whether the width of this character's cycle is allowed to decide how big it is
+	 * drawn (see `characterFitScale`). Omitted means yes, which is what every character
+	 * gets: what a surface gives a character is a box, and a cycle wider than its box is
+	 * brought back until it fits rather than being drawn over the character beside it.
+	 *
+	 * Set to `false` for a sheet whose width is not its size. The cap reads a cycle's
+	 * sweep as the room the character needs, which is true of a fighter drawn upright and
+	 * false of one drawn with its arms out: Franky's idle sweeps 195 source px against
+	 * Nico Robin's 43 at the very same height, so the cap alone stood him at three fifths
+	 * of his own castmate — and no {@link CharacterDefinition.renderScale} could reach
+	 * him, since the scale lowers the height he is measured against and the cap is the
+	 * smaller of the two either way. Turning it off sizes him by height alone, which is
+	 * what the roster's sizing means; he is then drawn wider than his cell and overlaps
+	 * his neighbours, which is the overlap this board is drawn with throughout.
+	 *
+	 * A fact about a particular sheet, like {@link CharacterDefinition.crownAlign} and
+	 * {@link CharacterDefinition.renderScale}, and kept in the character's own file for
+	 * the same reason: no reading of the pixels can tell an arm from a body.
+	 */
+	widthCap?: boolean;
+	/**
 	 * Whether this character is stood on the board by its **crown** — the middle of the
 	 * highest painted pixels of the pose it stands in — rather than by the MUGEN axis its
 	 * sheet is drawn around. Omitted means yes, which is what every character gets and
@@ -227,6 +248,11 @@ export const DEFAULT_RENDER_SCALE = 1;
  * screen. */
 export const RENDER_SCALE_MIN = 0.25;
 export const RENDER_SCALE_MAX = 4;
+
+/** Sized by its width as well as its height — what a definition with no
+ * {@link CharacterDefinition.widthCap} means. On by default because a box is a box; the
+ * field exists to turn it off for the sheets whose sweep is arms rather than size. */
+export const DEFAULT_WIDTH_CAP = true;
 
 /** Stood by its crown rather than by its axis — what a definition with no
  * {@link CharacterDefinition.crownAlign} means. On by default because it is right for
