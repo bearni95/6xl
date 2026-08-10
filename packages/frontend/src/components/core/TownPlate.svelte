@@ -61,14 +61,29 @@
 	// that reads as a stray row. What is left is what only the plate says: whose the place is
 	// and how far it has been taken.
 	export let named: boolean = true;
+	// Which end of the head row the tile is at. A plate is read tile-first everywhere it stands
+	// on its own — a pin on the map, a card in a column — because a picture is where a reading
+	// starts. Mirrored, the two lines take the row's width and are ranged right, and the tile
+	// follows them: the same head row read from the other end, for a plate laid into the
+	// left-hand half of something whose middle is where its mark belongs (the head of the fight,
+	// where the tile faces the account's own portrait across the seam). Nothing else about the
+	// plate turns round with it — the rows under the head are blocks of their own width.
+	export let mirrored: boolean = false;
 	export let classes: string = '';
 </script>
 
 <div class={classNames(flush ? PLATE_FLUSH_CLASSES : PLATE_CLASSES, classes)}>
-	<!-- The head row: the tile at the left end, the two lines beside it. `min-w-0` is what
-		lets a line longer than the plate's own width truncate rather than push the plate
-		wider — a flex item's floor is its content otherwise. The tile is decorative: the show
-		is named in the line right beside it, so announcing the glyph too would read it twice. -->
+	<!-- The head row: the tile at the left end, the two lines beside it — or, mirrored, the two
+		lines first and the tile at the right end. `min-w-0` is what lets a line longer than the
+		plate's own width truncate rather than push the plate wider — a flex item's floor is its
+		content otherwise. The tile is decorative: the show is named in the line right beside it,
+		so announcing the glyph too would read it twice.
+		Turning the row round is two things and they only work together: the tile is sent to the
+		other end (`order-last`, so the markup keeps saying picture-then-lines and only the
+		painting changes) and the lines take whatever width is spare and set themselves against it
+		(`flex-1 text-right`). Without the second the tile would sit next to the type in the
+		middle of the row rather than at the end of it, since a row of two shrink-to-fit boxes is
+		as wide as they are. -->
 	{#if named}
 		<div class="flex items-center gap-2">
 			{#if iconSvg || frameClasses}
@@ -76,14 +91,20 @@
 					class={classNames(
 						TILE_CLASSES,
 						'[&>svg]:size-7',
-						frameClasses ?? 'bg-base-100 text-base-content'
+						frameClasses ?? 'bg-base-100 text-base-content',
+						mirrored && 'order-last'
 					)}
 					aria-hidden="true"
 				>
 					{@html iconSvg ?? ''}
 				</div>
 			{/if}
-			<div class="flex min-w-0 flex-col text-left leading-tight">
+			<div
+				class={classNames(
+					'flex min-w-0 flex-col leading-tight',
+					mirrored ? 'flex-1 text-right' : 'text-left'
+				)}
+			>
 				{#if subtitle}
 					<span class="truncate text-xs font-semibold">{subtitle}</span>
 				{/if}

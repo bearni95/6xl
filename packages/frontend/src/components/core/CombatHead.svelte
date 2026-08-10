@@ -64,34 +64,57 @@
      caller's to say: the whole of a phone's screen, whatever the two cells come to over the
      board from `sm:` up, or the whole of the sidebar lying down. -->
 <div class={classNames('flex w-full flex-col', classes)}>
-	<!-- The two things the fight is about, side by side: whoever is sitting on the town on the
-	     left and the place itself on the right. They are of a kind — who it is being fought
-	     with, and what is being fought for — so they are read across rather than stacked, and
-	     the grid is what makes the two cells the same width whatever either of them holds: a
-	     name of any length and a town of any length are laid out by the head, not by each other.
-	     The two cells are read *out of the middle*, and that is what decides which is written
-	     first. Each carries a picture — a face and a show's glyph — and each sets its type
-	     against that picture, so the pair reads outwards from the seam between them: the
-	     account's avatar at the inner edge of the left cell with the name running back from it,
-	     the town's tile at the inner edge of the right cell with the place running on from it.
-	     They stood the other way round, each picture at the far end of its own cell, which put
-	     the two marks at the outer corners of a block whose middle then had nothing in it and
-	     left every line of type hanging away from the thing it was about. Nothing inside either
-	     cell changed to turn it round: both were already packed against one end, so swapping the
-	     cells is what swapped the ends they are packed against.
+	<!-- The two things the fight is about, side by side: the place on the left and whoever is
+	     sitting on it on the right. They are of a kind — what is being fought for, and who it is
+	     being fought with — so they are read across rather than stacked, and the grid is what
+	     makes the two cells the same width whatever either of them holds: a name of any length
+	     and a town of any length are laid out by the head, not by each other.
+	     Both cells face the middle, and that is a rule about their insides rather than about
+	     which of them is which. Each carries a picture — the show's tile and the account's face —
+	     and each picture stands on the seam between the two cells, with its own type set against
+	     it and growing back out towards the edge of the head: the tile at the right end of the
+	     left cell with the place's lines ranged right against it, the face at the left end of the
+	     right cell with the name ranged left against it. The two marks are then a pair, read
+	     together, and neither line of type is left hanging away from the thing it names.
+	     Every picture was at the outer end before, which is what a block assembled out of two
+	     things that each start with a picture does if nothing is said about it: two marks in the
+	     far corners of the head, and the middle — the one part of it the eye crosses — empty.
+	     The cells did not move to fix it and must not: the town is the left-hand thing in this
+	     game wherever the two are named together, the board included. What moved is what is
+	     inside them, and each cell says so itself (`mirrored` on the plate, and CombatHost's own
+	     single arrangement).
 	     Two cells whoever is sitting on the town. Where nobody is — a town still on its seeded
-	     house team — the first is the same plate with nothing printed on it. It stood as a
+	     house team — the second is the same plate with nothing printed on it. It stood as a
 	     single wide column for a while, on the reading that an empty plate says there is a
 	     player and we have lost them; what it actually says is that there is nobody over there
 	     to name, which is the truth about a seeded town. A row of two whoever holds the place
 	     is also a row that does not change shape as the place changes hands, which is the whole
 	     of what a head laid over a board should be doing. -->
 	<div class="grid grid-cols-2 items-stretch">
+		<!-- The town, on the very plate its pin carries on the map: the same mark, drawn the same
+		     way, showing what was pressed to get here. Only the challenge button is missing, and
+		     the caller is what leaves it out — a fight already under way has nothing left to
+		     start.
+		     Mirrored, which is the one thing about it that is not the map's: the head row is read
+		     the other way round — the two lines take the width and are ranged right, the tile after
+		     them — so the glyph ends up at the right edge of this cell, which is the middle of the
+		     head. A pin has one end to start from and this cell has the other, and the plate is
+		     told which rather than left to be turned round from outside.
+		     Flush: laid into a cell it takes the cell's width and squares its corners, where a
+		     pin's plate settles its own width and rounds them.
+		     Without its holder row, which is the one thing a pin's plate says that this head now
+		     says better: the row is a face and a name squeezed under the place, which is all a pin
+		     has room for, and the cell beside this is the whole account. Said twice, side by side,
+		     the second saying reads as a second player. The plate keeps the row everywhere else —
+		     this is the caller leaving it out, exactly as it leaves out the challenge button. -->
+		{#if location}
+			<TownPlate {...location} holder={null} challenge={null} flush mirrored />
+		{/if}
 		<!-- Whose town it is — the account behind the line-up on the other side of the board, said
 		     the way this game says a player wherever it says one: the face they wear, the name they
-		     chose and the level they have reached. Written first, so it takes the left-hand cell,
-		     where its own layout (the reading takes the spare width and is set right, the avatar
-		     after it) stands the face against the middle of the head. -->
+		     chose and the level they have reached. Written second, so it takes the right-hand cell,
+		     where its own arrangement — the face first, the reading set left against it — puts the
+		     portrait on the middle of the head and runs the name outwards from there. -->
 		{#if location?.holder}
 			<CombatHost
 				name={location.holder.name}
@@ -106,24 +129,6 @@
 			     of the board is the town's own and not a player's, and an empty plate is how a head
 			     with two halves says it. -->
 			<div class={PLATE_FLUSH_CLASSES}></div>
-		{/if}
-		<!-- The town, on the very plate its pin carries on the map: the same mark, drawn the same
-		     way, showing what was pressed to get here. Only the challenge button is missing, and
-		     the caller is what leaves it out — a fight already under way has nothing left to
-		     start.
-		     Written second, so it takes the right-hand cell, where the plate's own head row —
-		     tile first, the two lines set left against it — puts the show's glyph on the middle of
-		     the head and runs the place's name outwards from it. The plate is drawn exactly as the
-		     map draws it; it is the cell it is put in that decides which way it faces.
-		     Flush: laid into a cell it takes the cell's width and squares its corners, where a
-		     pin's plate settles its own width and rounds them.
-		     Without its holder row, which is the one thing a pin's plate says that this head now
-		     says better: the row is a face and a name squeezed under the place, which is all a pin
-		     has room for, and the cell beside this is the whole account. Said twice, side by side,
-		     the second saying reads as a second player. The plate keeps the row everywhere else —
-		     this is the caller leaving it out, exactly as it leaves out the challenge button. -->
-		{#if location}
-			<TownPlate {...location} holder={null} challenge={null} flush />
 		{/if}
 	</div>
 	<!-- The standing used to be a third cell across the foot of this grid. It is on the banner

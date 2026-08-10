@@ -38,12 +38,6 @@
 	// player's own account at the corner of their orders panel — since a plate on a plate is a
 	// second edge drawn round a thing that already has one.
 	export let plated: boolean = true;
-	// Which end the picture is at. The face goes last where the reading fills its cell and is
-	// set against the picture (the head's left-hand cell, whose far end is the middle of the
-	// head and the town's plate across it) and first where it stands at the near edge of what
-	// it is in, which is what the corner of the orders panel is: a picture reads as the start
-	// of an account, so at the left it comes first and the name follows it.
-	export let faceFirst: boolean = false;
 	// What the reading is a reading of, said to a pointer resting on it. The caller's, because
 	// only the caller knows: the same three facts are somebody else's account in the head of
 	// the fight and the player's own in their panel. Null carries no tooltip at all, which is
@@ -54,34 +48,21 @@
 	$: initial = (name || '?').charAt(0).toUpperCase();
 </script>
 
-<!-- In the head of the fight this is read the other way round from the town's plate beside
-	it: the reading first and the face at the far end. That is the left-hand cell of the head,
-	whose far end is the middle of it, so the picture goes onto the seam the town's tile stands
-	on and the type is set against the picture — the two cells then read outwards from that
-	middle, each with its own mark on it, rather than both pointing the same way and leaving the
-	head with a face at one outer corner and a glyph at the other. `flex-1` on the reading is
-	what pushes the avatar out there: the column takes whatever width the cell has spare, so the
-	face is at the end of the cell and not merely after the name. Turned round (`faceFirst`)
-	there is nothing to push against — the box is as wide as what is in it — so the reading takes
-	its own width and the picture leads it.
-	`min-w-0` either way is what lets a long username truncate rather than push the whole head
-	wider: a flex item's floor is its content otherwise.
+<!-- One arrangement, and both places it stands want it: the picture at the near end and the
+	reading after it, which is how an account is read anywhere. In the head of the fight that
+	near end is the middle of the head — this is its right-hand cell, and the town's plate across
+	the seam is mirrored to bring its own tile to the same place — so the two marks meet there and
+	each reading runs outwards from its own. In the corner of the orders panel it is the corner
+	itself. The reading took the spare width and was set right for a while, to push the avatar out
+	to the outer edge of the head; that is what put a face in one far corner of the block and a
+	glyph in the other, and the mirror on the plate is what replaced it.
+	`min-w-0` is what lets a long username truncate rather than push the whole head wider: a flex
+	item's floor is its content otherwise.
 	The level's line is faded rather than tinted (`opacity-70` and not `text-white/70`), so it
 	is seven tenths of whatever ink it is standing in — the plate's white in the head, and
 	whatever the panel is set in where this carries no plate. -->
 <div class={classNames(plated && PLATE_FLUSH_CLASSES, classes)} title={hint}>
 	<div class="flex items-center gap-2">
-		<div
-			class={classNames(
-				'flex min-w-0 flex-col leading-tight',
-				faceFirst ? 'text-left' : 'flex-1 text-right'
-			)}
-		>
-			<span class="truncate text-sm font-semibold">{name}</span>
-			<span class="truncate text-xs font-medium opacity-70">
-				{$_('profile.levelBadge', { values: { level } })}
-			</span>
-		</div>
 		<PlayerAvatar
 			{characterId}
 			{color}
@@ -89,7 +70,13 @@
 			ownColors={false}
 			size="w-10"
 			textClasses="text-base font-bold"
-			classes={classNames('flex-none', faceFirst && 'order-first')}
+			classes="flex-none"
 		/>
+		<div class="flex min-w-0 flex-col text-left leading-tight">
+			<span class="truncate text-sm font-semibold">{name}</span>
+			<span class="truncate text-xs font-medium opacity-70">
+				{$_('profile.levelBadge', { values: { level } })}
+			</span>
+		</div>
 	</div>
 </div>

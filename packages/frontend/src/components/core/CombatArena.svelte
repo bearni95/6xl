@@ -1599,7 +1599,6 @@
 											color={$profile.avatarColor}
 											level={$profile.level}
 											plated={false}
-											faceFirst
 										/>
 									</button>
 									<!-- The way back from the question, and then the way out of the fight. In that
