@@ -7,7 +7,8 @@
 	import CombatHost from '$components/core/CombatHost.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
-	import TownPlate from '$components/core/TownPlate.svelte';
+	import TownChallenge from '$components/core/TownChallenge.svelte';
+	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
 	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
 	import { combatColorHex } from '$utils/color/combat-color';
 	import { ORDER_ICONS } from '$utils/color/traits';
@@ -1587,7 +1588,7 @@
 						     player. The plate keeps the row everywhere else — this is the caller
 						     leaving it out, exactly as it leaves out the challenge button. -->
 						{#if location}
-							<TownPlate {...location} holder={null} flush />
+							<TownPlate {...location} holder={null} challenge={null} flush />
 						{/if}
 						<!-- Whose town it is — the account behind the line-up on the other side of the
 						     board, said the way this game says a player wherever it says one: the face
@@ -1600,6 +1601,30 @@
 								color={location.holder.color}
 								level={location.holder.level}
 							/>
+						{/if}
+						<!-- How far the town has been taken, on a cell of its own under the two: it is
+						     about both of them at once — the wins this player has banked against the
+						     side sitting there, and the bar the town's own turnover sets — so it is
+						     read across the whole head rather than tucked into either column. It is
+						     also the one thing here that is a picture of a quantity, and a bar is worth
+						     the full width it is given.
+						     Off the plate for that reason, which is why it brings the plate's own
+						     surface with it: TownChallenge draws no ground of its own (it is normally
+						     already standing on a pin's), so the flush plate is what it is laid on
+						     here, butting into the two cells above as one block of chrome.
+						     `col-span-2` only where there are two columns to span — in a one-column
+						     grid it would open an implicit second one and pull the head off centre. -->
+						{#if location?.challenge}
+							<div
+								class={classNames(PLATE_FLUSH_CLASSES, location.holder && 'col-span-2')}
+							>
+								<TownChallenge
+									siege={location.challenge.siege}
+									button={location.challenge.button}
+									unlocksAt={location.challenge.unlocksAt}
+									onUnlock={location.challenge.onUnlock}
+								/>
+							</div>
 						{/if}
 					</div>
 					{#if state && !state.outcome}
