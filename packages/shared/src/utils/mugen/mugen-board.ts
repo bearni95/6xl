@@ -908,14 +908,6 @@ interface OrderStrip {
 	container: Container;
 	buttons: BoardMark[];
 	placement: OrderPlacement;
-	/**
-	 * Nothing in this column can be tapped — every one of its marks is a reading
-	 * ({@link BoardOrder.readonly}) or an empty slot. It is what decides which side of its
-	 * own fighter the column is drawn ({@link MugenBoard.updateOrders}), read off the orders
-	 * themselves rather than told, so a column that is offered as an input cannot end up
-	 * behind the sprite that would hide it.
-	 */
-	readonly: boolean;
 }
 
 /** A character standing (and, during combat, running) on the board. */
@@ -3427,7 +3419,6 @@ export class MugenBoard {
 		const strip = actor.orders;
 		if (!strip) return;
 		strip.placement = placement;
-		strip.readonly = orders.every((order) => order.readonly || order.empty);
 		const size = this.orderSize();
 		orders.forEach((order, i) => {
 			const button = strip.buttons[i];
@@ -3508,12 +3499,7 @@ export class MugenBoard {
 			return button;
 		});
 
-		const strip: OrderStrip = {
-			container,
-			buttons,
-			placement,
-			readonly: orders.every((order) => order.readonly || order.empty)
-		};
+		const strip: OrderStrip = { container, buttons, placement };
 		actor.orders = strip;
 		this.layOutOrders(actor);
 		return strip;
@@ -3705,19 +3691,22 @@ export class MugenBoard {
 		const reach = pad + width / 2;
 		strip.container.x = side === 'left' ? edges.left + reach : edges.right - reach;
 		strip.container.y = mark.y + footToFloor() * this.cellWidth() - pad;
-		// Above the board, below the callouts and the sparks — but which side of its own
-		// fighter it goes depends on whether it is a thing to tap. A column that can be
-		// pressed goes over everything on the board, since a button a sprite is standing in
-		// front of is a button nobody can see to press. One that is only ever read passes
-		// behind its fighter — over the charge aura under it, under the figure itself — so
-		// the character stays what the reader is looking at and the buttons stay what is
-		// being said about it.
+		// Above the board, below the callouts and the sparks, and behind its own fighter —
+		// over the charge aura under it, under the figure itself — whether it is a thing to
+		// tap or only a thing to read. The character is what the reader is looking at and
+		// the column is what is being said about it, on both halves of the field alike; a
+		// player's own column used to go over everything on the board so that no sprite
+		// could stand in front of a button, but a column stands in the padded side of a cell
+		// and a figure plants itself in the middle of one, so what it was buying was a
+		// fighter cut into by its own orders. Passing behind costs the buttons nothing they
+		// are pressed by: a sprite takes no pointer, so the taps still reach the column
+		// under it.
 		//
 		// Measured against where the fighter stands when it is home rather than where it is
 		// now, so the depth is settled by the same cell the column's place is, and a fighter
 		// away on a strike run does not drag its own column through the row behind it.
 		const stand = mark.y + actor.footDrop;
-		strip.container.zIndex = strip.readonly ? stand - 0.25 : stand + 5000;
+		strip.container.zIndex = stand - 0.25;
 	}
 
 	/** Take a fighter's strip off the board. */
