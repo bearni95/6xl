@@ -5,10 +5,11 @@
 	import CombatFlanks from '$components/core/CombatFlanks.svelte';
 	import CombatGround from '$components/core/CombatGround.svelte';
 	import CombatHost from '$components/core/CombatHost.svelte';
+	import GameGlyph from '$components/core/GameGlyph.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
-	import TownPlate from '$components/core/TownPlate.svelte';
+	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
 	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
 	import { combatColorHex } from '$utils/color/combat-color';
 	import { ORDER_ICONS } from '$utils/color/traits';
@@ -1577,10 +1578,15 @@
 					     than stacked, and the grid is what makes the two cells the same width whatever
 					     either of them holds: a name of any length and a town of any length are laid
 					     out by the head, not by each other.
-					     One column where nobody holds the town, which is a town still on its seeded
-					     house team: there is no player on the other side to name, and half a head of
-					     empty plate would be saying there is one and we have lost them. -->
-					<div class={classNames('grid items-stretch', location?.holder ? 'grid-cols-2' : 'grid-cols-1')}>
+					     Two cells whoever is sitting on the town. Where nobody is — a town still on
+					     its seeded house team — the second is the same plate with nothing printed on
+					     it. It stood as a single wide column for a while, on the reading that an
+					     empty plate says there is a player and we have lost them; what it actually
+					     says is that there is nobody over there to name, which is the truth about a
+					     seeded town. And the head has a middle to keep: the way out of the fight is
+					     laid on the seam between the two cells (below), so a row that is sometimes
+					     one cell wide is a mark that moves depending on who holds the place. -->
+					<div class="relative grid grid-cols-2 items-stretch">
 						<!-- The town, on the very plate its pin carries on the map: the same mark, drawn
 						     the same way, showing what was pressed to get here. Only the challenge button
 						     is missing, and the caller is what leaves it out — a fight already under way
@@ -1607,6 +1613,48 @@
 								color={location.holder.color}
 								level={location.holder.level}
 							/>
+						{:else}
+							<!-- Nobody holds the town, so nobody is named — and the cell stays, on the
+							     very surface the cell beside it is printed on. What it says is that the
+							     line-up on the other side of the board is the town's own and not a
+							     player's, and an empty plate is how a head with two halves says it. -->
+							<div class={PLATE_FLUSH_CLASSES}></div>
+						{/if}
+						<!-- The way out of the fight, laid over the seam between the two cells: the
+						     place and whoever holds it are what the fight is about, and giving it up is
+						     the one thing on this screen that is about the fight as a whole rather than
+						     a part of playing it. So it stands at the middle of that row, absolutely —
+						     over both cells at once and belonging to neither, which is the one spot in a
+						     two-cell row that is not part of either reading.
+						     A picture and no words: a flag flown is a sentence nobody has to read. The
+						     label it used to carry is still said in words, to a screen reader and to a
+						     pointer resting on it.
+						     A red disc with the flag drawn white on it: a mark on its own over two plates
+						     is a picture, and what makes it read as a thing to press is a filled shape
+						     with an edge of its own. Round, because the button is as wide as it is tall —
+						     a shape with no words in it has no side to be the longer one — and because it
+						     is laid on the seam of two squared cells, where a circle is the one outline
+						     that belongs to neither. The glyph is inlined rather than served as a picture
+						     precisely so the white it is drawn in can reach it (see GameGlyph).
+						     It had two copies before this — one in the middle of the score banner, out of
+						     sight until the pointer was on the plate, and a full-width row under it for
+						     the phone, which has no pointer to hide a control behind. One mark standing
+						     in the open answers both, so both are gone.
+						     Between turns only, as it always was: a turn already being carried out
+						     settles itself, and a fight already decided has nothing left to give up — the
+						     result panel's Close is the way out of that one. Its own pointer, since the
+						     head is a reading laid over the board and takes no taps otherwise. -->
+						{#if state && !state.outcome}
+							<button
+								type="button"
+								class="pointer-events-auto absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-red-500 bg-red-500 btn text-white btn-circle btn-sm"
+								disabled={state.phase !== 'planning'}
+								title={$_('combat.concede')}
+								aria-label={$_('combat.concede')}
+								on:click={() => controller?.concede()}
+							>
+								<GameGlyph name="lorc/flying-flag" classes="[&>svg]:size-6" />
+							</button>
 						{/if}
 					</div>
 					<!-- The standing used to be a third cell across the foot of this grid. It is on
@@ -1649,10 +1697,10 @@
 					     banner narrower than the rows above it — a shape, and shapes do not butt against
 					     anything.
 					     The counts keep their own width at the two ends and the room between them is what
-					     gives (`flex-1`), so a wider head is a wider bar and a longer reach to the button,
-					     never two counts drifting apart from the halves of the board they are about. -->
+					     gives (`flex-1`), so a wider head is a wider bar, never two counts drifting apart
+					     from the halves of the board they are about. -->
 					<div
-						class="group pointer-events-auto relative flex h-7 w-full items-stretch gap-2 bg-base-100/80 text-white shadow-xl"
+						class="pointer-events-auto relative flex h-7 w-full items-stretch gap-2 bg-base-100/80 text-white shadow-xl"
 					>
 						<!-- How far the town itself has been taken, and the whole plate is what it is drawn
 						     on: the bar is laid *under* the counts rather than beside them or below them —
@@ -1665,17 +1713,17 @@
 						     is: this fight is one of the wins that bar is measuring.
 						     Squared and stretched to the plate by the variants below, which reach past the
 						     bar's own `h-6` — a height meant for the plate of a pin, where this one is the
-						     banner itself. It takes no pointer: the one control here is the button over it,
-						     and the bar's figures are what gives way to that button, going invisible under
-						     the pointer exactly as the turn number used to. They stand in the middle of the
-						     plate, which is the room the button is reached for in. -->
+						     banner itself. It takes no pointer — there is nothing on this row to press: the
+						     way out of the fight, which used to stand in the middle of it and hid these
+						     figures whenever the pointer came near, is a mark at the middle of the head
+						     above now. So the figures stand in the middle of the plate and stay there. -->
 						{#if location?.challenge}
 							<TownChallenge
 								siege={location.challenge.siege}
 								button={location.challenge.button}
 								unlocksAt={location.challenge.unlocksAt}
 								onUnlock={location.challenge.onUnlock}
-								classes="pointer-events-none absolute inset-0 [&>div]:h-full [&_progress]:h-full [&_progress]:rounded-none sm:group-hover:[&_span]:invisible"
+								classes="pointer-events-none absolute inset-0 [&>div]:h-full [&_progress]:h-full [&_progress]:rounded-none"
 							/>
 						{/if}
 						<!-- Each side's count is three cells in a row, laid out as cells of the
@@ -1720,38 +1768,17 @@
 								</span>
 							{/each}
 						</div>
-					<!-- The room between the two counts, and the way out of the fight standing in
-					     it. It is the middle of the score and it is deliberately empty: the turn
-					     number that used to fill it was a figure nothing on the screen was
-					     waiting for, and what the middle is actually for is the one control here
-					     that is not part of playing.
-					     The way out is the only one there is: a battle is ended by a result,
-					     never by walking off, so giving it up reports the loss it is and closes
-					     the arena exactly as being wiped out would. Between turns only — a turn
-					     already being carried out settles itself.
-					     Out of sight until the plate is under the pointer: a fight is played with
-					     the buttons beside the fighters, and what stands over the board at all
-					     times should be what is true of the fight. Reached for rather than
-					     offered. The room between the counts is what gives as the head gets wider
-					     (`flex-1`), the counts keeping the width they are drawn at: a count is
-					     three cells of the board and means nothing stretched, where the space
-					     between two counts is only ever space.
-					     Reaching for it is a thing a pointer does, so this is the pointer's copy
-					     and it is scoped to `sm:` outright — a touch screen has no hover to hide
-					     a control behind, and the emulated one a tap leaves behind would leave it
-					     showing for good. The phone is given the same control as a row of its
-					     own, at the foot of the orders (above), where it can be seen to be
-					     there. -->
-					<div class="relative flex flex-1 items-center justify-center">
-						<button
-							type="button"
-							class="btn absolute inset-0 hidden btn-ghost btn-sm text-error sm:group-hover:inline-flex"
-							disabled={state.phase !== 'planning'}
-							on:click={() => controller?.concede()}
-						>
-							{$_('combat.concede')}
-						</button>
-					</div>
+					<!-- The room between the two counts, and it is deliberately empty. Two things
+					     have stood here and neither belonged: the turn number, a figure nothing on the
+					     screen was waiting for, and after it the way out of the fight, out of sight
+					     until the pointer was on the plate. The way out is one mark at the middle of
+					     the head now (above), where it is seen without being reached for and where a
+					     phone can reach it too — so what is left here is the room itself, which is
+					     what the middle of a score is.
+					     It is what gives as the head gets wider (`flex-1`), the counts keeping the
+					     width they are drawn at: a count is three cells of the board and means nothing
+					     stretched, where the space between two counts is only ever space. -->
+					<div class="flex-1"></div>
 					<div
 						class="relative grid h-full w-24 grid-cols-3 py-1"
 						role="progressbar"
@@ -1769,29 +1796,6 @@
 						{/each}
 						</div>
 					</div>
-					<!-- Giving up, which on a phone is here and nowhere else. On the banner it is
-					     reached for — hidden under the turn until the pointer is on the plate — and a
-					     phone has no pointer to put there, so that control needs a place of its own on
-					     a touch screen. It is the head's last row: the head is what is true of the
-					     fight as a whole, which is exactly what giving it up is about, and it is the
-					     one control on this screen that is not part of playing — so it stands at the
-					     end of the view the thumb is *not* resting at, away from the orders, where it
-					     cannot be taken for one of them.
-					     The same button in every other respect — it reports the loss it is and closes
-					     the arena exactly as being wiped out would, and it is offered between turns
-					     only, a turn already being carried out settling itself. Off once the fight is
-					     decided: there is nothing left to give up, and the result panel's Close is the
-					     way out of a fight that is over.
-					     Its own pointer: the head is a reading laid over the board and takes no taps,
-					     and this is the one thing in it that is pressed. -->
-					<button
-						type="button"
-						class="pointer-events-auto btn w-full border-0 bg-base-100/80 text-error shadow-xl sm:hidden"
-						disabled={state.phase !== 'planning'}
-						on:click={() => controller?.concede()}
-					>
-						{$_('combat.concede')}
-					</button>
 					{/if}
 				</div>
 			</div>

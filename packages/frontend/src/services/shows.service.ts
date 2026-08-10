@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { readable, writable, type Readable } from 'svelte/store';
 import { showLogoUrl } from '$utils/show/show-logo';
 import { showIconsByShow } from '$utils/show/show-icon';
-import { inlineIconMarkup } from '$utils/icon/inline-svg';
+import { loadIconMarkup } from '$services/icons.service';
 import type { ShowsCollection } from '$types/show.type';
 
 /**
@@ -96,23 +96,6 @@ export function loadShowLogos(): Promise<void> {
 	return logoLoad;
 }
 
-// One glyph fetch per *icon*, not per show: two shows given the same mark are one
-// file. Kept for the session — these are a few hundred bytes each and the set is
-// however many shows are authored.
-const markupByIcon = new Map<string, Promise<string | null>>();
-
-function iconMarkup(name: string): Promise<string | null> {
-	let pending = markupByIcon.get(name);
-	if (!pending) {
-		pending = fetch(`/assets/icons/${name}.svg`)
-			.then((response) => (response.ok ? response.text() : null))
-			.then((markup) => (markup ? inlineIconMarkup(markup) : null))
-			.catch(() => null);
-		markupByIcon.set(name, pending);
-	}
-	return pending;
-}
-
 // The glyph load, kept so the pack scene — which needs the markup as pixels rather
 // than as a subscription — can await the same one the document's copies started.
 let glyphLoad: Promise<void> | null = null;
@@ -131,7 +114,7 @@ export function loadShowGlyphs(): Promise<void> {
 			const byId = new Map<number, string>();
 			await Promise.all(
 				[...icons].map(async ([showId, icon]) => {
-					const markup = await iconMarkup(icon);
+					const markup = await loadIconMarkup(icon);
 					if (markup) byId.set(showId, markup);
 				})
 			);
