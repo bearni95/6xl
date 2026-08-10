@@ -8,11 +8,10 @@
 	 * How many other fights have finished while this one has been going on, and the way to
 	 * see them.
 	 *
-	 * It stands at the end of the score banner in the head of the fight, past the player's
-	 * own count and on the same siege bar everything else on that row stands on — the one
-	 * place in the arena that is already a running account of what is happening to the map,
-	 * which is what this is: the bar under it is how far *this* town has been taken, and the
-	 * number on it is how many other towns have just been fought over.
+	 * It stands at the end of the score banner in the head of the fight, past the player's own
+	 * count — the one row in the arena that is already a running account of how things stand,
+	 * which is what this is: the discs beside it are how this fight is going, and the number on
+	 * it is how many other fights have just finished.
 	 *
 	 * Nothing is drawn until something has arrived. The feed has no history — it is what has
 	 * happened since this page opened (see `combat-feed.type`) — so an arena opened into a

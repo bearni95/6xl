@@ -35,7 +35,7 @@
 	import { _ } from 'svelte-i18n';
 	import CombatFeedButton from '$components/core/CombatFeedButton.svelte';
 	import CombatHost from '$components/core/CombatHost.svelte';
-	import TownChallenge from '$components/core/TownChallenge.svelte';
+	import SiegeBar from '$components/core/SiegeBar.svelte';
 	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
 	import { TEAM_SIZE } from '$services/team.service';
 	import type { TownPlateCard } from '$types/map.type';
@@ -96,8 +96,14 @@
 	     player and we have lost them; what it actually says is that there is nobody over there
 	     to name, which is the truth about a seeded town. A row of two whoever holds the place
 	     is also a row that does not change shape as the place changes hands, which is the whole
-	     of what a head laid over a board should be doing. -->
-	<div class="grid grid-cols-2 items-stretch">
+	     of what a head laid over a board should be doing.
+	     Three columns and not two, the middle one shrink-to-fit: the standing stands on the seam
+	     itself, between the place and whoever is sitting on it, which is where it is about. The
+	     two cells are `1fr` apiece and so stay the same width as each other whatever the bar in
+	     between comes to — the rule that the head lays the two cells out, not each other, is
+	     unchanged. With no standing to draw the middle column is nothing wide and the row is the
+	     pair it always was. -->
+	<div class="grid grid-cols-[1fr_auto_1fr] items-stretch">
 		<!-- The town, on the very plate its pin carries on the map: the same mark, drawn the same
 		     way, showing what was pressed to get here. Only the challenge button is missing, and
 		     the caller is what leaves it out — a fight already under way has nothing left to
@@ -116,6 +122,22 @@
 		     this is the caller leaving it out, exactly as it leaves out the challenge button. -->
 		{#if location}
 			<TownPlate {...location} holder={null} challenge={null} flush mirrored />
+		{/if}
+		<!-- How far the town itself has been taken, upright on the seam between the two cells: the
+		     count this one fight is one of, standing between the place it is about and the account
+		     it is against. It lay across the banner below as the ground the lane counts were
+		     drawn on, which put a quantity about the *town* in among the score of one fight; here
+		     it is between the two things it is a quantity about, and the banner is left to be a
+		     score.
+		     Sized off the portrait across from it — the same depth as the face in the cell to the
+		     right, half as wide — so the seam reads as one mark's worth of upright and not as a
+		     third column of chrome. On the cells' own surface, which is what makes the row one
+		     block of plate rather than two with a gap between them, and padded to the plate's own
+		     padding so the bar is inset exactly as the tile and the face beside it are. -->
+		{#if location?.challenge}
+			<div class="flex items-center bg-base-100/80 px-1.5 shadow-lg">
+				<SiegeBar siege={location.challenge.siege} vertical />
+			</div>
 		{/if}
 		<!-- Whose town it is — the account behind the line-up on the other side of the board, said
 		     the way this game says a player wherever it says one: the face they wear, the name they
@@ -138,10 +160,10 @@
 			<div class={PLATE_FLUSH_CLASSES}></div>
 		{/if}
 	</div>
-	<!-- The standing used to be a third cell across the foot of this grid. It is on the banner
-	     below now, in the middle of the score, which is where the fight is counted: what this one
-	     fight is one of belongs with how this one fight is going, not with the two things it is
-	     about. -->
+	<!-- The standing has stood in three places and is on the seam of the row above now: a cell
+	     across the foot of that grid first, then the ground the score below was drawn on. What
+	     the last one cost is what it said — a quantity about the town, laid in among the count of
+	     one fight — so it went back up to the two things it is about, upright between them. -->
 	{#if wins}
 		<!-- The score, at the head of the fight it is a score of, under the town being fought
 		     over.
@@ -151,11 +173,9 @@
 		     three, and they are cells of a board rather than a length being filled, which is what
 		     the thing being counted is. Each side's three sit over the half of the board that side
 		     holds — the rivals' to the left, the player's to the right. Between them plain room,
-		     and *under* both of them — the plate's whole width and
-		     its whole depth — how far the town itself has been taken: the count this one fight is
-		     one of, which is why it is read with the score rather than up with the two things the
-		     fight is about. The banner is one row deep for that: the bar is the ground the counts
-		     stand on, not a second band under them.
+		     and nothing else on the row: the banner counts this one fight and only this one, the
+		     siege having gone up to the seam it is about. One row deep for that, since what is on
+		     it is three discs and three discs.
 		     Both counts grow outwards from that middle, so the rivals' three are laid out backwards
 		     and fill from the right: it is the same count read either way round, and the two then
 		     mirror each other across the middle rather than both running left to right. Both are
@@ -174,33 +194,8 @@
 		     (`flex-1`), so a wider head is a wider bar, never two counts drifting apart from the
 		     halves of the board they are about. -->
 		<div
-			class="pointer-events-auto relative flex h-7 w-full items-stretch gap-2 bg-base-100/80 text-white shadow-xl"
+			class="pointer-events-auto flex h-7 w-full items-stretch gap-2 bg-base-100/80 text-white shadow-xl"
 		>
-			<!-- How far the town itself has been taken, and the whole plate is what it is drawn on:
-			     the bar is laid *under* the counts rather than beside them or below them —
-			     `absolute inset-0`, so it is the plate's own width and the plate's own depth, every
-			     pixel of the row. It had a row to itself for a moment, which doubled the depth of the
-			     banner to carry one bar: a band laid over the board is the last thing that should be
-			     growing, and a quantity does not need a line of its own when what stands on it is
-			     three discs and three discs. So the counts stand on it, and the fill is the ground
-			     they are counted on — which is what the standing is: this fight is one of the wins
-			     that bar is measuring.
-			     Squared and stretched to the plate by the variants below, which reach past the bar's
-			     own `h-6` — a height meant for the plate of a pin, where this one is the banner
-			     itself. It takes no pointer, and neither does anything else in this head: the way out
-			     of the fight stood in the middle of this very row once and hid these figures whenever
-			     the pointer came near, then moved up to the seam above, and is off the head
-			     altogether now — it is asked for on the player's own card in the orders panel. So the
-			     figures stand in the middle of the plate and stay there. -->
-			{#if location?.challenge}
-				<TownChallenge
-					siege={location.challenge.siege}
-					button={location.challenge.button}
-					unlocksAt={location.challenge.unlocksAt}
-					onUnlock={location.challenge.onUnlock}
-					classes="pointer-events-none absolute inset-0 [&>div]:h-full [&_progress]:h-full [&_progress]:rounded-none"
-				/>
-			{/if}
 			<!-- Each side's count is three cells in a row, laid out as cells of the board because
 			     that is what is being counted: three equal columns over `w-24`, which is three of the
 			     plate's own former depth — the two blocks are the same width as each other and read
