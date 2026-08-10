@@ -4094,12 +4094,22 @@
 							same as scrolled — the statues, the standing and the plate would each be squeezed a
 							little to fit a box they do not fit, which is the picture being redrawn wrong rather
 							than framed and read through. Held to its own height, what is too tall for the
-							square scrolls inside it, which is what the panel around it is for. -->
+							square scrolls inside it, which is what the panel around it is for.
+							`my-auto`: the party sits in the MIDDLE of what it is given rather than at the top
+							of it. The block is a square on a phone and half a column from `md` up, and the
+							column standing in it is only as tall as the town has things to say — a side, a
+							standing, a plate — so a short one left a picture pinned to the ceiling with the
+							whole of the rest of the box empty under it. It is an auto margin and not
+							`justify-center` on the panel, which is the one difference that matters here: this
+							panel scrolls, and centred content taller than its box overflows past the top edge
+							where no scrollbar can reach it, while an auto margin resolves to nothing the
+							moment there is no room spare. So a tall town scrolls exactly as it did and a
+							short one is centred. -->
 						<TownPin
 							marker={townPin}
 							named={false}
 							alwaysReveal
-							classes="w-full max-w-[500px] flex-none"
+							classes="my-auto w-full max-w-[500px] flex-none"
 						/>
 					{/if}
 				</div>
