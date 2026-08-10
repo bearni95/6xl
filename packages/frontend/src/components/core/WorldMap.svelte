@@ -620,6 +620,9 @@
 	// The disc itself: the glyph on the chrome every plate on this map is drawn on — base-100
 	// at four fifths, so the terrain reads faintly through it — inside a ring in the colour of
 	// the line round the group it belongs to, which is what says the two are one statement.
+	// The ring is the group's colour and the glyph is not: the mark is drawn in the theme's
+	// primary, so what is being said (this show) reads in the game's own ink and the ring goes
+	// on saying which line it belongs to.
 	//
 	// The glyph is inlined rather than pointed at by an <img> so it paints in the disc's own
 	// ink (see inlineIconMarkup), and sized through a CSS rule, which outranks the svg's own
@@ -629,7 +632,7 @@
 		const disc = document.createElement('div');
 		disc.className =
 			'flex size-10 items-center justify-center rounded-full shadow-md ' +
-			'bg-base-100/80 text-secondary ring-2 ring-secondary [&>svg]:size-6';
+			'bg-base-100/80 text-primary ring-2 ring-secondary [&>svg]:size-6';
 		disc.setAttribute('aria-hidden', 'true');
 		disc.innerHTML = mark.iconSvg;
 		return disc;
