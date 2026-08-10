@@ -7,8 +7,7 @@ import {
 	ImageSource,
 	Sprite,
 	Text,
-	Texture,
-	TilingSprite
+	Texture
 } from 'pixi.js';
 import { destroyPixiApp } from '../pixi/release-context';
 import { combatColorHex, GRID_LINE } from '../color/combat-color';
@@ -226,6 +225,15 @@ const GROUND_Z = -1;
 
 /** Between the two: over the grass it rules, under the lattice that rules the cells. */
 const GROUND_LINE_Z = -0.5;
+
+/** One of the squares a cell's ground is divided into, in screen px: a tile of grass and
+ * the yellow border round it, which are the same rectangle ({@link MugenBoard.groundSquares}). */
+interface GroundSquare {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+}
 
 /**
  * The viewport the canvas is sized against, across and down.
@@ -1308,54 +1316,81 @@ export class MugenBoard {
 	 * scaled — both are geometry in the same space and go through the same scale.
 	 */
 	private ruleGround(graphics: Graphics, q: number, r: number): void {
-		const [topLeft] = cellCorners(q, r);
-		const step = 1 / GROUND_TILES_PER_CELL;
-		for (let row = 0; row < GROUND_TILES_PER_CELL; row++) {
-			for (let col = 0; col < GROUND_TILES_PER_CELL; col++) {
-				const at = this.project(topLeft.x + col * step, topLeft.y + row * step);
-				const beyond = this.project(topLeft.x + (col + 1) * step, topLeft.y + (row + 1) * step);
-				graphics.rect(at.x, at.y, beyond.x - at.x, beyond.y - at.y);
-				graphics.stroke({ width: 1, color: GROUND_LINE, alpha: 1 });
-			}
+		for (const square of this.groundSquares(q, r)) {
+			graphics.rect(square.x, square.y, square.width, square.height);
+			graphics.stroke({ width: 1, color: GROUND_LINE, alpha: 1 });
 		}
 	}
 
 	/**
-	 * Lay the grass over the cell at [q, r]: the tile repeated
-	 * {@link GROUND_TILES_PER_CELL} times across and down — nine of them, one per square of
-	 * the ruling that goes over it — filling the cell corner to corner and no further.
+	 * Lay the grass over the cell at [q, r]: the tile drawn once into each of the cell's
+	 * nine squares, filling it corner to corner and no further.
 	 *
 	 * Every cell of the field takes it, whichever half it belongs to: the grass is the
 	 * ground the fight is fought on and not a marking, so it stops at the outer edge of the
-	 * board and nowhere inside it. One tiling per cell rather than one sheet under the whole
-	 * field because what is drawn here is cells, and the tile count being whole is what
-	 * keeps that from showing: neighbouring cells lay the same tiles in the same places, so
-	 * the seam between two of them is a ruled line over continuous grass rather than a break
-	 * in it.
+	 * board and nowhere inside it.
+	 *
+	 * **One sprite per square, off the same list the ruling is drawn from** ({@link
+	 * groundSquares}) — so a square of grass and the yellow border round it are the same
+	 * rectangle by construction, and the artwork cannot end anywhere but on the line that
+	 * says where it ends. A single tiling sprite over the whole cell drew the same picture
+	 * by a different route: it repeated the texture at a pitch of its own and the ruling
+	 * measured the thirds again separately, two answers to where a tile ends that agree only
+	 * as long as the arithmetic does. Nine sprites is one answer. It costs nine quads a cell
+	 * — a hundred and eight on a board — which is nothing beside one MUGEN fighter.
 	 */
 	private layGround(q: number, r: number): void {
 		if (!this.app || !this.groundTexture) return;
+		for (const square of this.groundSquares(q, r)) {
+			const grass = new Sprite(this.groundTexture);
+			grass.position.set(square.x, square.y);
+			// The tile is 16px of artwork stretched over a ninth of a cell — sampled
+			// `nearest`, so what that magnifies is the artwork's own pixels.
+			grass.width = square.width;
+			grass.height = square.height;
+			grass.zIndex = GROUND_Z;
+			this.app.stage.addChild(grass);
+		}
+	}
+
+	/**
+	 * The nine squares the cell at [q, r] is divided into, in screen space: the cell cut
+	 * {@link GROUND_TILES_PER_CELL} ways across and down.
+	 *
+	 * The one place those squares are worked out. Both the grass and the yellow ruling are
+	 * drawn from what this returns, which is what makes them the same nine squares rather
+	 * than two divisions of the same cell that happen to come out equal. Each is measured
+	 * from its own two corners projected — never a corner plus a width — so neighbouring
+	 * squares share an edge exactly and the row of them ends precisely on the cell's own
+	 * border, with no gap left by a third of a cell not dividing evenly into pixels.
+	 */
+	private groundSquares(q: number, r: number): GroundSquare[] {
 		const [topLeft] = cellCorners(q, r);
-		const at = this.project(topLeft.x, topLeft.y);
-		const size = this.cellWidth();
-		const grass = new TilingSprite({ texture: this.groundTexture, width: size, height: size });
-		grass.position.set(at.x, at.y);
-		// The artwork's own pixels, blown up to the size a cell divided this many ways makes
-		// them. Square, like everything else on this board.
-		grass.tileScale.set(size / (GROUND_TILE_PX * GROUND_TILES_PER_CELL));
-		grass.zIndex = GROUND_Z;
-		this.app.stage.addChild(grass);
+		const step = 1 / GROUND_TILES_PER_CELL;
+		const squares: GroundSquare[] = [];
+		for (let row = 0; row < GROUND_TILES_PER_CELL; row++) {
+			for (let col = 0; col < GROUND_TILES_PER_CELL; col++) {
+				const at = this.project(topLeft.x + col * step, topLeft.y + row * step);
+				const beyond = this.project(topLeft.x + (col + 1) * step, topLeft.y + (row + 1) * step);
+				squares.push({ x: at.x, y: at.y, width: beyond.x - at.x, height: beyond.y - at.y });
+			}
+		}
+		return squares;
 	}
 
 	/**
 	 * Fetch the ground sheet and cut its top-left tile out as a texture of its own.
 	 *
 	 * `createImageBitmap` takes the crop rectangle itself, so the tile is the whole of the
-	 * bitmap that reaches the GPU and the rest of the sheet is never uploaded. That is what
-	 * lets the texture **wrap**: tiling samples past the edge of its texture, and an edge is
-	 * only an edge if the bitmap ends there. Sampled `nearest`, this being pixel art that is
-	 * then drawn several times its own size — the one place on this board where linear
-	 * filtering would turn artwork into a smear.
+	 * bitmap that reaches the GPU and the rest of the sheet is never uploaded. Pointing at
+	 * the same 16 pixels *inside* the sheet would draw the same tile most of the time and
+	 * the flowers next to it at the edges: a magnified sample near the boundary of a frame
+	 * reaches for the texels beyond it, and on a page of tiles those belong to another tile.
+	 * Cut out, there is nothing beyond it to reach. Sampled `nearest`, this being pixel art
+	 * drawn at several times its own size — the one place on this board where linear
+	 * filtering would turn artwork into a smear — and set to wrap, so that a sample which
+	 * does run a hair past the edge comes back on the tile's other side, which is grass,
+	 * rather than smearing its last column.
 	 *
 	 * Built by hand rather than through `Assets`, which is keyed on what it is given and
 	 * would hold a cache entry per board for a bitmap no other board can name. Nothing else
