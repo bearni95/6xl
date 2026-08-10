@@ -1490,8 +1490,15 @@
 			     spread end to end (above), so a block that arrived with the fight would have let
 			     the board settle at the bottom of the view first and then jump up as the orders
 			     came in. An empty one holds the place they are coming to. -->
+			<!-- Standing up it starts **on** the foot of the canvas: no padding along that edge
+			     (`pt-0`), so the fighter's plate begins exactly where the picture stops. The
+			     padding is what a plate wants against the edges of a screen, and the board is not
+			     one of those — a strip of ground between the last row of the fight and the panel
+			     read as the panel having come loose from it. Lying down the panel is beside the
+			     board and its top edge is the top of the view, which is an edge of the screen and
+			     takes the padding back (`landscape:pt-3`). -->
 			<div
-				class="relative flex min-h-0 w-full flex-1 flex-col gap-3 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:left-[calc(8*min(100vw/8,100dvh/11))] landscape:w-auto"
+				class="relative flex min-h-0 w-full flex-1 flex-col gap-3 p-3 pt-0 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:left-[calc(8*min(100vw/8,100dvh/11))] landscape:w-auto landscape:pt-3"
 			>
 				<!-- What the band stands on: the board's own ground, carried on into the document
 				     past the last row the canvas had room to draw. It is laid under the whole of

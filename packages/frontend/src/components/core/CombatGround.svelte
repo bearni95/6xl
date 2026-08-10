@@ -60,6 +60,24 @@
 	 */
 	const ROWS = 14;
 
+	/**
+	 * What the band is painted before a single tile is laid on it: the flat colour of the
+	 * earth tiles themselves (#dedd7e, read off the three of them on the sheet).
+	 *
+	 * It is here because of what is *behind* this band — the arena's sky, which is one column
+	 * the width of the canvas running the whole height of the sheet. A square is
+	 * `min(100vw/8, 100dvh/11)`, which is a fraction of a pixel, so the squares of this grid
+	 * cannot all land on device pixels: between them the browser left hairlines, and what came
+	 * through every one of them was that blue — a grid of thin blue lines ruled over the ground
+	 * below the board, saying the one thing the ground is there not to say. The band is opaque
+	 * now, so there is nothing behind it to come through: a hairline shows the earth the tiles
+	 * on either side of it are drawn in.
+	 *
+	 * Keep it with {@link GROUND_EARTH_TILES}: it is those tiles' own colour, and a different
+	 * earth on the sheet would want a different value here.
+	 */
+	const EARTH = 'bg-[#dedd7e]';
+
 	/** Everything every square is: one tile of the sheet, drawn at one square, magnified with
 	 * its own pixels rather than smeared (`pixelated`) — the canvas samples the same artwork
 	 * `nearest` for the same reason. */
@@ -88,7 +106,10 @@
 	});
 </script>
 
-<div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+<div
+	class={classNames('pointer-events-none absolute inset-0 overflow-hidden', EARTH)}
+	aria-hidden="true"
+>
 	<div class="mx-auto grid w-fit grid-cols-8">
 		{#each squares as square, index (index)}
 			<div class={classNames(SQUARE, square)}></div>

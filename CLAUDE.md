@@ -175,8 +175,14 @@ column and, beside them, a ring of edges and corners drawn to meet whatever the 
 borders on. The board takes one block whole — the vivid green — so every tile on the field
 is the same grass: its three fills alternated over every cell, nine squares to a cell,
 and its upper and lower edges along the field's first and last rows. It is ground and not a
-marking, so both halves and the column between them stand on the same earth, and which cell
-is whose is said by the red lattice ruled over it. Each tile is cut out of the sheet as it
+marking, so both halves and the column between them stand on the same earth, and **nothing
+is ruled over it at all** — not the red lattice that once drew a square per cell, and not
+the yellow one that ruled the ground's own finer squares and numbered each of them. Which
+cell is whose is said by what stands on it and by the overlay a claim puts there. The same
+goes for the ground the *document* carries on past the foot of the canvas
+(`CombatGround`): it is painted the earth tiles' own colour before a tile is laid on it,
+because a square is a fraction of a pixel wide and the hairlines between them showed the
+sky behind as a grid of blue lines. Each tile is cut out of the sheet as it
 loads
 (`createImageBitmap`'s own crop) rather than pointed at inside it: a magnified sample near
 the edge of a frame reaches past it, and inside a page of tiles what it reaches is the next

@@ -45,7 +45,13 @@
 	// take that size rather than given one of its own, so anything a caller hangs off the
 	// host (`classes`, and the absolutely-placed things a host puts beside it) lines up
 	// with the board's own edges instead of with a row the board sits in the middle of.
-	$: wrapperClasses = classNames('flex overflow-hidden rounded-box leading-none', classes);
+	//
+	// Square corners. It was `rounded-box`, which rounded the picture's four corners off —
+	// a card's treatment on something that is not a card: the arena is one drawing running
+	// to the edges of the room it is given, and the ground it draws does not stop short of
+	// them. The document lays the same ground on past those edges (`CombatFlanks`,
+	// `CombatGround`), which a curve cut across.
+	$: wrapperClasses = classNames('flex overflow-hidden leading-none', classes);
 
 	onMount(async () => {
 		// Pixi only in the browser, so it never runs during SSR/prerender — and normally
