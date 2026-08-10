@@ -1121,7 +1121,7 @@
 		     under everything, and each of the three keeps the end of the view it belongs to on
 		     a tall phone and a short one alike. -->
 		<div
-			class="relative flex h-full w-full flex-col items-center justify-between sm:justify-center"
+			class="relative isolate flex h-full w-full flex-col items-center justify-between sm:justify-center"
 		>
 			<!-- The sky, which is the page's and not the canvas's: the board's top row and the
 			     gaps in the fringe the field starts with are drawn on nothing at all, so what
@@ -1136,11 +1136,19 @@
 			     band at each end, and those bands are not the fight — they are the sheet, with
 			     the town still faintly through them. Sky out there would have made the arena a
 			     blue screen with a board on it.
-			     First in the flow and taking no pointer, so everything written after stands over
-			     it: the head, the board, and the ground below the board, which is drawn on this
-			     the way the field's own bottom fringe is. -->
+			     It is a **layer under everything in the sheet** (`-z-10`) and not merely the
+			     first thing written in it. Being written first is not enough: the head of the
+			     fight is a flex item carrying `order-first`, and a flex container paints its
+			     items in the order `order` puts them rather than the order they are written in —
+			     so on a phone, where the head is in the flow, it was painted before a strip
+			     written above it and the sky swallowed the town and the score. Anything laid
+			     across the whole sheet would meet that again; a layer of its own is the answer
+			     that does not depend on what else is in here. `isolate` on the box above keeps
+			     the negative inside it — without one it would sink past the sheet the arena is
+			     drawn on. It takes no pointer either: it is a colour, not a surface. The head,
+			     the board and the ground below the board all stand on it. -->
 			<div
-				class="pointer-events-none absolute inset-y-0 left-1/2 w-[calc(9*min(100vw/9,100dvh/12))] -translate-x-1/2 bg-sky-300"
+				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(9*min(100vw/9,100dvh/12))] -translate-x-1/2 bg-sky-300"
 				aria-hidden="true"
 			></div>
 			<!-- The board, and nothing round it. No card, no body, no column, and no border: the
@@ -1460,11 +1468,6 @@
 			     is what puts it back at the head of the column it is written at the foot of. The
 			     board follows it there rather than under it, out of the room a width-limited canvas
 			     leaves standing empty.
-			     `relative` throughout, which on a phone it is *only* for the painting: a positioned
-			     box paints over an unpositioned one whatever the order they are written in, so the
-			     sky laid across the top of this sheet covered a head that was the one thing in here
-			     still in the flow. Everything else in the arena is positioned already; this is that
-			     and nothing more, since with no offsets given `relative` moves nothing.
 			     Neither takes the pointer except where it has to (see the banner's plate): they are
 			     readings laid over the board, and the board underneath is what is played.
 			     The column is only as wide as the widest thing in it — the banner, in practice — and
@@ -1472,7 +1475,7 @@
 			     objects that happen to be stacked. Centred by the row it sits in rather than by
 			     centring its own contents, which is what leaves the stretching to it. -->
 			<div
-				class="pointer-events-none relative order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
+				class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
 			>
 				<div class="flex flex-col">
 					<!-- The town, on the very plate its pin carries on the map: the same mark, drawn
