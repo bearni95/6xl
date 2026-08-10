@@ -1153,9 +1153,16 @@
 		     thumb that presses them, and the board in what is left between the two. Whatever
 		     room the screen turns out to have goes into the two gaps rather than into a band
 		     under everything, and each of the three keeps the end of the view it belongs to on
-		     a tall phone and a short one alike. -->
+		     a tall phone and a short one alike.
+		     Which end of the width the board takes changes with the same thing. Standing up the
+		     board is the whole width and there is no end to take. Lying down the width is what
+		     is left over, and the whole of it goes to the orders in one piece rather than being
+		     halved into a band at either end of a centred board — so the board is put against
+		     the left edge of the view (`landscape:items-start`) and the panel takes everything
+		     past its right one (below). The bands beside a centred board were the room the
+		     orders wanted, and half of it was on the wrong side of them. -->
 		<div
-			class="relative isolate flex h-full w-full flex-col items-center justify-between sm:justify-center"
+			class="relative isolate flex h-full w-full flex-col items-center justify-between sm:justify-center landscape:items-start"
 		>
 			<!-- The sky, which is the page's and not the canvas's: the board's top row and the
 			     gaps in the fringe the field starts with are drawn on nothing at all, so what
@@ -1164,12 +1171,13 @@
 			     sky, painted once, rather than a colour kept in step across a canvas and a
 			     stylesheet.
 			     It is the **canvas's own column** and not the whole sheet: eight squares wide,
-			     which is the canvas's own width (`CombatGround` has the figures), centred on the
-			     same middle the canvas is. On a phone that is the whole width and there is no
-			     difference; on anything wider the canvas is limited by the height and leaves a
-			     band at each end, and those bands are not the fight — they are the sheet, with
-			     the town still faintly through them. Sky out there would have made the arena a
-			     blue screen with a board on it.
+			     which is the canvas's own width (`CombatGround` has the figures), standing where
+			     the canvas stands — centred with it standing up, and against the left edge with
+			     it lying down (`landscape:left-0`, the centring translate taken back off). On a
+			     phone that is the whole width and there is no difference; on anything wider the
+			     canvas is limited by the height and leaves the rest of the width over, and that
+			     is not the fight — it is the sheet, with the town still faintly through it. Sky
+			     out there would have made the arena a blue screen with a board on it.
 			     It is a **layer under everything in the sheet** (`-z-10`) and not merely the
 			     first thing written in it. Being written first is not enough: the head of the
 			     fight is a flex item carrying `order-first`, and a flex container paints its
@@ -1182,7 +1190,7 @@
 			     drawn on. It takes no pointer either: it is a colour, not a surface. The head,
 			     the board and the ground below the board all stand on it. -->
 			<div
-				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(8*min(100vw/8,100dvh/11))] -translate-x-1/2 bg-sky-300"
+				class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[calc(8*min(100vw/8,100dvh/11))] -translate-x-1/2 bg-sky-300 landscape:left-0 landscape:translate-x-0"
 				aria-hidden="true"
 			></div>
 			<!-- What is beside the board, on every screen the board does not fill the width of:
@@ -1358,12 +1366,16 @@
 			     the head at the top of the view and the orders at the foot under the thumb that
 			     presses them. **Lying down** — anything wider than it is tall, a turned phone and
 			     every desktop alike — the board is limited by its height and takes the whole of it,
-			     and what is left is a band at each end: the panel takes the right-hand one, out of
-			     the flow entirely (`absolute`, so the board is never sized against it) and the full
-			     height of the view, exactly as wide as the gap between the canvas's right edge and
-			     the screen's — `(100vw − the canvas's own eight squares) / 2`, the figures spelled
-			     again in CSS as `CombatFlanks` and `CombatGround` spell them, since a class is a
-			     literal.
+			     and what is left is width: the board is put against the left edge of the view and
+			     the panel takes the whole of the rest, out of the flow entirely (`absolute`, so the
+			     board is never sized against it) and the full height of the view. It is anchored to
+			     the canvas's right edge and runs to the screen's — `left` is the canvas's own eight
+			     squares and `right` is nothing, with no width of its own to keep the two in step,
+			     the figures spelled again in CSS as `CombatFlanks` and `CombatGround` spell them,
+			     since a class is a literal. It used to be half of that, `(100vw − eight squares) / 2`,
+			     the board sitting in the middle with an identical empty band on its other side —
+			     which is a screen's worth of room spent on nothing while the orders were squeezed
+			     into what was left.
 			     It is not `sm:`-scoped any more, which is what used to stand in for this: on a wide
 			     screen the panel was simply gone and the only orders were the canvas's own. The two
 			     are both there now on every screen, which is what they were always meant to be —
@@ -1416,7 +1428,7 @@
 			     the board settle at the bottom of the view first and then jump up as the orders
 			     came in. An empty one holds the place they are coming to. -->
 			<div
-				class="relative min-h-0 w-full flex-1 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:w-[calc((100vw_-_8*min(100vw/8,100dvh/11))/2)]"
+				class="relative min-h-0 w-full flex-1 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:left-[calc(8*min(100vw/8,100dvh/11))] landscape:w-auto"
 			>
 				<!-- What the band stands on: the board's own ground, carried on into the document
 				     past the last row the canvas had room to draw. It is laid under the whole of
@@ -1562,9 +1574,16 @@
 			     chrome and not two objects that happen to be stacked: on a phone that is the whole
 			     width of the view, and from `sm:` up it is whatever the two cells come to, with the
 			     score stretched to them. Centred by the row it sits in rather than by centring its
-			     own contents, which is what leaves the stretching to it. -->
+			     own contents, which is what leaves the stretching to it.
+			     What it is centred *in* is the board's own column and not the view, once the two
+			     stop being the same thing: lying down the board is against the left edge and the
+			     orders have everything past it, so a head centred on the screen would be laid half
+			     over the panel. So it is given the canvas's own eight squares to be centred in
+			     (`landscape:left-0` and that width, the `sm:inset-x-0` released with
+			     `landscape:inset-x-auto`), which is the top of the fight rather than the top of the
+			     page. -->
 			<div
-				class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
+				class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto landscape:inset-x-auto landscape:left-0 landscape:w-[calc(8*min(100vw/8,100dvh/11))]"
 			>
 				<!-- The head's own column. It takes the whole width it is given and only settles
 				     its own from `sm:` up, where the wrapper stops being the viewport: a phone gets

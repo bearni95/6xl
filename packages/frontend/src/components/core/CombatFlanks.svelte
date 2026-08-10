@@ -4,10 +4,13 @@
 	 *
 	 * The canvas is `min(100vw, 100dvh × aspect)` and on anything wider than a phone the
 	 * height is what runs out, so a board eight squares across and eleven deep takes the whole
-	 * height and leaves a band of view at each end. This is what those bands stand on: the
+	 * height and leaves the rest of the width standing. This is what that stands on: the
 	 * board's own rows, carried out past the edges of the picture to the edges of the screen,
 	 * so the field runs off the sides of the view rather than stopping at the sides of a
-	 * drawing floating in the middle of it.
+	 * drawing floating in the middle of it. Where the board is decides which side of it that
+	 * room is on — a band at either end of a centred board, and all of it past the right edge
+	 * of one lying down against the left of the view — so the block of rows follows the board
+	 * across (see its own class below).
 	 *
 	 * It is {@link CombatGround} turned ninety degrees, and for the same reason. That one
 	 * carries the ground on *below* the canvas, which is the band a phone is left with; this
@@ -62,14 +65,19 @@
 	const APRON_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL;
 
 	/**
-	 * How many squares each band is drawn, out from the board's own edge. The band is
-	 * `(100vw − 8 squares) / 2` and at eleven squares to the height that is
-	 * `(11 × vw/dvh − 8) / 2` squares, so this many covers a view up to `(2 × columns + 8) / 11`
-	 * times as wide as it is tall — past 32:9, which is the widest screen sold. The rest is cut
-	 * off by the clip, which is what the overflow is for: the rows are allowed to run past the
-	 * sides of the view and are never to be scrolled to.
+	 * How many squares each band is drawn, out from the board's own edge. It is `32` in the
+	 * block's own class below as well, a class being a literal.
+	 *
+	 * The demanding case is the board lying down against the left edge of the view, where the
+	 * whole of the width past it is one band: `100vw − 8 squares`, which at eleven squares to
+	 * the height is `11 × vw/dvh − 8` squares. So this many covers a view up to
+	 * `(columns + 8) / 11` times as wide as it is tall — past 32:9, which is the widest screen
+	 * sold. (Centred, which is every screen taller than it is wide, each band is half of that
+	 * and the same count reaches twice as far.) The rest is cut off by the clip, which is what
+	 * the overflow is for: the rows are allowed to run past the sides of the view and are never
+	 * to be scrolled to.
 	 */
-	const BAND_COLUMNS = 16;
+	const BAND_COLUMNS = 32;
 
 	/**
 	 * One square, at the size the picture draws one — and the whole of what a square is where
@@ -194,8 +202,17 @@
 	<!-- `w-max` because the rows are wider than the box they are clipped in and an absolutely
 	     placed box with no width of its own is otherwise shrunk to whatever room is left beside
 	     where it is anchored. The two halves are the same length, so the rows are centred on the
-	     board's own middle by being centred as a block. -->
-	<div class="absolute top-1/2 left-1/2 w-max -translate-x-1/2 -translate-y-1/2">
+	     board's own middle by being centred as a block.
+	     That holds while the board is centred, which it is on a screen taller than it is wide.
+	     Lying down the board is against the left edge of the view and the orders have all the
+	     width past it, so the gap in the middle of every row has to move there too: the block is
+	     anchored to that edge and pulled back by the left band's own {@link BAND_COLUMNS}
+	     squares, which puts the gap's left side exactly on it. The left band then hangs off the
+	     screen entirely and the right one carries the field out under the panel, which is what
+	     is beside the board over there. -->
+	<div
+		class="absolute top-1/2 left-1/2 w-max -translate-x-1/2 -translate-y-1/2 landscape:left-0 landscape:-translate-x-[calc(32*min(100vw/8,100dvh/11))]"
+	>
 		{#each rows as squares, row (row)}
 			<div class="flex">
 				{#each squares as square, column (column)}
