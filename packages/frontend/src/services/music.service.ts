@@ -482,6 +482,18 @@ class MusicService {
 			// decode that fell behind. Anything smaller than the drift is left alone: a
 			// seek is audible and being a second out is not.
 			this.seek(audio, track.file, offsetMs);
+		} else if (audio.ended) {
+			// The song has run out and the clock still says it is on: a file plays for as
+			// long as it decodes to, which is not the length its header reported when a tag
+			// or a bad bitrate estimate padded it, so the last of the sound can come a
+			// fraction of a second before the station's own boundary. There is nothing to
+			// do with an element that has run out, and one thing that must not be done to
+			// it: `play()` on it rewinds to the top, so a song that had just finished began
+			// again and played until the retune arrived to cut it off — the station
+			// stuttering back into what it had already played. The retune waiting at the
+			// end of the slot is what brings the next song up, and waiting for it is what
+			// keeps this radio on the same second as every other one.
+			return;
 		}
 
 		if (this.wanted) void this.start(audio);

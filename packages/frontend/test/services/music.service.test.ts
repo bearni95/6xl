@@ -64,14 +64,16 @@ class FakeAudio {
 	static refuse = false;
 
 	preload = '';
-	currentTime = 0;
 	paused = true;
 	readyState = 0;
 	duration = NaN;
+	/** Whether it has played to the end. `paused` stays false there, as the spec has it. */
+	ended = false;
 	/** Where the crossfade puts this element in the mix: 1 for a radio of one station. */
 	volume = 1;
 
 	private source = '';
+	private position = 0;
 	private handlers = new Map<string, Set<() => void>>();
 
 	constructor(src?: string) {
@@ -85,6 +87,16 @@ class FakeAudio {
 
 	/** As the load algorithm does: everything about the last file is dropped, and the
 	 *  new one's metadata arrives a turn later — which is what makes `seek` wait. */
+	/** Seeking an element that has played out takes it off its end, as the spec has it. */
+	get currentTime(): number {
+		return this.position;
+	}
+
+	set currentTime(value: number) {
+		this.position = value;
+		this.ended = false;
+	}
+
 	set src(value: string) {
 		this.source = value;
 		this.readyState = 0;
@@ -129,8 +141,10 @@ class FakeAudio {
 		this.handlers.get(type)?.delete(handler);
 	}
 
+	/** As the play algorithm does: an element that has played out is rewound first. */
 	play(): Promise<void> {
 		if (FakeAudio.refuse) return Promise.reject(new Error('NotAllowedError'));
+		if (this.ended) this.currentTime = 0;
 		this.paused = false;
 		this.emit('play');
 		return Promise.resolve();
@@ -141,9 +155,14 @@ class FakeAudio {
 		this.emit('pause');
 	}
 
-	/** The song running out, which no fake clock can bring about on its own. */
+	/**
+	 * The song running out, which no fake clock can bring about on its own. It stops at
+	 * its end and stays there, and `paused` is untouched — playback ending is not a
+	 * pause, and the element is left able to say it has nothing more to play.
+	 */
 	end(): void {
-		this.paused = true;
+		this.position = Number.isFinite(this.duration) ? this.duration : this.position;
+		this.ended = true;
 		this.emit('ended');
 	}
 
@@ -459,6 +478,37 @@ describe('the radio', () => {
 		await settle(30_000);
 		expect(element.file).toBe(order(11)[3].file);
 		expect(element.volume).toBe(1);
+		expect(FakeAudio.instances.length).toBe(built);
+	});
+
+	it('does not play a song that has run out again while the clock catches up', async () => {
+		// A file plays for as long as it decodes to, whatever length its header claimed: a
+		// tag or a bitrate estimate can put the station's boundary a fraction of a second
+		// after the last of the sound. The element saying it is done is not the station
+		// saying so, and the one thing that must not happen is what `play()` does to an
+		// element that has run out — rewind it. That put the song that had just finished
+		// back on from the top for the half-second until the retune arrived, which is the
+		// radio stuttering rather than handing over.
+		const service = await tunedIn();
+		service.toggle();
+		await settle();
+		const element = player();
+		const built = FakeAudio.instances.length;
+
+		// Half a second before the station says this song ends, the file runs out.
+		await vi.advanceTimersByTimeAsync(29_500);
+		element.end();
+		await settle();
+		expect(element.currentTime).toBe(60);
+		expect(element.file).toBe(order(11)[2].file);
+		expect(get(service.state).track).toEqual(order(11)[2]);
+
+		// And the next song comes up at the boundary, on the same element, from its top.
+		await vi.advanceTimersByTimeAsync(600);
+		expect(element.file).toBe(order(11)[3].file);
+		expect(element.currentTime).toBeLessThan(0.5);
+		expect(get(service.state).track).toEqual(order(11)[3]);
+		expect(get(service.state).playing).toBe(true);
 		expect(FakeAudio.instances.length).toBe(built);
 	});
 
