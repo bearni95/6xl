@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { authService } from '$services/auth.service';
 	import { openSignIn } from '$services/signInModal';
-	import { leaveRoster } from '$services/roster';
+	import { leaveRoster, teamUnfinished } from '$services/roster';
 	import { MAP_ROUTE } from '$services/combat';
 	import { spawnService } from '$services/spawn.service';
 	import { teamService, TEAM_SIZE } from '$services/team.service';
@@ -585,7 +585,20 @@
 	being routes rather than sheets is about where they live, not about what they look like.
 	The toolbar takes what it needs of that column and the grid gets the rest, which is what
 	its scroll box is sized from. -->
-<FullScreenModal title={$_('roster.title')} closeLabel={$_('roster.close')} on:close={close}>
+<!-- The way out is shut while the side is short of three and the player holds the cards to
+	finish it (see teamUnfinished): the ✕ greys and Escape does nothing, which is the same
+	hold the arena puts on its own sheet while a finished fight is on its way to the server.
+	It is the one thing this game asks before anything else in it, and a page that could be
+	closed on it would be asking nothing — the gate at the layout root would only hand the
+	player straight back, which is a bounce rather than an answer.
+	Nothing else is held: a player who cannot finish a side from what they hold is not held
+	here at all, so the shut ✕ is never a door with nothing behind it. -->
+<FullScreenModal
+	title={$_('roster.title')}
+	closeLabel={$_('roster.close')}
+	closeDisabled={$teamUnfinished}
+	on:close={close}
+>
 	{#if $status === AuthStatus.SignedIn && $spawns.length > 0}
 		{#if $teamError}
 			<!-- The team is the server's, so a refused line-up is said in the server's own

@@ -5,6 +5,7 @@
 	import SignInModal from '$components/core/SignInModal.svelte';
 	import LegalModal from '$components/core/LegalModal.svelte';
 	import LegalGate from '$components/core/LegalGate.svelte';
+	import TeamGate from '$components/core/TeamGate.svelte';
 	import WelcomeBoosterModal from '$components/core/WelcomeBoosterModal.svelte';
 
 	let { children } = $props();
@@ -19,6 +20,11 @@
 	(see $services/roster). Which also gives back for free what mounting it only while it was
 	open was buying: the card canvas, and the WebGL context every mount of it asks the browser
 	for, exist only while that page is the page. -->
+<!-- What does stand out here is the rule about that page: a player who can field a side and
+	has not is handed back to it from wherever they are, the way the map hands a player back
+	into the fight they are already in. It draws nothing — it is a rule, not a sheet — so
+	where it is mounted among these says nothing about what stands in front of what. -->
+<TeamGate />
 <!-- The way in, out here with the rest of them: the corner at the foot of the map is one
 	button now, and everything it asks is asked on this box. Out here it also survives the
 	documents being read over it, which is the whole reason a visitor can tick the gate and

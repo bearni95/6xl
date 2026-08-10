@@ -254,8 +254,12 @@ to `/combat`; leaving the arena navigates back. So the modal show/hide is a rout
 each way, and the rule that puts a player back into the fight they are already in is a
 **redirect**: the map loads the open battle and goes to the arena, once per battle (the
 marker is a store in that service, since the map is mounted afresh every time the arena is
-left). A visit that lands on `/combat` with nothing staged is bounced to the map, which
-stages the open battle back — which is what a reload in the middle of a fight does. The
+left). The staging is **written down** (localStorage), so a reload, a typed address or the
+browser's own Forward finds the fight already on hand rather than flashing through the map
+on the way back to itself; `/combat`'s own `+page.ts` load is what settles the two ways it
+can be walked into instead — nothing staged at all, which is bounced to the map, and a
+staging off a previous page life, which is held against the server's open battle before it
+is believed. The
 map is therefore not mounted behind a fight at all, which is why the town **spotlight**
 (the one town lit on black while a fight was up) is gone from `+page.svelte`; `WorldMap`
 still knows how to draw one, nothing asks it to.
@@ -269,7 +273,23 @@ back to **whichever page opened it**, recorded at the press rather than asked of
 arranging a team is the same errand from both, and a player who came from a fight is put
 back in it — the staging outlives the page, so the fight is still there. A visit that lands
 on `/roster` directly leaves for the map, which is also where the empty-roster card's "open
-the map" goes, a first card being something only a town can give. Everything that is not the map
+the map" goes, a first card being something only a town can give.
+
+**And it holds a player the way a fight does.** A side of `TEAM_SIZE` is what everything
+else in the game is downstream of, so an account that *can* field one and has not is asked
+to before anything else: `teamUnfinished` (`$services/roster`) shuts the roster's ✕ and
+Escape (`closeDisabled`, the same hold the arena puts on its sheet while a report is in
+flight), and `TeamGate.svelte` — mounted at the layout root beside `LegalGate`, drawing
+nothing — hands the player back to `/roster` from wherever else they are, as the map's
+resume rule hands them back into an open fight. Leaving still returns them to the page the
+gate took them from. Two things keep it from being a trap: it is **only** raised where
+finishing is a move the player can make — signed in, short of a full side, and holding
+cards that could actually fill one (`canFieldFullTeam` in `$utils/color/compare`, since
+every member must share a colour with the lead, so three cards in unrelated colours are
+three cards and no team) — and it **looks twice rather than watching**: when the player
+arrives somewhere, and when their cards first land. A live watch would fire the moment a
+booster pack awarded the card that completed the roster, navigating the pack's own sheet
+out from under the player mid-opening. Everything that is not the map
 is behind the **burger menu** — the `<aside>` drawer summoned from the far end of the
 breadcrumb bar: the block of buttons that raise those sheets, the sign-in, and at its foot
 `MusicPlayer.svelte`. The plate draws nothing until a song is loaded, and the audio element

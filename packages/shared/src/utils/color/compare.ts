@@ -51,3 +51,32 @@ export function teammateColors(lead: CombatColor): CombatColor[] {
 export function isTeammateColor(lead: CombatColor, color: CombatColor): boolean {
 	return teammateColors(lead).includes(color);
 }
+
+/**
+ * Whether a full side of `size` could be fielded from cards carrying `colors` — asked of
+ * the whole of what a player holds, whoever is leading at the moment.
+ *
+ * Holding `size` cards is not the same as being able to field them: every member shares a
+ * colour with the lead, so three cards in three unrelated colours are three cards and no
+ * team. The question is therefore asked lead-first — is there a colour among these that
+ * enough of the rest could stand behind? — and a lead's own colour counts among them, since
+ * {@link teammateColors} includes it.
+ *
+ * It says nothing about the line-up *currently* fielded: a player led by a colour the rest
+ * of their cards cannot follow still answers true here, because taking that lead off is a
+ * move they can make. What this answers is whether finishing the team is up to the player
+ * at all, which is what anything holding them to it has to know first.
+ */
+export function canFieldFullTeam(colors: CombatColor[], size: number): boolean {
+	if (size <= 0) return true;
+	if (colors.length < size) return false;
+	const held = new Map<CombatColor, number>();
+	for (const color of colors) held.set(color, (held.get(color) ?? 0) + 1);
+	for (const lead of held.keys()) {
+		const allowed = teammateColors(lead);
+		let behind = 0;
+		for (const [color, count] of held) if (allowed.includes(color)) behind += count;
+		if (behind >= size) return true;
+	}
+	return false;
+}
