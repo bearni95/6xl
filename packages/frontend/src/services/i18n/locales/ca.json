@@ -523,8 +523,10 @@
 							"Del teu compte de Google, quan hi inicies la sessió: l'adreça de correu electrònic, l'identificador del compte i el nom que Google publica al teu perfil. No rebem ni la contrasenya ni els contactes ni res més del teu compte de Google.",
 							"Del joc, a mesura que hi jugues: el nom d'usuari que tries, l'experiència i el nivell, l'avatar que portes, les cartes que t'han tocat, els sobres que has obert, els combats jugats amb el seu resultat i els municipis que ocupes o assetges.",
 							"De les acceptacions legals: quin document has acceptat, en quina versió, quan, i si vas declarar tenir l'edat mínima.",
-							"No tractem dades de categories especials, no fem perfils de tu, no prenem decisions automatitzades amb efectes jurídics sobre tu i no tenim analítica ni publicitat de cap mena. No et demanem la data de naixement, només que confirmis un llindar.",
-							"No desem la teva adreça IP en cap base de dades nostra. Els proveïdors que fan funcionar el joc en registren de manera temporal als seus registres tècnics, com fa qualsevol servidor d'internet; ho expliquem a l'apartat 5."
+							"De les visites al web, tinguis compte o no: mesurem l'audiència amb Umami, un programa d'analítica lliure que fem córrer al nostre propi servidor, a umami.bearni.io. De cada pàgina que obres s'hi envia l'adreça, el títol, d'on venies si hi has arribat des d'un enllaç, l'idioma del navegador i la mida de la pantalla. Ja del costat del servidor, de la teva adreça IP se'n dedueix d'on et connectes a escala de país, regió o ciutat, i se'n calcula un identificador de visita amb una sal que canvia cada dia, de manera que demà aquell identificador ja no pot lligar-te amb la visita d'avui.",
+							"Aquesta mesura no fa servir galetes, no desa res al teu navegador i no et segueix a cap altre lloc web: no hi ha res que permeti reconèixer-te fora d'aquest joc, ni tampoc dins del joc d'un dia per l'altre. L'únic punt on una dada d'aquestes pot quedar lligada a un compte és l'adreça d'una pàgina pública de jugador, que porta l'identificador d'aquell compte; a l'apartat 7 diem què en fem.",
+							"No tractem dades de categories especials, no fem perfils de tu, no prenem decisions automatitzades amb efectes jurídics sobre tu i no hi ha publicitat de cap mena, ni pròpia ni de ningú altre. No et demanem la data de naixement, només que confirmis un llindar.",
+							"No desem la teva adreça IP en cap base de dades nostra, tampoc en la de l'analítica: hi arriba, com arriba a qualsevol servidor a qui demanes una pàgina, s'usa per deduir-ne la procedència i per calcular l'identificador de visita, i no es guarda. Els proveïdors que fan funcionar el joc en registren de manera temporal als seus registres tècnics, com fa qualsevol servidor d'internet; ho expliquem a l'apartat 5."
 						]
 					},
 					{
@@ -534,6 +536,8 @@
 							"Per publicar el teu nom d'usuari al mapa i a la classificació: també execució del contracte, perquè ocupar municipis a la vista de tothom és literalment el joc. Si no vols aparèixer-hi, pots deixar el compte sense nom d'usuari o esborrar-lo.",
 							"Per guardar les acceptacions legals i la declaració d'edat: compliment d'una obligació legal (article 6.1.c) i interès legítim a poder demostrar que vam informar i que ens van acceptar (articles 5.2 i 7.1).",
 							"Per protegir el joc de trampes, abusos i atacs: interès legítim (article 6.1.f) a que el joc sigui jugable i el servei segur. Hem valorat que aquest interès no passa per sobre dels teus drets, perquè les dades implicades són les mateixes de la partida i no se'n dedueix res de la teva vida privada.",
+							"Per mesurar l'audiència del web: també interès legítim (article 6.1.f) a saber si el joc l'obre algú i quines parts, que és l'única manera de decidir què val la pena mantenir i què no. Hem valorat que aquest interès tampoc no passa per sobre dels teus drets, perquè la mesura és nostra i no arriba a ningú més, no fa servir galetes, no desa res al teu navegador, no et segueix per altres webs i el que se'n treu són recomptes i no fitxes de persones.",
+							"D'aquest últim tractament t'hi pots oposar quan vulguis (article 21 del RGPD), i no cal que ens ho demanis: l'apartat 4 de la Política de galetes i emmagatzematge local explica les dues maneres d'apagar-lo tu mateix en un moment.",
 							"No demanem el teu consentiment com a base legal per a res del que hi ha aquí, i per tant no hi ha res que hagis de retirar: el que et demanem és que acceptis un contracte i que confirmis una edat, que no és el mateix."
 						]
 					},
@@ -553,6 +557,7 @@
 							"Google, un segon cop i sense que hi hagi cap compte pel mig: la tipografia del joc, Genos, es carrega des dels servidors de Google Fonts cada vegada que s'obre la pàgina, i això li comunica la teva adreça IP i el navegador que fas servir. Passa a tothom qui entri, tingui compte o no. Ho diem clarament perquè és un tercer que hi intervé, i perquè els tribunals europeus ho han considerat una comunicació de dades i no un detall tècnic. Es pot evitar bloquejant les peticions a fonts.googleapis.com al navegador; la lletra canviarà i el joc funcionarà igual.",
 							"Esri Inc., que serveix les imatges de satèl·lit del mapa. Carregar el mapa demana aquestes imatges als seus servidors i, per tant, li comunica la teva adreça IP.",
 							"Qui allotja el web del joc, que en registra els accessos als seus registres tècnics durant un temps limitat i per motius de seguretat i de manteniment.",
+							"Umami, l'analítica, no és ningú més: el programa és lliure i el fem córrer nosaltres en un servidor nostre, a umami.bearni.io. Les dades de visita no en surten i no les veu cap empresa d'analítica, que és exactament per què està allotjat aquí i no contractat fora. Qui allotgi aquell servidor n'és encarregat del tractament, igual que qui allotja el web.",
 							"No venem, no lloguem ni cedim les teves dades a ningú per a finalitats comercials ni publicitàries. Només les comunicaríem a una autoritat si una llei o una resolució judicial ens hi obligués."
 						]
 					},
@@ -568,7 +573,9 @@
 						"heading": "7. Quant de temps les guardem",
 						"body": [
 							"Les dades del compte i de la partida, mentre el compte existeixi.",
-							"Quan esborres el compte, s'esborra tot: el perfil, les cartes, els avatars, els combats, els sobres, els municipis que ocupessis i el registre d'acceptacions. No en guardem cap còpia ni cap versió anonimitzada, i els municipis que tinguessis queden lliures per a qui els vulgui.",
+							"Quan esborres el compte, s'esborra tot el que en guarda la base de dades del joc: el perfil, les cartes, els avatars, els combats, els sobres, els municipis que ocupessis i el registre d'acceptacions. No en guardem cap còpia ni cap versió anonimitzada, i els municipis que tinguessis queden lliures per a qui els vulgui.",
+							"Les dades de visita de l'analítica són una altra base de dades i no tenen cap columna que digui de quin compte són: es conserven mentre serveixin per veure com evoluciona el joc, i l'identificador de visita ja caduca sol cada dia.",
+							"L'excepció és la que dèiem a l'apartat 2. Si algú obre la teva pàgina pública de jugador, allà hi queda l'adreça d'aquella pàgina, que porta l'identificador del teu compte. El botó d'esborrar el compte no arriba a aquella base de dades perquè no és la mateixa; escriu-nos al correu de contacte i les esborrem també, i si no ens dius res queden com una adreça que ja no porta enlloc.",
 							"No hi ha cap termini legal de conservació que ens obligui a guardar res teu: no cobrem res, no emetem factures i no hi ha comptabilitat associada a la teva partida.",
 							"Les còpies de seguretat del proveïdor poden trigar uns dies a reciclar-se; passat aquest termini no en queda res enlloc."
 						]
@@ -594,8 +601,8 @@
 						"heading": "10. Si vius als Estats Units",
 						"body": [
 							"Aquest apartat és per a les persones residents als Estats Units, i s'aplica a tots els estats independentment que la llei de cadascun ens obligui o no: hem preferit donar els mateixos drets a tothom que haver de decidir a qui li toquen.",
-							"Categories d'informació personal que recollim, en els termes de la CCPA de Califòrnia: identificadors (adreça de correu, identificador de compte, nom d'usuari), informació comercial no n'hi ha, i activitat a internet limitada a l'ús que fas del joc. No recollim informació de geolocalització precisa, ni dades biomètriques, ni informació personal sensible.",
-							"No venem ni compartim informació personal, en el sentit que la CCPA dona a aquests dos verbs, i no ho hem fet mai. No fem publicitat comportamental entre contextos. Per això no hi ha cap enllaç de Do Not Sell or Share My Personal Information: no hi hauria res per desactivar.",
+							"Categories d'informació personal que recollim, en els termes de la CCPA de Califòrnia: identificadors (adreça de correu, identificador de compte, nom d'usuari), informació comercial no n'hi ha, i activitat a internet, que és l'ús que fas del joc i les pàgines que hi obres, aquestes últimes recollides pel comptador de visites propi que descriu l'apartat 2. No recollim informació de geolocalització precisa — de l'adreça IP només se'n dedueix la procedència a escala de país, regió o ciutat, i l'adreça no es desa —, ni dades biomètriques, ni informació personal sensible.",
+							"No venem ni compartim informació personal, en el sentit que la CCPA dona a aquests dos verbs, i no ho hem fet mai. No fem publicitat comportamental entre contextos. El comptador de visites no ho canvia: és nostre, no el veu cap tercer i no alimenta cap publicitat. Per això no hi ha cap enllaç de Do Not Sell or Share My Personal Information: no hi hauria res per desactivar.",
 							"Tens dret a saber quina informació tenim de tu i a obtenir-ne còpia, a corregir-la, a esborrar-la i a no patir cap tracte pitjor per haver exercit aquests drets. Els dos primers els tens al botó de descàrrega de la configuració i el tercer al d'esborrar el compte; per als altres, escriu-nos.",
 							"Pots designar un agent autoritzat perquè exerceixi aquests drets per tu; li demanarem una prova que l'has autoritzat.",
 							"Si vius a Virgínia, Colorado, Connecticut, Utah, Texas o qualsevol altre estat amb una llei de privadesa pròpia, tens a més el dret a recórrer una decisió nostra que et denegui una petició: respon al mateix correu dient que hi vols recórrer i t'ho revisarà una persona diferent.",
@@ -623,9 +630,10 @@
 				"summary": "Què desa el joc al teu navegador, per què no et demanem permís per fer-ho i com esborrar-ho.",
 				"sections": [
 					{
-						"heading": "1. No fem seguiment de ningú",
+						"heading": "1. Comptem visites, i res més",
 						"body": [
-							"Aquest joc no té analítica, ni publicitat, ni píxels de xarxes socials, ni galetes de tercers, ni cap identificador que serveixi per perseguir-te d'una pàgina a una altra. No en té poc: no en té gens.",
+							"Aquest joc no té publicitat, ni píxels de xarxes socials, ni galetes de tercers, ni cap identificador que serveixi per perseguir-te d'una pàgina a una altra. D'això no en té poc: no en té gens.",
+							"El que sí que té és un comptador de visites. És Umami, un programa d'analítica lliure que fem córrer al nostre propi servidor, a umami.bearni.io, i serveix per saber quanta gent entra al joc i quines pàgines obre. No desa cap galeta, no escriu res al teu navegador i el que recull no surt d'aquell servidor. Què hi envia exactament ho detalla l'apartat 2 de la Política de privadesa, i com apagar-lo és a l'apartat 4 d'aquí sota.",
 							"Tot el que es desa al teu navegador és el que fa falta perquè el joc funcioni o perquè recordi una preferència que has triat tu."
 						]
 					},
@@ -636,6 +644,7 @@
 							"music-player: quina emissora escoltaves i si la ràdio estava engegada. És una preferència teva i es queda fins que la canviïs.",
 							"legal-consent-pending: guarda momentàniament les caselles que has marcat mentre ets a la pantalla de Google, perquè en tornar es pugui registrar l'acceptació. S'esborra tot just en registrar-la.",
 							"Claus que comencen per array-service: i object-service:, que guarden l'estat local del joc, com ara la vista del mapa on eres.",
+							"El comptador de visites no surt en aquesta llista perquè no hi desa res. L'única clau que té a veure amb ell és umami.disabled, i no la posa ell: la poses tu si el vols apagat, i llavors ell la llegeix per callar. A l'apartat 4 hi ha com.",
 							"Tot això és emmagatzematge local del navegador, no galetes enviades al servidor a cada petició. No hi ha res que viatgi sol."
 						]
 					},
@@ -643,17 +652,20 @@
 						"heading": "3. Per què no et demanem permís",
 						"body": [
 							"L'article 5.3 de la Directiva 2002/58/CE i l'article 22.2 de la Llei 34/2002 espanyola eximeixen del consentiment l'emmagatzematge estrictament necessari per prestar un servei que la persona ha demanat expressament.",
-							"Tot el que hi ha a la llista de dalt hi encaixa: la sessió és el servei, i la preferència de ràdio i la vista del mapa són coses que has triat tu i que serveixen per tornar-te-les tal com les vas deixar. No hi ha res per mesurar, ni per anunciar, ni per vendre.",
+							"Tot el que hi ha a la llista de dalt hi encaixa: la sessió és el servei, i la preferència de ràdio i la vista del mapa són coses que has triat tu i que serveixen per tornar-te-les tal com les vas deixar. No hi ha res per anunciar ni per vendre.",
+							"El comptador de visites hi encaixa per un motiu més senzill encara: aquell article parla de desar informació al teu aparell o d'accedir-hi, i Umami no fa ni l'una cosa ni l'altra. No hi posa cap galeta ni cap clau, no li cal llegir res teu per comptar una visita, i la petició que envia va expressament sense galetes de cap mena.",
+							"Igualment compleix les condicions que les autoritats de protecció de dades demanen a la mesura d'audiència per no haver de demanar permís: és estrictament nostra, només serveix per treure estadístiques agregades d'aquest lloc, no es creua amb cap altre tractament, no et segueix per altres webs i no es comparteix amb ningú. Que no calgui demanar-te permís, però, no vol dir que no el puguis retirar: l'apartat següent explica com apagar-lo.",
 							"Per això no hi ha cap finestra de galetes: una finestra que demana permís per a una cosa que no en necessita només ensenya la gent a fer clic sense llegir."
 						]
 					},
 					{
-						"heading": "4. Peticions a tercers en carregar la pàgina",
+						"heading": "4. Peticions que fa la pàgina en carregar-se, i com apagar-les",
 						"body": [
-							"Dues coses que el joc demana fora, i que impliquen que la teva adreça IP arribi a un tercer encara que no tinguis compte.",
-							"La tipografia Genos es carrega des de Google Fonts. Ho pots evitar bloquejant fonts.googleapis.com i fonts.gstatic.com; el joc funciona igual amb una altra lletra.",
-							"Les imatges de satèl·lit del mapa venen dels servidors d'Esri. Sense elles el mapa es veu sense fons, però les regions i les partides continuen funcionant.",
-							"Ni l'una ni l'altra desa res al teu navegador per compte nostre, i cap de les dues té a veure amb el teu compte ni amb la teva partida."
+							"En obrir el joc, el navegador demana coses a fora, i tota petició implica que la teva adreça IP arribi a qui la rep, tinguis compte o no. Són tres, i totes tres es poden desactivar.",
+							"La tipografia Genos, que es carrega des de Google Fonts: Google és un tercer. Ho pots evitar bloquejant fonts.googleapis.com i fonts.gstatic.com; el joc funciona igual amb una altra lletra.",
+							"Les imatges de satèl·lit del mapa, que venen dels servidors d'Esri, també un tercer. Sense elles el mapa es veu sense fons, però les regions i les partides continuen funcionant.",
+							"El comptador de visites, que va a umami.bearni.io i no és cap tercer sinó un servidor nostre. L'apagues de qualsevol de dues maneres: bloquejant umami.bearni.io amb una extensió de bloqueig, o desant la clau umami.disabled amb el valor 1 a l'emmagatzematge local del navegador, que és el senyal que el mateix programa busca abans d'enviar res i que, si el troba, el fa callar del tot. Amb qualsevol de les dues el joc funciona exactament igual.",
+							"Cap de les tres no desa res al teu navegador per compte nostre. Ni la lletra ni el mapa saben res del teu compte; del comptador de visites, l'apartat 2 de la Política de privadesa explica l'únic cas en què una adreça de pàgina en pot portar l'identificador."
 						]
 					},
 					{
@@ -661,6 +673,7 @@
 						"body": [
 							"Tancar la sessió esborra la sessió desada.",
 							"Esborrar les dades del lloc des de la configuració del navegador ho treu tot, incloent-hi les preferències. El joc tornarà a començar de zero pel que fa a l'aparença; la teva partida és al servidor i no es perd.",
+							"Compte amb una cosa: si havies desat umami.disabled per apagar el comptador de visites, esborrar les dades del lloc també se l'emporta i el comptador torna a comptar. Caldrà tornar-la a posar.",
 							"Navegar en finestra privada fa que res d'això sobrevisqui en tancar-la."
 						]
 					}
@@ -717,6 +730,7 @@
 						"heading": "7. Programari lliure",
 						"body": [
 							"El joc està construït amb SvelteKit, PixiJS, Leaflet, Tailwind CSS i DaisyUI, entre altres projectes de programari lliure, cadascun amb la seva pròpia llicència.",
+							"El comptador de visites és Umami, també lliure i sota llicència MIT, i el fem córrer nosaltres en un servidor propi en lloc de contractar cap servei d'analítica.",
 							"Gràcies a tothom qui els manté."
 						]
 					}

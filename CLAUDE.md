@@ -663,10 +663,27 @@ postal address and tax id of whoever publishes it. They are shipped as `PENDENT 
 placeholders, and both the LSSI (art. 10) and the GDPR (arts. 13–14) require the real
 thing.
 
-There is deliberately **no cookie banner**. Nothing is stored for measurement or
-advertising; the session, the radio preference and the held acceptance are all either
-strictly necessary or user-requested, which is the ePrivacy art. 5(3) / LSSI art. 22.2
-exemption. Adding anything analytical changes that answer.
+There is deliberately **no cookie banner**, and the reason survives the analytics: the
+session, the radio preference and the held acceptance are all either strictly necessary
+or user-requested, which is the ePrivacy art. 5(3) / LSSI art. 22.2 exemption, and the
+**Umami** tag in `app.html` neither writes nor reads anything on the device to do its
+counting — it sets no cookie, sends its request `credentials: 'omit'`, and the one key
+it touches (`umami.disabled`) is a key the *reader* sets to switch it off. Art. 5(3)
+governs storage and access; a beacon that does neither is outside it, and the audience
+measurement it does is first-party, self-hosted, aggregate and shared with nobody, which
+is the exemption the DPAs describe. **Anything that stores an identifier on the device,
+or that hands a third party the measurement, changes that answer and needs the banner.**
+
+What the analytics *does* need is to be described, because a lawful basis and a
+disclosure are separate obligations: it runs on art. 6(1)(f), it is written down in the
+privacy notice (§2 what is sent, §3 the basis and the art. 21 objection, §5 that it is
+our own server and not a recipient, §7 how long, §10 the CCPA categories) and in the
+storage note (§1, §2, §3 and §4's opt-out). **Change what the tag sends and those
+sections are part of the change** — including `data-performance` or any
+`data-umami-event`, neither of which is used today. One honest wrinkle is recorded there
+rather than hidden: Umami stores the *address* of each page, and `/profile/<id>` carries
+an account id, so those rows are the one place a visit can be tied to an account, and
+`delete_player_account()` does not reach that database.
 
 ---
 

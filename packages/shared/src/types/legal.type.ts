@@ -45,9 +45,9 @@ export const LEGAL_DOCUMENTS: readonly LegalDocumentId[] = [
  */
 export const LEGAL_VERSIONS: Record<LegalDocumentId, string> = {
 	[LegalDocumentId.Terms]: '2026-07-31',
-	[LegalDocumentId.Privacy]: '2026-07-31',
-	[LegalDocumentId.Cookies]: '2026-07-31',
-	[LegalDocumentId.Attributions]: '2026-07-31'
+	[LegalDocumentId.Privacy]: '2026-08-10',
+	[LegalDocumentId.Cookies]: '2026-08-10',
+	[LegalDocumentId.Attributions]: '2026-08-10'
 };
 
 /**
