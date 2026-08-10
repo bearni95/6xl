@@ -7,7 +7,7 @@
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import TownPlate from '$components/core/TownPlate.svelte';
-	import { SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
+	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
 	import { combatColorHex } from '$utils/color/combat-color';
 	import { ORDER_ICONS } from '$utils/color/traits';
 	// Types only, so nothing here reaches the renderer at load time: the arena letters a
@@ -444,26 +444,26 @@
 	 *
 	 * There are only three orders and each button is one of them. What a fighter's
 	 * colour adds on top is never tapped for — it is passive, it comes off the back of
-	 * whatever order *was* given, and the dot in a button's corner is where it is read.
+	 * whatever order *was* given, and the border round a button is where it is read.
 	 */
 	function giveOrder(fighterId: string, orderId: string): void {
 		controller?.setAction(fighterId, orderId as CombatAction);
 	}
 
 	/**
-	 * Which of the three orders a fighter's colour hands it free, marked with a dot in that
-	 * order's own corner — and only while the fight is on its opening turn, which is the
-	 * only turn a gift is ever in hand for.
+	 * Which of the three orders a fighter's colour hands it free, marked by edging that
+	 * order's own button in the fighter's colour — and only while the fight is on its
+	 * opening turn, which is the only turn a gift is ever in hand for.
 	 *
 	 * A gift *is* one of these three orders, had for nothing, so the place to say a fighter
-	 * has one is the button for that very order: a red fighter's Shoot wears a dot, an
-	 * orange one's Shoot and Charge both do, and reading the column reads what the colour
+	 * has one is the button for that very order: a red fighter's Shoot is edged, an
+	 * orange one's Shoot and Charge both are, and reading the column reads what the colour
 	 * is worth without a second thing on the board to look at. And it says it where the
 	 * choice is being made, which is what makes it worth knowing — the gift never comes on
-	 * the order it is given, so a dotted button is the one order that throws its own gift
+	 * the order it is given, so an edged button is the one order that throws its own gift
 	 * away.
 	 *
-	 * The dots come off with the turn. Whatever a colour granted has been taken or has
+	 * The borders come off with the turn. Whatever a colour granted has been taken or has
 	 * lapsed by the end of turn one, so a mark left standing after it would be saying a
 	 * fighter still holds something it cannot use again — the marks at a fighter's feet
 	 * that this replaces kept a spent gift drawn for the rest of the fight, an account of
@@ -479,7 +479,7 @@
 	 * so a fighter's column never changes shape under the cursor — and all of them lock while
 	 * a turn is playing out. What its colour does for it of its own accord is not a fourth
 	 * button: it is never tapped for, so it is not among the things that can be, and it is
-	 * said as a dot on the order it is a gift of ({@link giftedOrders}).
+	 * said as a border round the order it is a gift of ({@link giftedOrders}).
 	 */
 	function orderButtons(
 		fighter: FighterView,
@@ -509,7 +509,7 @@
 	 * acts and stays lit for the rest of the turn.
 	 *
 	 * It lights up in the fighter's own colour, as the player's own column does. And a rival
-	 * wears its gifts in the same corners the player's own fighters do: what a rival's colour
+	 * wears its gifts the same way the player's own fighters do: what a rival's colour
 	 * hands it is not a secret — it is a thing about the card and not a choice it has made —
 	 * and it is what the player is planning the opening turn against.
 	 */
@@ -1416,12 +1416,28 @@
 								</svg>
 							</button>
 							{#each row.orders as order (order.id)}
+								<!-- An order the fighter's colour hands it free is edged in that colour, exactly
+								     as the board edges it: a border round the whole button, because what is
+								     being said is about the whole of that order. On the one button *filled*
+								     with that very colour — the order the fighter has been given — a white
+								     seam is laid inside the border, which is the whole of what keeps the two
+								     apart; it is an inset ring rather than a second border so it costs the
+								     glyph no room and the three buttons stay one size whatever they wear.
+								     It comes and goes with the board's own, both being drawn off the same
+								     `gift` flag on the same list of orders, so it is only ever on the opening
+								     turn — the turn a gift is in hand for. -->
 								<button
 									type="button"
 									class={classNames(
-										'relative flex aspect-square w-full items-center justify-center rounded-box',
+										'relative flex aspect-square w-full items-center justify-center rounded-box border-2',
 										orderFill(order),
-										{ 'opacity-40': order.disabled }
+										order.gift
+											? SPAWN_BORDER_CLASSES[order.color as SpawnColor]
+											: 'border-transparent',
+										{
+											'opacity-40': order.disabled,
+											'ring-2 ring-white ring-inset': order.gift && order.selected
+										}
 									)}
 									disabled={order.disabled}
 									aria-label={ORDER_LABELS[order.id as CombatAction]}
@@ -1429,24 +1445,6 @@
 									on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
 								>
 									<img src={order.icon} alt="" class="w-3/5" />
-									{#if order.gift}
-										<!-- This is one of the orders the fighter's colour hands it free, said
-										     exactly where the board says it: a dot in the button's own top-right
-										     corner, in the fighter's colour, ringed white — the ring being the
-										     whole of what keeps it readable on the one button that is *filled*
-										     with that very colour, the order the fighter has been given.
-										     Small, and a mark on the button rather than anything the button is.
-										     It comes and goes with the board's own, both being drawn off the
-										     same `gift` flag on the same list of orders, so it is only ever on
-										     the opening turn — the turn a gift is in hand for. -->
-										<span
-											class={classNames(
-												'absolute top-1 right-1 size-[28%] rounded-full ring-2 ring-white',
-												SPAWN_FILL_CLASSES[order.color as SpawnColor]
-											)}
-											aria-hidden="true"
-										></span>
-									{/if}
 								</button>
 							{/each}
 							<button

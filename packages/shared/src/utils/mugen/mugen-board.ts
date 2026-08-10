@@ -451,7 +451,7 @@ const crownFrames = (frames: LoadedFrame[]): CrownFrame[] =>
  *
  * It was four — the three orders and, over them, a slot for what the fighter's colour did
  * of its own accord, which left the three at three quarters of a cell and a quarter of it
- * empty at the top once that slot came off (what a colour grants is said in the corner of
+ * empty at the top once that slot came off (what a colour grants is said as a border round
  * the order it hands over free, {@link BoardOrder.gift}). Nothing is held there now, so
  * nothing is kept for it.
  */
@@ -493,13 +493,15 @@ const ORDER_INVERTED_FILL = 0xffffff;
  * there, not enough to read as a button with nothing in it. */
 const ORDER_EMPTY_ALPHA = 0.3;
 
-// --- The gift dot (drawn in the corner of an order a fighter's colour hands it free) ---
-/** The dot's radius, as a fraction of a button's height. Small: it is a mark *on* a
- * button, and must never come to read as something the button itself is. */
-const GIFT_DOT_RATIO = 0.16;
-/** How thick the ring round the dot is drawn, in canvas px. The ring is the whole of what
- * keeps the dot readable on a button filled with the very colour the dot is drawn in. */
-const GIFT_DOT_RING = 2;
+// --- The gift border (drawn round an order a fighter's colour hands it free) ---
+/** How thick the border is, as a fraction of a button's height. Enough to read as an edge
+ * the button has been given rather than as the hairline every face is drawn with, and no
+ * more: what it says is about the button, so it must not become the button. */
+const GIFT_BORDER_RATIO = 0.09;
+/** The white line laid between the border and the face, in canvas px, on the one button
+ * whose face is filled with the very colour the border is drawn in — without it the border
+ * and the fill are one block of colour and the mark is gone. */
+const GIFT_BORDER_SEAM = 2;
 
 // --- Icon rasterisation (every glyph any of the above draws) ---
 /**
@@ -707,13 +709,13 @@ export interface BoardOrder {
 	 */
 	inverted?: boolean;
 	/**
-	 * Mark this button's corner with a dot in {@link color}: this is an order the fighter's
-	 * colour hands it for free, and not one it has to be given.
+	 * Edge this button with a border in {@link color}: this is an order the fighter's colour
+	 * hands it for free, and not one it has to be given.
 	 *
 	 * It goes *on* the button rather than beside it because a gift is one of these very
 	 * three orders — the same picture, had for nothing — so the thing to say it about is
-	 * that order itself, in the corner of it, and there is nowhere else on the board a
-	 * reader has to look to find out what a colour is worth.
+	 * that order itself, and there is nowhere else on the board a reader has to look to find
+	 * out what a colour is worth.
 	 */
 	gift?: boolean;
 }
@@ -734,7 +736,7 @@ interface BoardMark {
 	empty: boolean;
 	/** Drawn inside out: white face, glyph in the fighter's colour. */
 	inverted: boolean;
-	/** Carries a dot in its corner: this order is one the fighter's colour gives free. */
+	/** Wears a border in the fighter's colour: this order is one that colour gives free. */
 	gift: boolean;
 }
 
@@ -3145,18 +3147,41 @@ export class MugenBoard {
 		mark.glyph.alpha = mark.disabled ? ORDER_DISABLED_ALPHA : 1;
 
 		if (!mark.gift) return;
-		// The dot goes in the top-right corner of the face, drawn in the fighter's colour as
-		// everything on this board that says something about one fighter is — and ringed in
-		// white, because a chosen order fills its whole face with that very colour and a bare
-		// dot would disappear into it. Inside the face rather than straddling its corner: a
-		// column fills its cell of the board exactly, and a mark that overhung would be the
-		// one thing on the button crossing the ruled line the column is drawn up to.
-		const dot = height * GIFT_DOT_RATIO;
-		const inset = dot + GIFT_DOT_RING;
-		mark.face.circle(width / 2 - inset, -height / 2 + inset, dot);
-		mark.face.fill({ color: chosen });
-		mark.face.circle(width / 2 - inset, -height / 2 + inset, dot);
-		mark.face.stroke({ width: GIFT_DOT_RING, color: 0xffffff });
+		// A border round the whole face, drawn in the fighter's colour as everything on this
+		// board that says something about one fighter is. Round the button rather than in one
+		// of its corners, because what it says is about the whole of that order and not about
+		// some part of it: the button *is* the gift, so the button is what is edged.
+		//
+		// Drawn wholly inside the face rather than around it — a column fills its cell of the
+		// board exactly, and a border that straddled the edge would be the one thing on the
+		// button crossing the ruled line the column is drawn up to, and would grow the button
+		// out of the grid its three share.
+		const border = height * GIFT_BORDER_RATIO;
+		const half = border / 2;
+		mark.face.roundRect(
+			-width / 2 + half,
+			-height / 2 + half,
+			width - border,
+			height - border,
+			Math.max(0, radius - half)
+		);
+		mark.face.stroke({ width: border, color: chosen });
+
+		// On a chosen order the face is filled with that very colour, so the border has nothing
+		// to stand against and the seam is the whole of what keeps it readable — the job the
+		// ring did around the dot this replaces. Read off the fill rather than off `selected`,
+		// which is the state that happens to produce it today: what matters is that the two
+		// colours are the same one.
+		if (fill !== chosen) return;
+		const seam = border + GIFT_BORDER_SEAM / 2;
+		mark.face.roundRect(
+			-width / 2 + seam,
+			-height / 2 + seam,
+			width - 2 * seam,
+			height - 2 * seam,
+			Math.max(0, radius - seam)
+		);
+		mark.face.stroke({ width: GIFT_BORDER_SEAM, color: 0xffffff });
 	}
 
 	/**
