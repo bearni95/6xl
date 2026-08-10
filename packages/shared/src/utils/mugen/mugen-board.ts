@@ -35,6 +35,7 @@ import {
 	findPath,
 	isBoardCell,
 	LAST_COLUMN,
+	LAST_ROW,
 	MIDDLE_ROW
 } from './grid';
 
@@ -273,13 +274,37 @@ const GROUND_LINE = combatColorHex('yellow');
 const SKY_FILL = 0x7dd3fc;
 
 /**
+ * The **apron**: one row of ground squares below the last cell of the board, a third of a
+ * cell deep, which is where the field's bottom fringe is drawn.
+ *
+ * It is there so the fringe costs the fight nothing. The bottom row of cells is a lane like
+ * any other and its fighters stand on the floor of it, so a fringe laid inside that row put
+ * half a square of sky under the feet of the line standing there — the ground appearing to
+ * give way beneath the fighters that hold it. The board is given the extra strip instead
+ * and the fringe goes on that: the three squares under each of those fighters are whole
+ * grass, and the grass runs out below them, past the last line anything is played on.
+ *
+ * It belongs to no cell. Nothing walks on it, nothing is claimed on it and the red lattice
+ * does not rule it — it is ruled in the ground's own yellow like every other square of
+ * ground, because that is what it is. In cell widths, since that is what the projection
+ * takes.
+ */
+export const APRON_DEPTH = 1 / GROUND_TILES_PER_CELL;
+
+/** The row the apron's squares are counted as, one below the board's last cell row. Not a
+ * board row: it is only ever handed to the projection and to {@link MugenBoard.groundSquares},
+ * both of which are arithmetic on a cell's corners and have no opinion about which cells
+ * exist. */
+const APRON_ROW = LAST_ROW + 1;
+
+/**
  * The field's first and last rows of squares, counted in ground squares down from the top
  * of the board: the top of the first row a lane opens on, which is where the sky stops,
- * and the last row of the last cell, which is where the board itself stops. They are the
- * rows the two edge tiles are laid along.
+ * and the apron, which is where the board stops. They are the rows the two edge tiles are
+ * laid along, and everything between them is whole grass.
  */
 const FIELD_TOP_SQUARE_ROW = (FIRST_LANE_ROW - FIRST_ROW) * GROUND_TILES_PER_CELL;
-const FIELD_BOTTOM_SQUARE_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL - 1;
+const FIELD_BOTTOM_SQUARE_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL;
 
 /** Below the ruled lattice (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
@@ -995,7 +1020,8 @@ export class MugenBoard {
 	/**
 	 * Total canvas size: the grid's own extent at `cellSize` px to the cell width
 	 * ({@link BOARD_WIDTH}, {@link BOARD_HEIGHT}, which on a field of squares is the count
-	 * of columns and the count of rows), plus the padding around it.
+	 * of columns and the count of rows), the {@link APRON_DEPTH} of ground below the last
+	 * of those rows, plus the padding around it.
 	 *
 	 * This is the size the board is *laid out* at, not the size it is seen at: the canvas
 	 * is cropped to the grid once everything is on it ({@link MugenBoard.fitToContent}) and
@@ -1007,7 +1033,7 @@ export class MugenBoard {
 		const { cellSize, padding } = this.options;
 		return {
 			width: padding * 2 + cellSize * BOARD_WIDTH,
-			height: padding * 2 + cellSize * BOARD_HEIGHT
+			height: padding * 2 + cellSize * (BOARD_HEIGHT + APRON_DEPTH)
 		};
 	}
 
@@ -1178,16 +1204,16 @@ export class MugenBoard {
 	 * untouched, so no cell shifts.
 	 *
 	 * All four edges are geometry rather than a measurement — the outer sides of the first
-	 * and last columns, and the top and bottom edges of the first and last rows, at the size
-	 * a cell is drawn — so the crop does not depend on the frame it happens to be taken in,
-	 * and is the same board however the fighters standing on it are posed. Nothing is read
-	 * off what is drawn. What running the board out to every canvas edge costs is on
-	 * {@link contentCrop}.
+	 * and last columns, the top edge of the first row and the foot of the {@link APRON_DEPTH}
+	 * of ground under the last, at the size a cell is drawn — so the crop does not depend on
+	 * the frame it happens to be taken in, and is the same board however the fighters
+	 * standing on it are posed. Nothing is read off what is drawn. What running the board out
+	 * to every canvas edge costs is on {@link contentCrop}.
 	 */
 	private fitToContent(): void {
 		if (!this.app) return;
 		const topLeft = this.project(0, 0);
-		const bottomRight = this.project(BOARD_WIDTH, BOARD_HEIGHT);
+		const bottomRight = this.project(BOARD_WIDTH, BOARD_HEIGHT + APRON_DEPTH);
 		const { left, top, width, height } = contentCrop({
 			left: topLeft.x,
 			right: bottomRight.x,
@@ -1352,8 +1378,14 @@ export class MugenBoard {
 	 * ({@link layGround}) — or, on the row no line opens on, filled with {@link SKY_FILL}
 	 * instead — and ruled into that ground's own squares ({@link ruleGround}), both below
 	 * the lattice so the cells' red stays on top of them. A board whose tiles could not be
-	 * fetched keeps the ruling and the top row's fill and loses the grass alone: the
-	 * subdivision is the board's and not the artwork's.
+	 * fetched keeps the ruling and the sky and loses the grass alone: the subdivision is the
+	 * board's and not the artwork's.
+	 *
+	 * **The apron is ground with no cell over it** ({@link APRON_DEPTH}): one row of squares
+	 * below the last cell, laid and ruled exactly as any other row of ground and left out of
+	 * the lattice entirely, since there is no cell there to rule. It is drawn from a second
+	 * pass over the columns rather than from `boardCells`, which is the list of cells and
+	 * should stay it.
 	 *
 	 * The yellow is a **second** Graphics rather than more calls on this one, because
 	 * adjacent cells share their edges: drawn together, the yellow of a cell laid later
@@ -1371,12 +1403,22 @@ export class MugenBoard {
 			const side = cellSide(q);
 			const color = side === 'red' ? leftColor : side === 'blue' ? rightColor : centerColor;
 
-			this.layGround(groundFill, q, r);
-			this.ruleGround(groundLines, q, r);
+			const squares = this.groundSquares(q, r);
+			this.layGround(groundFill, squares);
+			this.ruleGround(groundLines, squares);
 
 			graphics.poly(this.cellOutline(q, r));
 			graphics.fill({ color, alpha: 0 });
 			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 1 });
+		}
+		// The strip of ground under the board: the first row of squares of the row of cells
+		// that would come next, and nothing else of it.
+		for (let q = FIRST_COLUMN; q <= LAST_COLUMN; q++) {
+			const apron = this.groundSquares(q, APRON_ROW).filter(
+				(square) => square.row === FIELD_BOTTOM_SQUARE_ROW
+			);
+			this.layGround(groundFill, apron);
+			this.ruleGround(groundLines, apron);
 		}
 		groundFill.zIndex = SKY_Z;
 		groundLines.zIndex = GROUND_LINE_Z;
@@ -1386,33 +1428,36 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Rule the cell at [q, r] into its tiles: a yellow border round each of the nine
-	 * squares the grass is laid in ({@link GROUND_TILES_PER_CELL}), drawn into the shared
-	 * ground-line object the caller hands over.
+	 * Rule the given squares of ground: a yellow border round each, drawn into the shared
+	 * ground-line object the caller hands over. A cell's own nine squares, or the strip of
+	 * apron under a column — the ruling has no idea which, ground being ground.
 	 *
-	 * Every one of the nine is bordered, the ones against the cell's own edge included — so
-	 * the subdivision is a grid of squares and not a cross inside a square. What that costs
-	 * is a yellow line under each red one, which is what the depths are for: the red is
-	 * drawn over it at twice the width, and the cell's border stays the cell's.
+	 * Every square is bordered, the ones against a cell's own edge included — so the
+	 * subdivision is a grid of squares and not a cross inside a square. What that costs is a
+	 * yellow line under each red one, which is what the depths are for: the red is drawn over
+	 * it at twice the width, and the cell's border stays the cell's.
 	 *
 	 * The finer line is 1px to the lattice's 2 at the size the board is laid out, so the
 	 * two rulings stay a ruling and a sub-ruling however far the finished canvas is then
 	 * scaled — both are geometry in the same space and go through the same scale.
 	 */
-	private ruleGround(graphics: Graphics, q: number, r: number): void {
-		for (const square of this.groundSquares(q, r)) {
+	private ruleGround(graphics: Graphics, squares: GroundSquare[]): void {
+		for (const square of squares) {
 			graphics.rect(square.x, square.y, square.width, square.height);
 			graphics.stroke({ width: 1, color: GROUND_LINE, alpha: 1 });
 		}
 	}
 
 	/**
-	 * Lay the ground over the cell at [q, r]: one of the sheet's grass tiles drawn into each
-	 * of the cell's nine squares, filling it corner to corner and no further.
+	 * Lay the ground over the given squares: one of the sheet's grass tiles drawn into each,
+	 * filling it corner to corner and no further. What those squares are — a cell's nine,
+	 * or the apron under a column — is the caller's business; this reads each square's own
+	 * row to know what belongs on it, so the same code lays the field, the sky above it and
+	 * the fringe below.
 	 *
-	 * Every cell that is fought on takes it, whichever half it belongs to: the grass is the
-	 * ground the fight is fought on and not a marking, so it stops at the outer edge of the
-	 * board and nowhere inside it.
+	 * Every row that is fought on takes grass, whichever half it belongs to: the grass is
+	 * the ground the fight is fought on and not a marking, so it stops at the outer edge of
+	 * the board and nowhere inside it.
 	 *
 	 * **The board's top row is not fought on and is not grassed.** No line opens there
 	 * ({@link FIRST_LANE_ROW}) — it is the board the lanes have over them — so its squares
@@ -1445,20 +1490,21 @@ export class MugenBoard {
 	 * starts and where it stops, and those are the tiles the sheet draws for exactly that.
 	 * Both are blades with sky between them, so each of those squares is filled sky first
 	 * and the fringe laid over it, and the fill is at a depth of its own below the grass
-	 * ({@link SKY_Z}) so it is behind the tile and not over it.
+	 * ({@link SKY_Z}) so it is behind the tile and not over it. The bottom one of those rows
+	 * is the apron and not a cell's, which is what keeps every square a fighter stands over
+	 * whole grass.
 	 */
-	private layGround(fill: Graphics, q: number, r: number): void {
+	private layGround(fill: Graphics, squares: GroundSquare[]): void {
 		if (!this.app) return;
-		if (r < FIRST_LANE_ROW) {
-			for (const square of this.groundSquares(q, r)) {
+		const { fills, topEdge, bottomEdge } = this.groundTiles;
+		for (const square of squares) {
+			// Above the field: sky, and nothing laid on it.
+			if (square.row < FIELD_TOP_SQUARE_ROW) {
 				fill.rect(square.x, square.y, square.width, square.height);
 				fill.fill({ color: SKY_FILL, alpha: 1 });
+				continue;
 			}
-			return;
-		}
-		const { fills, topEdge, bottomEdge } = this.groundTiles;
-		if (fills.length === 0) return;
-		for (const square of this.groundSquares(q, r)) {
+			if (fills.length === 0) continue;
 			const brink =
 				square.row === FIELD_TOP_SQUARE_ROW
 					? topEdge
@@ -1483,7 +1529,10 @@ export class MugenBoard {
 
 	/**
 	 * The nine squares the cell at [q, r] is divided into, in screen space: the cell cut
-	 * {@link GROUND_TILES_PER_CELL} ways across and down.
+	 * {@link GROUND_TILES_PER_CELL} ways across and down. It is arithmetic on a cell's
+	 * corners and asks nothing about which cells the board has, so {@link APRON_ROW} — the
+	 * row that would come after the last, whose first three squares are the apron — goes
+	 * through it exactly like a real one.
 	 *
 	 * The one place those squares are worked out. Both the grass and the yellow ruling are
 	 * drawn from what this returns, which is what makes them the same nine squares rather

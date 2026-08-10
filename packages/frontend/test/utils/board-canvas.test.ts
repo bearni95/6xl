@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { MugenBoard, type BoardGrid } from '$utils/mugen/mugen-board';
+import { APRON_DEPTH, MugenBoard, type BoardGrid } from '$utils/mugen/mugen-board';
 import { BOARD_HEIGHT, BOARD_WIDTH } from '$utils/mugen/grid';
 
 /**
  * The canvas the board is laid out on.
  *
- * It is the grid, plus the padding drawn inside during the layout — and the crop then takes
- * that padding back off, so the finished canvas is the grid and nothing else. Nothing
- * is reserved beside the board or over it: the canvas is scaled to fit its box, so room
- * held back is board drawn smaller, and the room a fighter needs above its head is a row of
- * the board itself (see `grid.ts`'s FIRST_LANE_ROW).
+ * It is the grid and the strip of ground under it, plus the padding drawn inside during the
+ * layout — and the crop then takes that padding back off, so the finished canvas is those
+ * two and nothing else. Nothing is reserved beside the board or over it: the canvas is
+ * scaled to fit its box, so room held back is board drawn smaller, and the room a fighter
+ * needs above its head is a row of the board itself (see `grid.ts`'s FIRST_LANE_ROW).
  *
  * Only the geometry is exercised: `dimensions` is arithmetic over the options, so no Pixi
  * app is booted and no WebGL context is asked for.
@@ -34,9 +34,11 @@ describe('the canvas the board is laid out on', () => {
 		// box — so what it held is board now.
 		expect(width).toBeCloseTo(padding * 2 + cellSize * BOARD_WIDTH);
 
-		// And down, the same: the board's own height and that same padding. The empty cell
-		// that used to be reserved over the top row is a row of the board instead.
-		expect(height).toBeCloseTo(padding * 2 + cellSize * BOARD_HEIGHT);
+		// And down: the board's own height, that same padding, and the apron — the strip of
+		// ground below the last row of cells that the field's bottom fringe is drawn on. It
+		// is board rather than reserved room: it is grass, it is ruled, and it is there so
+		// the fringe falls below the last row a fighter stands on instead of inside it.
+		expect(height).toBeCloseTo(padding * 2 + cellSize * (BOARD_HEIGHT + APRON_DEPTH));
 	});
 
 	it('scales with the cells and nothing else', () => {
