@@ -25,7 +25,7 @@ const board = (cellSize: number, padding: number) =>
 
 describe('the canvas the board is laid out on', () => {
 	it('is the board’s own extent, with the padding around it and nothing else', () => {
-		const cellSize = 100;
+		const cellSize = 99;
 		const padding = 10;
 		const { width, height } = board(cellSize, padding).dimensions;
 
@@ -51,9 +51,31 @@ describe('the canvas the board is laid out on', () => {
 	it('scales with the cells and nothing else', () => {
 		// Everything the canvas is made of is measured in cells, so a board drawn at twice
 		// the cell size is twice the board — the padding aside, which is pixels.
-		const small = board(100, 10).dimensions;
-		const large = board(200, 10).dimensions;
+		const small = board(99, 10).dimensions;
+		const large = board(198, 10).dimensions;
 		expect(large.height - 10 * 2).toBeCloseTo((small.height - 10 * 2) * 2);
 		expect(large.width - 10 * 2).toBeCloseTo((small.width - 10 * 2) * 2);
+	});
+
+	// A cell is nine ground squares and three of the board's own edges land on one of them —
+	// the cut column, the brow and the apron — so a cell that is not a whole number of squares
+	// puts those edges mid-pixel. The crop rounds outward from there, and the fraction of a
+	// pixel it takes past the field is canvas with no board drawn on it, sitting inside the
+	// picture with the arena's sky showing through it. So the size a caller asks for is a
+	// resolution and never a landing place: it is snapped to the squares before anything is
+	// measured off it.
+	it('lands on whole ground squares whatever size it is asked for', () => {
+		// Read off the geometry rather than the option, which is the board's own: an extent
+		// that is a whole number of pixels on both axes is a cell that is a whole number of
+		// squares, since every figure in it is the cell taken in thirds.
+		//
+		// To the hair the crop itself allows, and for the same reason: a third of a cell is
+		// not a binary fraction, so an exact figure arrives as 948.9999999999999 and it is
+		// the crop's tolerance rather than the arithmetic that lands it on the pixel.
+		for (const asked of [1, 100, 101, 219, 220]) {
+			const { width, height } = board(asked, 0).dimensions;
+			expect(width).toBeCloseTo(Math.round(width), 6);
+			expect(height).toBeCloseTo(Math.round(height), 6);
+		}
 	});
 });

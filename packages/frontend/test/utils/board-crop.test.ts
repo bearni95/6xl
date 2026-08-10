@@ -43,4 +43,27 @@ describe('the crop the board is drawn inside', () => {
 		expect(crop.left + crop.width).toBeGreaterThanOrEqual(1140.2);
 		expect(crop.top + crop.height).toBeGreaterThanOrEqual(900.1);
 	});
+
+	it('takes an edge a hair off a whole pixel as being on it', () => {
+		// The board's edges land on thirds of a cell and a third is not a binary fraction, so
+		// a figure that is exactly 186 arrives as 185.99999999999997. Rounded outward without
+		// a tolerance that is a whole pixel of canvas with no board drawn on it — inside the
+		// picture, with the arena's sky showing through it — and the canvas's aspect knocked
+		// off the eight-by-eleven the document lays its own ground beside.
+		const crop = contentCrop({
+			left: 40,
+			right: 623.9999999999999,
+			top: 185.99999999999997,
+			bottom: 988.9999999999999
+		});
+
+		expect(crop.left).toBe(40);
+		expect(crop.top).toBe(186);
+		expect(crop.width).toBe(584);
+		expect(crop.height).toBe(803);
+		// Which is the picture's own proportions and not merely a tidy pair of figures: eight
+		// ground squares across to eleven down, the ratio the sky column, the flanks and the
+		// ground below the board are all spelled at.
+		expect(crop.width / crop.height).toBeCloseTo(8 / 11, 10);
+	});
 });

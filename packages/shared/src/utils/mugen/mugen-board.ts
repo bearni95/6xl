@@ -189,7 +189,18 @@ const DEFAULTS = {
 	// what decides the canvas's resolution: enough that the board — which is sized to the
 	// viewport it is drawn in ({@link VIEWPORT_WIDTH}) — is nearly always being scaled
 	// *down* rather than up, which is what keeps the pixel art crisp.
-	cellSize: 220,
+	//
+	// A **multiple of {@link GROUND_TILES_PER_CELL}**, which is not a nicety: three of the
+	// board's own edges land on thirds of a cell — the cut column ({@link SQUARE_WIDTH}),
+	// the brow ({@link BROW_DEPTH}) and the apron ({@link APRON_DEPTH}) — so a cell that is
+	// not a whole number of squares puts the grid's right and bottom edges mid-pixel, and
+	// {@link contentCrop} then rounds *outward* to a whole framebuffer. Those fractions of a
+	// pixel are canvas the board is not drawn on, they sit inside the picture, and what
+	// shows through them is the sky the arena paints behind the board: a blue hairline down
+	// the right edge and along the foot of the field, and the canvas's aspect off the
+	// document's eight-by-eleven by just enough to leave the same blue beside it. 220 was
+	// that; 219 lands every edge on a whole pixel and the crop is exact.
+	cellSize: 219,
 	padding: 40
 };
 
@@ -1133,20 +1144,32 @@ export interface GridSpan {
  * One thing is cut here on purpose: a fighter that has been beaten stands half a cell
  * further out than it fought, so this edge takes half of it ({@link MugenBoard.fallenDrift}).
  * That is the whole of what the drift is for, and it is why it is half a cell and not more.
+ *
+ * **An edge a hair off a whole pixel is on it** ({@link CROP_EPSILON}). The rounding is
+ * outward so that no part of the grid falls off the canvas, and a board whose cell is a
+ * whole number of ground squares lands every one of its edges on a pixel exactly — but it
+ * lands there through thirds of a cell, and a third is not a binary fraction: the brow works
+ * out to 185.99999999999997 rather than 186, which an honest floor takes a whole pixel back
+ * from. That pixel is canvas with no board on it, inside the picture, with the arena's sky
+ * showing through — and it is also the canvas's aspect knocked off the eight-by-eleven the
+ * document lays its ground beside, which leaves the same blue down the sides. So the
+ * tolerance is not a nicety here; it is what makes an exact figure exact.
  */
+const CROP_EPSILON = 1e-6;
+
 export function contentCrop(span: GridSpan): {
 	left: number;
 	top: number;
 	width: number;
 	height: number;
 } {
-	const left = Math.floor(span.left);
-	const top = Math.floor(span.top);
+	const left = Math.floor(span.left + CROP_EPSILON);
+	const top = Math.floor(span.top + CROP_EPSILON);
 	return {
 		left,
 		top,
-		width: Math.ceil(span.right) - left,
-		height: Math.ceil(span.bottom) - top
+		width: Math.ceil(span.right - CROP_EPSILON) - left,
+		height: Math.ceil(span.bottom - CROP_EPSILON) - top
 	};
 }
 
@@ -1220,7 +1243,20 @@ export class MugenBoard {
 	private warming: Promise<void> = Promise.resolve();
 
 	constructor(options: MugenBoardOptions) {
-		this.options = { ...DEFAULTS, ...options };
+		const merged = { ...DEFAULTS, ...options };
+		// Snapped to a whole number of ground squares, for the reason the default is one
+		// ({@link DEFAULTS}): a cell that is not a multiple of {@link GROUND_TILES_PER_CELL}
+		// puts the grid's own edges mid-pixel, the crop rounds outward past them, and the
+		// strip left over is sky showing through the edge of the picture. It is snapped here
+		// rather than only chosen well so that a host asking for a size cannot reintroduce
+		// the line — the resolution is the caller's to say, where the field lands is not.
+		this.options = {
+			...merged,
+			cellSize: Math.max(
+				GROUND_TILES_PER_CELL,
+				Math.round(merged.cellSize / GROUND_TILES_PER_CELL) * GROUND_TILES_PER_CELL
+			)
+		};
 	}
 
 	/**

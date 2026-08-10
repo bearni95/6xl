@@ -31,7 +31,7 @@
 	export let grids: [BoardGrid, BoardGrid];
 	// Both mirror the engine's own defaults (see MugenBoardOptions), so the board looks
 	// the same whether a host says anything about its size or not.
-	export let cellSize: number = 220;
+	export let cellSize: number = 219;
 	export let padding: number = 40;
 	export let classes: string = '';
 
