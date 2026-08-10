@@ -70,8 +70,10 @@ export type CellSide = 'red' | 'purple' | 'blue';
  * size spent on a pair of empty margins: the whole field had to fit the screen, so the
  * three columns that matter came out smaller for the two that did not. Off they come.
  * A half is one column deep now, which is the front and the back of it at once — so a
- * fighter that has lost its lane stands the fight out where it fought it, faded, and
- * only the winner moves (the controller's `fallenColumn`, `settleLane`).
+ * fighter that has lost its lane stands the fight out on the very cell it fought it on,
+ * faded, and withdrawn as far as there is anywhere to withdraw to: half a cell, out to
+ * the board's own edge, with the half of it past that edge cut off by the canvas
+ * (`mugen-board.ts`'s `fallenDrift`, and the controller's `fallenColumn`, `settleLane`).
  */
 export const FIRST_COLUMN = -1;
 export const LAST_COLUMN = 1;

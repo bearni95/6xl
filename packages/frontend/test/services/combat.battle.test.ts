@@ -133,6 +133,39 @@ describe('CombatController — leaving a fight and coming back to it', () => {
 		expect(state.fighters.every((fighter) => !fighter.down)).toBe(true);
 	}, 120000);
 
+	it('draws the fallen of a resumed fight as fallen, without replaying their retreat', async () => {
+		const controller = new CombatController(seeds(COLORS));
+		await playTurns(controller, 6);
+		const snapshot = controller.snapshot();
+		const fallen = get(controller)
+			.fighters.filter((fighter) => fighter.down)
+			.map((fighter) => fighter.id);
+		// Nothing to show unless the fight actually took somebody down.
+		expect(fallen.length).toBeGreaterThan(0);
+
+		const faded: string[] = [];
+		const settled: string[] = [];
+		const walked: string[] = [];
+		const resumed = new CombatController(seeds(COLORS), snapshot);
+		resumed.attachBoard({
+			fadeDefeated: (id: string) => faded.push(id),
+			settleFallen: (id: string) => settled.push(id),
+			regroup: (id: string) => {
+				walked.push(id);
+				return Promise.resolve();
+			},
+			showAura: () => Promise.resolve(),
+			clearAura: () => {}
+		} as unknown as Parameters<CombatController['attachBoard']>[0]);
+
+		// Beaten and standing half out of its cell, which is where the fight left it — and
+		// put there outright, since a retreat walked out again on the turn a player reopens
+		// the fight would be a fighter falling twice.
+		expect(faded.sort()).toEqual([...fallen].sort());
+		expect(settled.sort()).toEqual([...fallen].sort());
+		expect(walked).toEqual([]);
+	}, 120000);
+
 	it('refuses a board with the wrong number of fighters', () => {
 		const controller = new CombatController(seeds(COLORS));
 		const snapshot = controller.snapshot();

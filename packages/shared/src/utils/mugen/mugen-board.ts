@@ -709,6 +709,13 @@ interface Actor {
 	moving: boolean;
 	/** Direction of the in-progress step: -1 left, +1 right, 0 when stationary. */
 	stepDir: number;
+	/**
+	 * Whether this fighter has been taken down ({@link MugenBoard.fadeDefeated}). Once on
+	 * it never comes off, and it says two things about how the actor is drawn from then on:
+	 * it carries {@link DEFEATED_ALPHA}, and it stands at the outer end of its cell rather
+	 * than in the middle of it ({@link MugenBoard.standPoint}).
+	 */
+	defeated: boolean;
 }
 
 /** The grid's own four edges in stage coordinates — the rectangle it occupies, which is
@@ -745,6 +752,10 @@ export interface GridSpan {
  * nobody uses — a limb that sweeps most of a cell to one side loses its far end at the
  * edge, which is the same overlap the board is drawn with everywhere else, taken at the
  * one place there is nothing beyond to overlap.
+ *
+ * One thing is cut here on purpose: a fighter that has been beaten stands half a cell
+ * further out than it fought, so this edge takes half of it ({@link MugenBoard.fallenDrift}).
+ * That is the whole of what the drift is for, and it is why it is half a cell and not more.
  */
 export function contentCrop(span: GridSpan): {
 	left: number;
@@ -1063,10 +1074,40 @@ export class MugenBoard {
 	 * The one that does not is the duel split ({@link meleeApproach}), which is not a
 	 * fighter standing in the middle of a cell at all: it is two sprites brought edge to
 	 * edge against one line, and it measures from their edges for that reason.
+	 *
+	 * **A fighter that has been taken down stands half a cell further out** — its middle
+	 * on the outer edge of whatever cell it holds rather than over the centre of it, so
+	 * half of it is beyond that edge ({@link fallenDrift}).
 	 */
 	private standPoint(actor: Actor, q: number, r: number): Point {
 		const mark = this.cellMark(q, r);
-		return { x: mark.x + actor.crownShift, y: mark.y };
+		return { x: mark.x + actor.crownShift + this.fallenDrift(actor), y: mark.y };
+	}
+
+	/**
+	 * How far out of its cell a fighter is drawn for having been beaten: half a cell
+	 * towards the outside of the board, or nothing at all while it is still in the fight.
+	 *
+	 * The fallen do not leave this board and they do not stand aside on it either — the
+	 * halves are one column deep, so the cell a fighter lost its lane on is the cell it
+	 * stands the rest of the fight on (`grid.ts`, and the controller's `fallenColumn`).
+	 * What is left to say it is beaten is where in that cell it stands: pushed out to the
+	 * edge, with the half of it past the edge cut off by the crop, since the outer edge of
+	 * an outer column *is* the edge of the canvas ({@link contentCrop}). So a fighter still
+	 * in the fight has the whole of its cell to itself and is wholly on the board, and one
+	 * that is out of it is half off the board and holding half a cell — a reading that
+	 * needs nothing drawn under anybody and does not depend on knowing which column is
+	 * which. It is deliberately not the whole way off: a fight is played on which fighters
+	 * are still standing, and a line whose losses have vanished is a line nobody can count.
+	 *
+	 * Outward is decided by the actor's **side** and not by the column it is standing on:
+	 * the fighter belongs to the half it was fielded in whatever ground it has ended up
+	 * holding, and the direction it withdraws in is that half's, away from the white
+	 * column between the two.
+	 */
+	private fallenDrift(actor: Actor): number {
+		if (!actor.defeated) return 0;
+		return (actor.side === 'blue' ? 1 : -1) * (this.cellWidth() / 2);
 	}
 
 	/**
@@ -1245,7 +1286,8 @@ export class MugenBoard {
 			targetX: stand.x,
 			targetY: stand.y,
 			moving: false,
-			stepDir: 0
+			stepDir: 0,
+			defeated: false
 		};
 		this.applyFrame(actor);
 		this.actors.push(actor);
@@ -1791,18 +1833,48 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Draw a fighter as beaten: its sprite carries {@link DEFEATED_ALPHA} from here on.
+	 * Draw a fighter as beaten: its sprite carries {@link DEFEATED_ALPHA} from here on, and
+	 * it stands at the outer end of its cell rather than in the middle of it
+	 * ({@link fallenDrift}).
 	 *
 	 * Said of the fighter and not of the walk, so it is put on as the retreat begins and
 	 * never taken off — a fighter that has been taken down is out of the fight for the rest
-	 * of it, and comes back at the same weight it went off at. It is the sprite alone: the
-	 * aura went out with the blow, and the fighter's own orders came off it, so what is left
-	 * to fade is the character.
+	 * of it, and comes back at the same weight it went off at. Which is why the drift is
+	 * hung off the same flag: a fight picked up again marks its fallen with this before a
+	 * turn is played, and they come back standing exactly where the fight left them.
+	 *
+	 * The *walk* out to that edge is the caller's, and is the retreat it was already
+	 * making: this only says where the mark it is walking to has moved to, so a fighter
+	 * felled mid-fight glides out under its own steam ({@link regroup}), and one placed by
+	 * a resumed board is put there outright ({@link settleFallen}).
 	 */
 	fadeDefeated(id: string): void {
 		const actor = this.findActor(id);
 		if (!actor) return;
+		actor.defeated = true;
 		actor.sprite.alpha = DEFEATED_ALPHA;
+	}
+
+	/**
+	 * Put a fallen fighter on its mark with no walk at all — where {@link regroup} would
+	 * have glided it, arrived at.
+	 *
+	 * For the fight that is picked up rather than started: a resumed board stands every
+	 * fighter it holds on the cell it was saved on, including the ones that were already
+	 * down, and those were placed in the middle of their cells like everybody else before
+	 * anything knew they were beaten. Walking them out from there would be replaying a
+	 * retreat that happened turns ago, in front of a player who has just opened the fight.
+	 */
+	settleFallen(id: string): void {
+		const actor = this.findActor(id);
+		if (!actor) return;
+		const stand = this.standPoint(actor, actor.homeColumn, actor.homeRow);
+		actor.x = stand.x;
+		actor.y = stand.y;
+		actor.targetX = stand.x;
+		actor.targetY = stand.y;
+		actor.sprite.x = stand.x;
+		actor.sprite.y = stand.y;
 	}
 
 	/**

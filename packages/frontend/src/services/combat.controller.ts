@@ -573,6 +573,16 @@ export class CombatController {
 			// Every fighter of both lines, the fallen included: they are standing at the back
 			// of their own half rather than gone, so a resumed fight draws all six of them.
 			//
+			// The ones that were already down are drawn as down — faded, and pushed out to
+			// the outer end of the cell they hold — rather than as fighters merely standing
+			// somewhere. The board placed them in the middle of their cells with everybody
+			// else, knowing nothing of the fight they are being placed back into, so it is
+			// told here and settled without a walk: the retreat is turns old and is not
+			// something to play out in front of somebody who has just opened the fight.
+			if (fighter.down) {
+				this.board.fadeDefeated(fighter.id);
+				this.board.settleFallen(fighter.id);
+			}
 			// Light the aura of anyone holding a charge, so a fight picked up where it
 			// was left shows who is dangerous before a single order is given. Never on one
 			// that is out of the fight: nothing it is carrying can be fired any more, so a
@@ -948,11 +958,13 @@ export class CombatController {
 	 * together, because it is one event:
 	 *
 	 *   · **The loser retracts** to the back of its own half ({@link fallenColumn}) — which
-	 *     on a board whose halves are one column deep is the ground it is already standing
-	 *     on, so it settles onto its own mark and stays there. It is out of the fight, not
-	 *     off the board: nothing is ever taken off this board, so a fighter that has been
-	 *     beaten is a fighter standing in its own half with nothing left to do, drawn faded,
-	 *     which is a thing the player can see and count.
+	 *     on a board whose halves are one column deep is the cell it is already standing on,
+	 *     so what it withdraws by is half a cell: the board draws a beaten fighter at the
+	 *     outer end of whatever ground it holds instead of in the middle of it, so it walks
+	 *     out to the edge of the board and stands the fight out there with half of itself
+	 *     past it (`MugenBoard.fallenDrift`). It is out of the fight, not off the board:
+	 *     nothing is ever taken off this board, and a line whose losses had walked out of
+	 *     sight would be a line nobody could count. Faded, half a cell out, still there.
 	 *   · **The winner takes the white column** ({@link WON_COLUMN}) on that row, on either
 	 *     side of the board. Standing there is what says the row was won, so it is the same
 	 *     cell and the same move whichever line won it — the ground a lane is played for
@@ -969,10 +981,12 @@ export class CombatController {
 	private async settleLane(winner: Fighter, loser: Fighter): Promise<void> {
 		// Out of the fight, so nothing is loading: the aura goes out with the fighter,
 		// whatever it was still carrying when the blow landed. And the fighter itself is drawn
-		// back a little from here on, as it retracts and for the rest of the fight: the cell
-		// it withdraws to already says it is beaten, but only to a reader who knows which
-		// column that is, and a fighter still drawn at full weight on ground it does not hold
-		// reads as one that is merely standing somewhere else.
+		// back a little from here on, as it retracts and for the rest of the fight — a fighter
+		// still at full weight reads as one that is merely standing somewhere else.
+		//
+		// Before the retreat and not after it, because it is what the retreat is walked to:
+		// this is where the board learns the fighter is beaten, and a beaten fighter's mark
+		// is half a cell further out than the one it is standing on.
 		this.dropAura(loser);
 		this.board?.fadeDefeated(loser.id);
 		const row = loser.cell?.r ?? winner.cell?.r;
