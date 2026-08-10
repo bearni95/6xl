@@ -1,12 +1,17 @@
 <script lang="ts">
 	import classNames from 'classnames';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { formatDuration } from '$utils/time/format-duration';
+	import { formatDuration, formatSeconds } from '$utils/time/format-duration';
 
 	// The instant the countdown runs out at, epoch milliseconds.
 	export let until: number;
 	export let title: string = '';
 	export let classes: string = '';
+
+	// How the span left is read. `clock` is `H:MM:SS`, which is what a wait measured in
+	// hours wants; `seconds` is the bare number, for a wait short enough that the two
+	// leading fields would never move off nought.
+	export let format: 'clock' | 'seconds' = 'clock';
 
 	const dispatch = createEventDispatcher<{ elapsed: void }>();
 
@@ -31,5 +36,5 @@
 </script>
 
 <span class={classNames('tabular-nums', classes)} {title}>
-	{formatDuration(remaining)}
+	{format === 'seconds' ? formatSeconds(remaining) : formatDuration(remaining)}
 </span>

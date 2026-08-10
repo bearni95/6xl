@@ -24,6 +24,7 @@
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import CombatArena from '$components/core/CombatArena.svelte';
 	import { loadBoardEngine } from '$components/core/MugenBoard.svelte';
+	import Countdown from '$components/core/Countdown.svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import RosterModal from '$components/core/RosterModal.svelte';
 	import CollectionModal from '$components/core/CollectionModal.svelte';
@@ -38,6 +39,7 @@
 	import { avatarPickerOpen } from '$services/avatarPicker';
 	import { leaderboardModalOpen } from '$services/leaderboardModal';
 	import { faqModalOpen, openFaq } from '$services/faqModal';
+	import { radarCooldownUntil, startRadarCooldown } from '$services/radarCooldown';
 	import { creditsModalOpen, openCredits } from '$services/creditsModal';
 	import { boosterModalOpen } from '$services/boosterModal';
 	import type { OpenerPack } from '$components/core/pack/scene/opener-view.type';
@@ -2130,6 +2132,16 @@
 	// where the map is now.
 	$: radarTarget = nearestUnclaimedBox(radarFrom, festaBoxes, selected);
 
+	// The rest between presses (see radarCooldown). Whether it is still on is a question
+	// about the clock, and nothing here ticks, so it is asked once whenever the deadline
+	// moves and then answered by the readout itself: the countdown drawn over the button
+	// is what runs, and its `elapsed` is what lets the button go. That is the same hand-off
+	// the town challenges use, and it is why the page re-renders twice over a minute rather
+	// than sixty times.
+	$: radarRestUntil = $radarCooldownUntil;
+	let radarRestOver = 0;
+	$: radarResting = radarRestUntil > Date.now() && radarRestOver !== radarRestUntil;
+
 	// The radar's press: open that town exactly as its pin, its crumb or its table row would,
 	// which frames the map onto its polygons and stands its box up in the block beside it.
 	// Nothing is claimed and nothing is raised — the reader asked where to go, not for the pack.
@@ -2139,7 +2151,8 @@
 	// navigation, because the wrapper was a tab of its own that every new selection reset away
 	// from.
 	function findNearestBox(): void {
-		if (!radarTarget) return;
+		if (!radarTarget || radarResting) return;
+		startRadarCooldown();
 		open(radarTarget.id);
 	}
 
@@ -3317,19 +3330,40 @@
 								to and not a row to be as tall as. `size-10` is what that row came to, so the
 								square is the same square. `ml-auto` so the corner it holds is the far one of a
 								strip that still spans the map, and `flex-none` so it stays that square
-								whatever comes to stand beside it.
+								whatever comes to stand beside it — both on the box around it now, so the corner is
+								held by the same thing whether or not anything is standing over the square.
 								Disabled when there is nothing left to point at — every box in the window
 								opened, or none loaded yet — because a radar that answers "here" or answers
-								nothing is a press with no destination. -->
-							<button
-								type="button"
-								class="pointer-events-auto ml-auto flex size-10 flex-none cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
-								aria-label={$_('map.radar.nearest')}
-								disabled={!radarTarget}
-								on:click={findNearestBox}
-							>
-								<img src="/assets/icons/lorc/radar-sweep.svg" class="size-6" alt="" />
-							</button>
+								nothing is a press with no destination. And disabled while it is resting off its
+								last answer (see radarCooldown), which is the other reason it takes no press.
+								The rest is drawn ON the square rather than beside it: the seconds left are laid over
+								the sweep, so what is greyed out and what is counting are one thing in one place. The
+								mark stays under them — the sweep is what says which press this is, and a button that
+								swapped its face for a number would read as a different button for a minute. The
+								readout is a sibling of the button rather than a child of it, because the dimming that
+								says the press is off is the button's own `opacity-40` and would take the number down
+								with it, and the count is the one thing here that has to be read. It is
+								`pointer-events-none`, so the square under it is the whole of the press again the
+								moment the rest is over. -->
+							<div class="relative ml-auto flex-none">
+								<button
+									type="button"
+									class="pointer-events-auto flex size-10 cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
+									aria-label={$_('map.radar.nearest')}
+									disabled={!radarTarget || radarResting}
+									on:click={findNearestBox}
+								>
+									<img src="/assets/icons/lorc/radar-sweep.svg" class="size-6" alt="" />
+								</button>
+								{#if radarResting}
+									<Countdown
+										until={radarRestUntil}
+										format="seconds"
+										classes="pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-bold text-primary-content drop-shadow"
+										on:elapsed={() => (radarRestOver = radarRestUntil)}
+									/>
+								{/if}
+							</div>
 						</div>
 
 						<!-- The other edge of the terrain: where the map is standing, the way back up out

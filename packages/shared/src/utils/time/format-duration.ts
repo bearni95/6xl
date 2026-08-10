@@ -14,6 +14,16 @@ export function formatDuration(ms: number): string {
 }
 
 /**
+ * A span of milliseconds as a bare count of seconds — what a countdown short enough to
+ * have no minutes in it shows, where a clock readout would spell out three fields that
+ * never move. Rounded up, so a span with anything left in it reads as at least one:
+ * a readout saying nought while whatever it is holding is still held is a lie.
+ */
+export function formatSeconds(ms: number): string {
+	return String(Math.max(0, Math.ceil(ms / 1000)));
+}
+
+/**
  * A song's length, `M:SS` — the other shape a span is read in, and the one a list of
  * tracks wants. The hour slot is dropped rather than kept, because nothing is ticking
  * here for it to hold its shape against, and appears only for a song long enough to
