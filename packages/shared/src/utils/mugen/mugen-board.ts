@@ -223,16 +223,19 @@ const GROUND_FILL_TILES: SheetTile[] = [
 ];
 
 /**
- * The tile the top row of the field is drawn with instead: the sheet's upper grass edge,
- * blades along the top of it and nothing above them.
+ * The tiles the field's first and last rows of squares are drawn with instead: the
+ * sheet's two grass edges, the upper one blades along the top with nothing above them and
+ * the lower one its mirror, blades hanging off the bottom.
  *
- * It is a boundary tile — drawn to be laid where grass stops — so the field ends in a
- * fringe against the sky over it rather than at a straight line nothing put there. Being a
- * boundary, most of its top half is not grass at all: it is laid over a square of
- * {@link SKY_FILL}, so what shows between the blades is the same sky as the row above and
- * not whatever the canvas happens to be standing on.
+ * They are boundary tiles — drawn to be laid where grass stops — so the field begins and
+ * ends in a fringe rather than at a straight line nothing put there. Being boundaries,
+ * half of each is not grass at all: both are laid over a square of {@link SKY_FILL}, so
+ * what shows between the blades is sky, and not whatever the canvas happens to be standing
+ * on. Which makes the field a band of ground with sky above it and below, and the fight is
+ * played on the band.
  */
-const GROUND_EDGE_TILE: SheetTile = { column: 2, row: 2 };
+const GROUND_TOP_EDGE_TILE: SheetTile = { column: 2, row: 2 };
+const GROUND_BOTTOM_EDGE_TILE: SheetTile = { column: 2, row: 0 };
 
 /**
  * How many of those tiles a cell is laid with, across and down — nine to a cell, three
@@ -270,11 +273,13 @@ const GROUND_LINE = combatColorHex('yellow');
 const SKY_FILL = 0x7dd3fc;
 
 /**
- * The first row of squares the field is grassed from, counted in ground squares down from
- * the top of the board: the top of the first row a lane opens on, which is where the sky
- * stops. It is the row {@link GROUND_EDGE_TILE} is laid along.
+ * The field's first and last rows of squares, counted in ground squares down from the top
+ * of the board: the top of the first row a lane opens on, which is where the sky stops,
+ * and the last row of the last cell, which is where the board itself stops. They are the
+ * rows the two edge tiles are laid along.
  */
 const FIELD_TOP_SQUARE_ROW = (FIRST_LANE_ROW - FIRST_ROW) * GROUND_TILES_PER_CELL;
+const FIELD_BOTTOM_SQUARE_ROW = BOARD_HEIGHT * GROUND_TILES_PER_CELL - 1;
 
 /** Below the ruled lattice (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
@@ -287,10 +292,11 @@ const SKY_Z = -1.5;
 const GROUND_LINE_Z = -0.5;
 
 /** The sheet's tiles as the board holds them: the fills it alternates over the field, and
- * the fringe it finishes the top of the field with. */
+ * the two fringes it finishes the top and the bottom of the field with. */
 interface GroundTiles {
 	fills: Texture[];
-	edge: Texture | null;
+	topEdge: Texture | null;
+	bottomEdge: Texture | null;
 }
 
 /** One of the squares a cell's ground is divided into, in screen px: a tile of grass and
@@ -960,7 +966,7 @@ export class MugenBoard {
 	 * ({@link loadGround}) — empty if it could not be had. Held so they can be freed with
 	 * the board: they are built here rather than fetched through `Assets`, so nothing else
 	 * is keeping them. */
-	private groundTiles: GroundTiles = { fills: [], edge: null };
+	private groundTiles: GroundTiles = { fills: [], topEdge: null, bottomEdge: null };
 	private iconTextures = new Map<string, Texture>();
 	/**
 	 * A cycle's crown offset in the artwork's own pixels ({@link crownOffset}), keyed by
@@ -1240,8 +1246,9 @@ export class MugenBoard {
 		this.sparkContext = null;
 		// The grass goes the same way, sources and all: the sprites that drew it went with the
 		// stage, and this board cut its tiles for itself out of the sheet.
-		for (const tile of [...this.groundTiles.fills, this.groundTiles.edge]) tile?.destroy(true);
-		this.groundTiles = { fills: [], edge: null };
+		const { fills, topEdge, bottomEdge } = this.groundTiles;
+		for (const tile of [...fills, topEdge, bottomEdge]) tile?.destroy(true);
+		this.groundTiles = { fills: [], topEdge: null, bottomEdge: null };
 		this.cellPaint.clear();
 		this.crownOffsets.clear();
 	}
@@ -1433,12 +1440,12 @@ export class MugenBoard {
 	 * stored: the same board is the same field every time it is built, which is what a
 	 * pattern is and a scatter is not.
 	 *
-	 * **The field's top row of squares breaks that alternation** and takes
-	 * {@link GROUND_EDGE_TILE}, the sheet's upper grass edge, along its whole width — the
-	 * field's first row of squares is where the grass starts, and this is the tile the
-	 * sheet draws for exactly that. It is blades with sky between them, so each of those
-	 * squares is filled sky first and the fringe laid over it, and the fill is at a depth
-	 * of its own below the grass ({@link SKY_Z}) so it is behind the tile and not over it.
+	 * **The field's first and last rows of squares break that alternation** and take the
+	 * sheet's two grass edges along their whole width — those rows are where the grass
+	 * starts and where it stops, and those are the tiles the sheet draws for exactly that.
+	 * Both are blades with sky between them, so each of those squares is filled sky first
+	 * and the fringe laid over it, and the fill is at a depth of its own below the grass
+	 * ({@link SKY_Z}) so it is behind the tile and not over it.
 	 */
 	private layGround(fill: Graphics, q: number, r: number): void {
 		if (!this.app) return;
@@ -1449,15 +1456,20 @@ export class MugenBoard {
 			}
 			return;
 		}
-		const { fills, edge } = this.groundTiles;
+		const { fills, topEdge, bottomEdge } = this.groundTiles;
 		if (fills.length === 0) return;
 		for (const square of this.groundSquares(q, r)) {
-			const brink = square.row === FIELD_TOP_SQUARE_ROW && edge !== null;
+			const brink =
+				square.row === FIELD_TOP_SQUARE_ROW
+					? topEdge
+					: square.row === FIELD_BOTTOM_SQUARE_ROW
+						? bottomEdge
+						: null;
 			if (brink) {
 				fill.rect(square.x, square.y, square.width, square.height);
 				fill.fill({ color: SKY_FILL, alpha: 1 });
 			}
-			const tile = brink ? edge : fills[(square.column + square.row) % fills.length];
+			const tile = brink ?? fills[(square.column + square.row) % fills.length];
 			const grass = new Sprite(tile);
 			grass.position.set(square.x, square.y);
 			// The tile is 16px of artwork stretched over a ninth of a cell — sampled
@@ -1511,8 +1523,8 @@ export class MugenBoard {
 
 	/**
 	 * Fetch the ground sheet and cut the board's tiles out of it: the fills it lays the
-	 * field with ({@link GROUND_FILL_TILES}) and the fringe it finishes the field's top row
-	 * with ({@link GROUND_EDGE_TILE}), each named by where it lies on the sheet.
+	 * field with ({@link GROUND_FILL_TILES}) and the two fringes it finishes the field's
+	 * first and last rows with, each named by where it lies on the sheet.
 	 *
 	 * One fetch and one blob, cut as many times as there are tiles — the sheet is a single
 	 * small file, and asking for it once per tile would be one request per rectangle of the
@@ -1537,12 +1549,12 @@ export class MugenBoard {
 	 * which is a board.
 	 */
 	private async loadGround(): Promise<GroundTiles> {
-		const nothing: GroundTiles = { fills: [], edge: null };
+		const nothing: GroundTiles = { fills: [], topEdge: null, bottomEdge: null };
 		try {
 			const response = await fetch(GROUND_TILE_SHEET);
 			if (!response.ok) return nothing;
 			const sheet = await response.blob();
-			const wanted = [...GROUND_FILL_TILES, GROUND_EDGE_TILE];
+			const wanted = [...GROUND_FILL_TILES, GROUND_TOP_EDGE_TILE, GROUND_BOTTOM_EDGE_TILE];
 			const cut = await Promise.all(
 				wanted.map((tile) =>
 					createImageBitmap(
@@ -1566,7 +1578,8 @@ export class MugenBoard {
 			);
 			return {
 				fills: textures.slice(0, GROUND_FILL_TILES.length),
-				edge: textures[GROUND_FILL_TILES.length] ?? null
+				topEdge: textures[GROUND_FILL_TILES.length] ?? null,
+				bottomEdge: textures[GROUND_FILL_TILES.length + 1] ?? null
 			};
 		} catch {
 			return nothing;
