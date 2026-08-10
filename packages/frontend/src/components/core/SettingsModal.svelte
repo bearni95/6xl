@@ -5,7 +5,8 @@
 	import { authService, UsernameRejected } from '$services/auth.service';
 	import { settingsModalOpen } from '$services/settingsModal';
 	import { avatarPickerOpen } from '$services/avatarPicker';
-	import { AuthStatus } from '$types/profile.type';
+	import { AuthStatus, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from '$types/profile.type';
+	import { isValidUsername } from '$utils/profile/username';
 	import ProfileCard from '$components/core/ProfileCard.svelte';
 	import AccountDataRights from '$components/core/AccountDataRights.svelte';
 
@@ -54,10 +55,14 @@
 	}
 
 	$: trimmedName = username.trim();
+	// The same rule the RPC decides by, checked here so a name that could only be turned
+	// down is not sent at all — and so the reason is on screen while it is being typed
+	// rather than after a round trip.
+	$: nameInvalid = trimmedName !== '' && !isValidUsername(trimmedName);
 	// Blank is an answer too: emptying the field clears the name and leaves the
 	// account unnamed, which is where every account starts and may stay. So the only
-	// thing that disables saving is having nothing to change.
-	$: canSaveName = !savingName && trimmedName !== ($profile?.username ?? '');
+	// other thing that disables saving is having nothing to change.
+	$: canSaveName = !savingName && !nameInvalid && trimmedName !== ($profile?.username ?? '');
 
 	async function saveName(): Promise<void> {
 		if (!canSaveName) return;
@@ -69,7 +74,9 @@
 			// A name the server turned down is said in the player's language; anything
 			// else really is a failure and is reported as it came.
 			if (error instanceof UsernameRejected) {
-				nameError = $_(`profile.username.${error.reason}`);
+				nameError = $_(`profile.username.${error.reason}`, {
+					values: { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }
+				});
 			} else {
 				nameError = error instanceof Error ? error.message : $_('errors.generic');
 			}
@@ -132,7 +139,7 @@
 								type="text"
 								bind:value={username}
 								disabled={savingName}
-								maxlength={32}
+								maxlength={USERNAME_MAX_LENGTH}
 								autofocus={unnamed}
 								placeholder={$_('profile.username.placeholder')}
 								class="input input-bordered flex-1"
@@ -150,9 +157,14 @@
 						</div>
 					</label>
 
-					{#if nameError}
+					{#if nameError || nameInvalid}
 						<div class="alert alert-error">
-							<span>{nameError}</span>
+							<span>
+								{nameError ??
+									$_('profile.username.invalid', {
+										values: { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }
+									})}
+							</span>
 						</div>
 					{/if}
 				</form>

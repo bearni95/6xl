@@ -24,6 +24,36 @@ export enum AuthStatus {
 export const MIN_PASSWORD_LENGTH = 8;
 
 /**
+ * The shortest and longest a username may be, and the whole of what one may be made
+ * of: ASCII letters, digits and the underscore, and nothing else.
+ *
+ * It is stated here because three things have to agree on it and only one of them can
+ * be argued with — `set_player_username` in `packages/backend/supabase/player_profiles.sql`
+ * is what actually decides, the two screens that take a name check the same rule before
+ * sending so a refusal is not the first the player hears of it, and the input's own
+ * `maxlength` stops the field at {@link USERNAME_MAX_LENGTH} rather than letting a name
+ * be typed that could only be turned down.
+ *
+ * Deliberately no accents, spaces or punctuation, though the game is Catalan and the old
+ * rule allowed all three: a name is an identifier here — it is what one player is called
+ * by another and what the town plates print — and letters that look alike unaccented are
+ * how one player comes to be mistaken for another.
+ */
+export const USERNAME_MIN_LENGTH = 3;
+
+/** @see USERNAME_MIN_LENGTH */
+export const USERNAME_MAX_LENGTH = 32;
+
+/**
+ * The whole of a valid username, anchored so it matches nothing else. No `g` flag: a
+ * global regex carries `lastIndex` between `test` calls and would answer differently on
+ * every other keystroke.
+ *
+ * @see USERNAME_MIN_LENGTH
+ */
+export const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/;
+
+/**
  * Why a set of credentials was turned down, in the terms a screen can word — the whole
  * of what the sign-in form is ever told, and the whole of what it has to be able to say.
  *

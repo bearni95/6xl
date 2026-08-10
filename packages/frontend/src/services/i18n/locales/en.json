@@ -68,7 +68,7 @@
 		"username": {
 			"none": "Unnamed player",
 			"taken": "That username is already taken.",
-			"invalid": "Use 3 to 32 characters: letters, digits, spaces and . _ - only.",
+			"invalid": "Between {min} and {max} characters: unaccented letters, digits and underscores only.",
 			"label": "Username",
 			"placeholder": "e.g. player_one",
 			"save": "Save username",

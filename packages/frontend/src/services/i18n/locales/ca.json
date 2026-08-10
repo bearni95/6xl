@@ -68,7 +68,7 @@
 		"username": {
 			"none": "Sense nom",
 			"taken": "Aquest nom d'usuari ja està agafat.",
-			"invalid": "Utilitza entre 3 i 32 caràcters: només lletres, xifres, espais i . _ -",
+			"invalid": "Entre {min} i {max} caràcters: només lletres sense accent, xifres i guions baixos (_).",
 			"label": "Nom d'usuari",
 			"placeholder": "p. ex. jugador_u",
 			"save": "Desa el nom",

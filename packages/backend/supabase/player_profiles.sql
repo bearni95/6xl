@@ -210,11 +210,17 @@ begin
 		if char_length(v_name) < 3 or char_length(v_name) > 32 then
 			raise exception 'A username is between 3 and 32 characters.' using errcode = '22023';
 		end if;
-		-- Letters (accented included — these are Catalan names) and digits, then
-		-- spaces and a few joiners inside. Must open on a letter or digit so a name
-		-- cannot be made of punctuation alone.
-		if v_name !~ '^[[:alnum:]][[:alnum:]_. ''·-]*$' then
-			raise exception 'A username may use letters, digits, spaces and . _ - only.'
+		-- ASCII letters, digits and the underscore, and nothing else. A username is an
+		-- identifier — it is what one player is called by another and what a town plate
+		-- prints — so the accents, spaces and punctuation the old rule allowed are out:
+		-- they are how one player comes to be mistaken for another. `[[:alnum:]]` is not
+		-- used, since under a UTF-8 collation it takes accented letters back in.
+		--
+		-- The same rule is stated for the screens in @3xl/shared's types/profile.type.ts
+		-- (USERNAME_PATTERN and the two lengths above) and checked before a name is sent,
+		-- but this is what decides: nothing reaches the column except through here.
+		if v_name !~ '^[A-Za-z0-9_]+$' then
+			raise exception 'A username may use letters, digits and underscores only.'
 				using errcode = '22023';
 		end if;
 		-- Checked explicitly as well as by the index, so the answer is a sentence

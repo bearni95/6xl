@@ -468,11 +468,13 @@ export function ensureTables(): Promise<void> {
 										raise exception 'A username is between 3 and 32 characters.'
 												using errcode = '22023';
 								end if;
-								-- Letters (accented included — these are Catalan names) and digits,
-								-- then spaces and a few joiners inside. Must open on a letter or
-								-- digit, so a name cannot be made of punctuation alone.
-								if v_name !~ '^[[:alnum:]][[:alnum:]_. ''·-]*$' then
-										raise exception 'A username may use letters, digits, spaces and . _ - only.'
+								-- ASCII letters, digits and the underscore, and nothing else — the
+								-- accents, spaces and punctuation the old rule allowed are how one
+								-- player comes to be mistaken for another. Not [[:alnum:]], which
+								-- takes accented letters back in under a UTF-8 collation. Stated for
+								-- the screens in @3xl/shared's types/profile.type.ts; decided here.
+								if v_name !~ '^[A-Za-z0-9_]+$' then
+										raise exception 'A username may use letters, digits and underscores only.'
 												using errcode = '22023';
 								end if;
 								-- Checked here as well as by the index, so the answer is a sentence
