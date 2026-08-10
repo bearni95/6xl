@@ -311,10 +311,12 @@
 			"close": "Close the fights",
 			"empty": "No fight has finished yet.",
 			"anonymous": "Somebody",
-			"house": "The house team",
-			"beat": "beat",
-			"drew": "drew",
-			"captured": "took"
+			"house": "the house team",
+			"said": {
+				"beat": "{winner} beat {loser} at {town}.",
+				"captured": "{winner} beat {loser} and took {town}.",
+				"drew": "{winner} and {loser} drew at {town}."
+			}
 		},
 		"previousFighter": "Previous fighter",
 		"nextFighter": "Next fighter",

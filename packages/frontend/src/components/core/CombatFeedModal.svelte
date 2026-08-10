@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import CombatFeedSide from '$components/core/CombatFeedSide.svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
+	import PlayerAvatar from '$components/core/PlayerAvatar.svelte';
 	import { combatFeedService } from '$services/combatFeed.service';
 	import restoreCatalanArticle from '$utils/string/restore-catalan-article';
 	import type { CombatFeedEntry, CombatFeedPlayer } from '$types/combat-feed.type';
@@ -17,11 +17,11 @@
 	 * A line used to name one player and read the fight from their side ("X won at Y"),
 	 * which is how the announcement is worded — `outcome` is stated from the account that
 	 * reported it — and it is not how a fight reads to anybody else: a win is somebody
-	 * beating somebody, and the feed was printing half of that. Both sides are on the row
-	 * now, facing each other across what happened between them, exactly as the head of a
-	 * fight lays out the town and whoever holds it. Which of them is the winner is settled
-	 * here ({@link duel}) rather than on the row, since the row should not have to know that
-	 * `lose` means the *other* one won.
+	 * beating somebody, and the feed was printing half of that. Both are in it now, and they
+	 * are in a **sentence** ({@link sentence}): the whole wording lives in the catalogue and
+	 * the three names are handed to it, rather than the row being a face and a name and a
+	 * level at either end of a verb. A fight assembled out of boxes leaves the grammar to
+	 * the layout, and grammar is not a thing a flex row can be right about.
 	 *
 	 * The list is the service's and arrives by socket, so nothing is fetched here and there
 	 * is nothing to refresh: a fight that finishes while this sheet is up is drawn onto it
@@ -73,8 +73,8 @@
 	// would have left every line standing at the id it was first drawn with.
 	$: lines = $entries.map((entry) => ({
 		entry,
-		town: townName(entry, $townNames),
-		duel: duel(entry)
+		said: sentence(entry, townName(entry, $townNames)),
+		face: winner(entry)
 	}));
 
 	function townName(entry: CombatFeedEntry, known: ReadonlyMap<string, string> | null): string {
@@ -82,33 +82,50 @@
 		return name ? restoreCatalanArticle(name) : entry.locationId;
 	}
 
-	/** A fight as two sides rather than as one account's account of it. `drawn` is the third
-	 * outcome, where the two are simply the two and neither of them beat anybody. */
-	interface Duel {
-		/** The one that won, or the reporter on a draw — the side the row opens with. */
-		winner: CombatFeedPlayer | null;
-		/** The one that was beaten, null where it was the town's own house team. */
-		loser: CombatFeedPlayer | null;
-		drawn: boolean;
+	/**
+	 * The fight, in one sentence.
+	 *
+	 * Both the players, which of them won and the town it was over, said the way the game
+	 * would say it out loud — the whole wording in the catalogue and the three names handed
+	 * to it, rather than a row of boxes the reader has to assemble a fight out of. Which
+	 * means the *grammar* is the catalogue's too: where the verb sits, what the preposition
+	 * is and whether taking a town is a clause of its own are all things a language decides,
+	 * and none of them survive being drawn as three cells in a line.
+	 *
+	 * Three sentences, and they are three because the sentence differs and not because the
+	 * data does: a fight won, a fight won that took the town with it, and a fight that
+	 * settled nothing — which has no winner, and reads as the two of them together.
+	 *
+	 * The announcement is worded from the account that reported it, so `win` is the reporter
+	 * beating whoever held the town and `lose` is that side beating the reporter. Turning
+	 * that round is the whole of what this has to know beyond the words.
+	 */
+	function sentence(entry: CombatFeedEntry, town: string): string {
+		const beaten = entry.outcome === 'lose' ? entry.player : entry.rival;
+		const won = entry.outcome === 'lose' ? entry.rival : entry.player;
+		const values = { winner: named(won), loser: named(beaten), town };
+		if (entry.outcome === 'draw') return $_('combat.feed.said.drew', { values });
+		if (entry.captured) return $_('combat.feed.said.captured', { values });
+		return $_('combat.feed.said.beat', { values });
 	}
 
 	/**
-	 * Which of the two won.
+	 * What to call one of the two in that sentence.
 	 *
-	 * The announcement is worded from the account that reported it, so `win` is the reporter
-	 * beating the side that held the town and `lose` is that side beating the reporter — the
-	 * one fact that has to be turned round before a line can name a winner. A draw has no
-	 * winner at all and keeps the reporter first, there being nothing to put ahead of them.
-	 *
-	 * Either of the two may be null: the reporter's account is always named, but a town on
-	 * its seeded house team belongs to nobody, and that is the side {@link CombatFeedSide}
-	 * letters as the house.
+	 * A null side is a town still on its seeded house team, which belongs to nobody — so it
+	 * is called the house rather than left as a hole in the middle of a sentence; and an
+	 * account that has never named itself is worded, as it is everywhere else in this game,
+	 * never stored.
 	 */
-	function duel(entry: CombatFeedEntry): Duel {
-		if (entry.outcome === 'lose') {
-			return { winner: entry.rival, loser: entry.player, drawn: false };
-		}
-		return { winner: entry.player, loser: entry.rival, drawn: entry.outcome === 'draw' };
+	function named(player: CombatFeedPlayer | null): string {
+		if (!player) return $_('combat.feed.house');
+		return player.name ?? $_('combat.feed.anonymous');
+	}
+
+	/** The face the line is marked with: the winner's, or the reporter's where nobody won.
+	 * One mark and not a portrait of each side — the sentence is what names them both. */
+	function winner(entry: CombatFeedEntry): CombatFeedPlayer {
+		return entry.outcome === 'lose' && entry.rival ? entry.rival : entry.player;
 	}
 
 	function close(): void {
@@ -124,56 +141,46 @@
 	<!-- The list scrolls inside the sheet rather than the sheet scrolling, as the leaderboard's
 	     table does: the title bar stays put however far down the feed a fight sits. -->
 	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-box bg-base-200/50">
-		{#each lines as { entry, town, duel } (entry.id)}
+		{#each lines as { entry, said, face } (entry.id)}
 			<!-- One fight: the line it is read as, and under it the whole of what was announced
 			     about it, while it is open. The rule the row carried moves out here, so a fight
 			     is one block however much of it is showing and the record is inside the same
 			     division as the line it belongs to. -->
 			<div class="flex flex-col border-b border-base-300/50 last:border-0">
-				<!-- One fight, read across as a duel: the two that fought it facing each other over
-				     what happened between them, each wearing the avatar they wear everywhere else,
-				     and under the pair the town it was over with the hour at the far end.
-				     Two halves of one row (`flex-1` each), so a name of any length and a name of any
-				     length are laid out by the row and not by each other — the same rule the head of
-				     the fight lays its two cells out under. The winner opens the row and the beaten
-				     side closes it, faded, facing back into the middle: which of them won is said in
-				     words between them, and the fade is only what keeps the eye on the one that did.
+				<!-- One fight, said in one sentence: both the players in it, which of them won and
+				     the town it was over, written out (see `sentence`) rather than laid out. It was
+				     a row of boxes for a while — a face and a name and a level at either end of a
+				     word — which is a fight the reader has to assemble out of its parts, and which
+				     leaves the grammar to the layout: where a verb sits and what a preposition is
+				     are the catalogue's to decide, not a flex row's.
+				     One face beside it, the winner's, which is a mark on the line and not a fourth
+				     thing to read: the sentence has already named them.
 				     The whole line is the press, as the map's own rows are: there is one thing to do
 				     with a fight here and the line is the thing to press. It names itself in its own
-				     words — the two players, what happened, the town and the hour are what a screen
-				     reader reads out — so it carries no label of its own, only `aria-expanded`, which
-				     is the one thing about it the words do not say. -->
+				     words — the sentence and the hour are what a screen reader reads out — so it
+				     carries no label of its own, only `aria-expanded`, which is the one thing about
+				     it the words do not say. -->
 				<button
 					type="button"
-					class="flex w-full cursor-pointer flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-base-300/40"
+					class="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-base-300/40"
 					aria-expanded={opened.has(entry.id)}
 					on:click={() => toggle(entry.id)}
 				>
-					<div class="flex w-full items-center gap-2">
-						<CombatFeedSide player={duel.winner} />
-						<!-- What happened between them, on the seam the two sides meet at: one word,
-						     which is either a verb with a subject on its left and an object on its
-						     right, or the noun a fight that settled nothing is. It keeps its own width
-						     and the two halves give, so the seam stays in the middle of the row
-						     whatever the names either side of it come to. -->
-						<span class="flex-none px-1 text-xs font-semibold tracking-wide uppercase opacity-70">
-							{duel.drawn ? $_('combat.feed.drew') : $_('combat.feed.beat')}
-						</span>
-						<CombatFeedSide player={duel.loser} reversed dimmed={!duel.drawn} />
-					</div>
-					<!-- Where it happened, and when. Under the pair rather than beside either of them,
-					     because the town is the one thing on the row that is about neither side —
-					     until it changed hands, which is the winner's doing and is said here as the
-					     one thing a fight can do to the map. -->
-					<div class="flex w-full items-baseline justify-between gap-2 text-xs opacity-70">
-						<span class="truncate">
-							{#if entry.captured}<span class="font-semibold"
-									>{$_('combat.feed.captured')}</span
-								>{/if}
-							{town}
-						</span>
-						<span class="flex-none">{timeFormat.format(new Date(entry.at))}</span>
-					</div>
+					<PlayerAvatar
+						characterId={face.characterId}
+						color={face.color}
+						initial={(face.name ?? '?').slice(0, 1).toUpperCase()}
+						size="w-10"
+						textClasses="text-base"
+						ownColors={false}
+					/>
+					<!-- The sentence wraps rather than truncating: it is a sentence, and half of one
+					     says something other than what happened. `min-w-0` so it may, a flex item
+					     being floored at its own content otherwise. -->
+					<span class="min-w-0 flex-1 text-sm">{said}</span>
+					<span class="flex-none self-start text-xs opacity-60"
+						>{timeFormat.format(new Date(entry.at))}</span
+					>
 				</button>
 				{#if opened.has(entry.id)}
 					<!-- The announcement itself, as the app holds it: the entry the adapter read off

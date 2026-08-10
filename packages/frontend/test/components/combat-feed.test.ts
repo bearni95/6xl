@@ -76,8 +76,10 @@ describe('the sheet of other fights', () => {
 		// The name off the map's own layer, with the article back at the front the way every
 		// other place name in this game is printed. Awaited, because the layer is fetched: the
 		// bug this pins is a name that lands after the first paint and never redraws.
-		expect(await findByText("L'Hospitalet de Llobregat")).toBeTruthy();
-		expect(queryByText('ES_08101')).toBeNull();
+		// Matched inside the sentence rather than as a line of its own — the town is a word in
+		// what the feed says about a fight, not a cell beside it.
+		expect(await findByText(/L'Hospitalet de Llobregat/)).toBeTruthy();
+		expect(queryByText(/ES_08101/)).toBeNull();
 	});
 
 	it('leaves the id standing for a town the layer does not hold', async () => {
@@ -85,47 +87,61 @@ describe('the sheet of other fights', () => {
 		const { findByText } = render(CombatFeedModal);
 		// Better than a blank: a fight did happen somewhere, and this is everything anybody
 		// knows about where.
-		expect(await findByText('ES_99999')).toBeTruthy();
+		expect(await findByText(/ES_99999/)).toBeTruthy();
 	});
 
 	/**
-	 * A fight is two players, and the line says which of them won.
+	 * A fight is two players in one sentence, and the sentence says which of them won.
 	 *
 	 * The announcement is worded from whoever reported it — `outcome` is *their* result — so
-	 * a loss has to be turned round before it can be read as a duel: the side that held the
-	 * town is the winner of it. Getting that backwards is the failure this pins, and it is
-	 * one that reads perfectly well on screen while saying the opposite of what happened.
+	 * a loss has to be turned round before it can be said: the side that held the town is the
+	 * winner of it. Getting that backwards is the failure this pins, and it is one that reads
+	 * perfectly well on screen while saying the opposite of what happened.
+	 *
+	 * The whole line is asserted rather than the two names being found in it, because what is
+	 * being drawn here is a sentence: the order the names come in, the verb between them and
+	 * the preposition before the town are the thing, and a test that only checked both names
+	 * were present would pass on a line that said the loser won.
 	 */
-	it('opens the row with the winner, whichever side reported the fight', async () => {
+	it('says the winner first, whichever side reported the fight', async () => {
 		// A loss: the reporter was beaten by the account holding the town.
 		combatFeedService.receive(
-			fight('lost', 'ES_08101', { outcome: 'lose', player: { id: 'p3', name: 'Berenguer', level: 2 }, rival: RIVAL })
+			fight('lost', 'ES_08101', {
+				outcome: 'lose',
+				player: { id: 'p3', name: 'Berenguer', level: 2 },
+				rival: RIVAL
+			})
 		);
-		const { container, findByText } = render(CombatFeedModal);
-		await findByText('Berenguer');
+		const { findByText } = render(CombatFeedModal);
+		expect(
+			await findByText("Ermessenda ha guanyat Berenguer a L'Hospitalet de Llobregat.")
+		).toBeTruthy();
+	});
 
-		// Both sides on the row, and the winner first: the row lays the two halves out either
-		// side of the word between them, so reading it across is reading who beat whom.
-		const line = container.querySelector('button[aria-expanded]');
-		const said = (line?.textContent ?? '').replace(/\s+/g, ' ').trim();
-		expect(said.indexOf('Ermessenda')).toBeGreaterThanOrEqual(0);
-		expect(said.indexOf('Ermessenda')).toBeLessThan(said.indexOf('Berenguer'));
-		expect(said).toContain(ca.combat.feed.beat);
+	/** Taking the town is a clause of the same sentence, not a badge beside it. */
+	it('says the town changing hands in the sentence itself', async () => {
+		combatFeedService.receive(fight('taken', 'ES_08101', { captured: true, rival: RIVAL }));
+		const { findByText } = render(CombatFeedModal);
+		expect(
+			await findByText("Guifré ha guanyat Ermessenda i ha pres L'Hospitalet de Llobregat.")
+		).toBeTruthy();
 	});
 
 	/**
 	 * A town nobody holds is fought against the house, and the house is not a player.
 	 *
-	 * Nothing is invented for that side — no name, no level, no face — and it is not left
-	 * blank either: a fight did happen against somebody's three, they simply were not an
-	 * account's.
+	 * Nothing is invented for that side — no name, no level, no face — and it is not left as
+	 * a hole in the middle of the sentence either: a fight did happen against somebody's
+	 * three, they simply were not an account's.
 	 */
-	it('letters the seeded side as the house team rather than as a player', async () => {
+	it('names the seeded side as the house team rather than as a player', async () => {
 		combatFeedService.receive(fight('house', 'ES_08101'));
+		const { findAllByText } = render(CombatFeedModal);
 		// All of them, because every fight the tests above left in the feed was over a town
 		// nobody held either — which is the state this is about.
-		const { findAllByText } = render(CombatFeedModal);
-		expect((await findAllByText(ca.combat.feed.house)).length).toBeGreaterThan(0);
+		expect(
+			(await findAllByText(new RegExp(ca.combat.feed.house))).length
+		).toBeGreaterThan(0);
 	});
 
 	/**
@@ -152,7 +168,7 @@ describe('the sheet of other fights', () => {
 		// wall of JSON where a feed was wanted.
 		expect(container.querySelector('pre')).toBeNull();
 
-		const line = (await findByText('Ramon')).closest('button');
+		const line = (await findByText(/Ramon/)).closest('button');
 		expect(line).toBeTruthy();
 		await fireEvent.click(line!);
 
