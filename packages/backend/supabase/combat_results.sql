@@ -151,6 +151,18 @@ alter table public.combat_results add column if not exists location_id text;
 alter table public.combat_results add column if not exists captured boolean not null default false;
 alter table public.combat_results add column if not exists stale boolean not null default false;
 
+-- WHO the fight was against: the account that was holding the town when the battle was
+-- opened (battles.holder_id), or null for a town still on its seeded house team. It is
+-- copied off the battle row rather than read off the map at report time, so a fight that
+-- outlived a capture still names the side it actually beat.
+--
+-- Null on every row written before this, which reads as the house team — the one place
+-- the two meanings are not told apart. It costs nothing worth a column to fix: the feed
+-- reads the last ten fights and nothing else ever reads this, so those rows are gone
+-- from every surface within a few minutes of anybody playing.
+alter table public.combat_results
+	add column if not exists rival_id uuid references auth.users (id) on delete set null;
+
 create index if not exists combat_results_user_day_idx
 	on public.combat_results (user_id, fought_at);
 
@@ -306,6 +318,15 @@ declare
 	v_name text;
 	v_avatar_character text;
 	v_avatar_color text;
+	-- And who it was fought against, said the same way. The account is the battle's own
+	-- (battles.holder_id, frozen when the fight was picked); the rest is read off
+	-- player_profiles at the announcement, as the caller's is, so a defender is drawn as
+	-- they currently stand rather than as they stood when the fight opened.
+	v_rival uuid;
+	v_rival_name text;
+	v_rival_character text;
+	v_rival_color text;
+	v_rival_exp bigint;
 begin
 	if v_uid is null then
 		raise exception 'You must be signed in to earn experience.';
@@ -324,7 +345,8 @@ begin
 	-- *what* was fought comes from here rather than from the report, and a report
 	-- with no battle behind it is not a fight that happened — it is a claim about
 	-- one, which is the whole thing this row exists to make impossible.
-	select b.location_id, b.turnover, b.rivals into v_location, v_fought, v_rivals
+	select b.location_id, b.turnover, b.rivals, b.holder_id
+		into v_location, v_fought, v_rivals, v_rival
 		from public.battles b where b.user_id = v_uid;
 	if v_location is null then
 		raise exception 'You have no battle in progress to report.';
@@ -601,9 +623,9 @@ begin
 	-- back, so nothing is recorded that was not also paid.
 	insert into public.combat_results
 		(user_id, outcome, survivors, fielded, rivals_defeated, level, level_span, exp_awarded,
-			location_id, captured, stale)
+			location_id, captured, stale, rival_id)
 		values (v_uid, p_outcome, v_standing, v_owned, v_felled, v_level, v_span, v_award,
-			v_location, v_captured, v_stale)
+			v_location, v_captured, v_stale, v_rival)
 		returning id, fought_at into v_result_id, v_fought_at;
 
 	-- The fight is over: the battle is closed and the player is free to start
@@ -632,6 +654,13 @@ begin
 			into v_name, v_avatar_character, v_avatar_color
 			from public.player_profiles p where p.user_id = v_uid;
 
+		-- The other side, when there is one. A town on its seeded house team belongs to
+		-- nobody, and finds nothing here — every field stays null and the announcement
+		-- carries no rival at all, which is what the feed letters as the house.
+		select p.username, p.avatar_character_id, p.avatar_color, p.exp
+			into v_rival_name, v_rival_character, v_rival_color, v_rival_exp
+			from public.player_profiles p where p.user_id = v_rival;
+
 		perform realtime.send(
 			jsonb_build_object(
 				-- The record this announcement is of, so one fight heard twice reads as one.
@@ -656,7 +685,22 @@ begin
 					-- The level they are on *after* this fight, which is the level the fight
 					-- left them at — read off the same stored experience everything else is.
 					'level', public.level_for_exp(coalesce(v_total, v_exp))
-				)
+				),
+				-- Whoever was on the other side of it, said exactly as the caller is. Null
+				-- for a town nobody held: a fight is announced as two players where there
+				-- were two, and the outcome above is what says which of them won. Their
+				-- level is their own, read live, and this fight did not move it — a
+				-- defender is not the one reporting and banks nothing either way.
+				'rival', case
+					when v_rival is null then null::jsonb
+					else jsonb_build_object(
+						'id', v_rival,
+						'name', v_rival_name,
+						'character_id', v_rival_character,
+						'color', v_rival_color,
+						'level', public.level_for_exp(coalesce(v_rival_exp, 0))
+					)
+				end
 			),
 			'fight',
 			'combat-results',
@@ -723,10 +767,24 @@ language sql stable security definer set search_path = public as $$
 			'character_id', p.avatar_character_id,
 			'color', p.avatar_color,
 			'level', public.level_for_exp(coalesce(p.exp, 0))
-		)
+		),
+		-- The side that was fought, off the account the fight recorded. Null is a town
+		-- nobody held — and, on a row written before the column existed, a fight whose
+		-- defender was never recorded; see the column's own note.
+		'rival', case
+			when r.rival_id is null then null::jsonb
+			else jsonb_build_object(
+				'id', r.rival_id,
+				'name', q.username,
+				'character_id', q.avatar_character_id,
+				'color', q.avatar_color,
+				'level', public.level_for_exp(coalesce(q.exp, 0))
+			)
+		end
 	)
 	from public.combat_results r
 	left join public.player_profiles p on p.user_id = r.user_id
+	left join public.player_profiles q on q.user_id = r.rival_id
 	where r.location_id is not null
 	order by r.fought_at desc
 	limit least(greatest(coalesce(p_limit, 10), 1), 10);

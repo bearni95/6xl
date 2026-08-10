@@ -51,8 +51,22 @@ export class CombatFeedAdapter extends AdapterClass {
 			locationId,
 			captured: record.captured === true,
 			stale: record.stale === true,
-			player: this.playerFromJson(record.player)
+			player: this.playerFromJson(record.player),
+			rival: this.rivalFromJson(record.rival)
 		};
+	}
+
+	/**
+	 * The side that was fought, or null where there was no account on it.
+	 *
+	 * Null is the announcement's own answer for a town still on its seeded house team, and
+	 * it is also what a message with no rival at all reads as — an older server, or one of
+	 * the rows kept from before a fight recorded who it was against. Both are the same
+	 * thing to draw: a fight the game cannot name a second player for.
+	 */
+	private rivalFromJson(value: unknown): CombatFeedPlayer | null {
+		if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+		return this.playerFromJson(value);
 	}
 
 	/** The player a fight is announced under. Anonymous where the account has never named

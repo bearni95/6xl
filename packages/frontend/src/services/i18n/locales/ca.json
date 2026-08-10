@@ -320,12 +320,10 @@
 			"close": "Tanca els combats",
 			"empty": "Encara no ha acabat cap combat.",
 			"anonymous": "Algú",
-			"captured": "ha pres",
-			"outcome": {
-				"win": "ha guanyat a",
-				"lose": "ha perdut a",
-				"draw": "ha empatat a"
-			}
+			"house": "L'equip de la casa",
+			"beat": "venç",
+			"drew": "empat",
+			"captured": "ha pres"
 		},
 		"previousFighter": "Lluitador anterior",
 		"nextFighter": "Lluitador següent",

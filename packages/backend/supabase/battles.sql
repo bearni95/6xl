@@ -47,6 +47,15 @@ create table if not exists public.battles (
 	-- sitting on the town at the time, frozen so a resumed fight faces the same three
 	-- whatever has happened to the town since.
 	rivals jsonb not null default '[]'::jsonb,
+	-- WHOSE those three are: the account holding the town when the battle was opened,
+	-- or null for a town still on its seeded house team, which belongs to nobody.
+	-- Frozen for exactly the reason the line-up above is — a fight is against whoever
+	-- was sitting there when it was picked, and the town can change hands while it is
+	-- being played out. It is what lets a finished fight be announced as a fight
+	-- *between two players*: read at the report off this row rather than off the map,
+	-- so a stale fight names the side it actually beat rather than whoever moved in
+	-- afterwards. See combat_results.sql.
+	holder_id uuid references auth.users (id) on delete set null,
 	-- The player's own line-up in fielded order, as [spawn_id, …]. It is not the
 	-- client's to name: `start_battle` reads it off the team slots on the player's
 	-- own cards (see character_spawns.sql) and copies it here, which is what makes a
@@ -65,6 +74,13 @@ create table if not exists public.battles (
 -- Battles opened before the team was checked carry none, and are left as they are:
 -- the column simply arrives empty on them.
 alter table public.battles add column if not exists team jsonb not null default '[]'::jsonb;
+
+-- Battles opened before the defender was frozen carry none, and read as a town nobody
+-- held — which is what a null means here for every battle opened since. The two cases
+-- are not distinguishable on those rows and do not need to be: a battle is minutes
+-- long, and the feed that reads this only ever shows what has just happened.
+alter table public.battles
+	add column if not exists holder_id uuid references auth.users (id) on delete set null;
 
 -- A battle used to record the Catalan day whose challenge it spent, back when a
 -- challenge was a day. It is a cooldown now and there is no day to record: the
@@ -199,10 +215,14 @@ begin
 				voided_at = null
 		returning municipality_challenges.started_at into v_started;
 
+	-- The holder goes down with the line-up, off the very read that refused a challenge
+	-- to one's own town above: the three being fought are that account's three, and
+	-- which account it was is not something the map can be asked again at the end of a
+	-- fight it may have lost in the meantime.
 	insert into public.battles
-		(user_id, location_id, turnover, rivals, team, board)
+		(user_id, location_id, turnover, rivals, team, board, holder_id)
 		values (v_uid, p_location_id, greatest(0, coalesce(p_turnover, 0)),
-			coalesce(p_rivals, '[]'::jsonb), v_team, null);
+			coalesce(p_rivals, '[]'::jsonb), v_team, null, v_holder);
 
 	town_id := p_location_id;
 	opened_at := v_started;

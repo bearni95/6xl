@@ -21,6 +21,15 @@ const announcement = (overrides: Record<string, unknown> = {}) => ({
 		color: 'blue',
 		level: 4
 	},
+	// The side that was fought: whoever held the town when the battle was opened. Null on
+	// the channel for a town still on its seeded house team, which belongs to nobody.
+	rival: {
+		id: '77777777-6666-5555-4444-333333333333',
+		name: 'Ermessenda',
+		character_id: 'chichi',
+		color: 'red',
+		level: 7
+	},
 	...overrides
 });
 
@@ -43,8 +52,27 @@ describe('CombatFeedAdapter — a fight off the channel', () => {
 				characterId: 'goku',
 				color: SpawnColor.Blue,
 				level: 4
+			},
+			rival: {
+				id: '77777777-6666-5555-4444-333333333333',
+				name: 'Ermessenda',
+				characterId: 'chichi',
+				color: SpawnColor.Red,
+				level: 7
 			}
 		});
+	});
+
+	it('reads no rival at all where there was no account on the other side', () => {
+		// A town on its seeded house team belongs to nobody, and the announcement says so by
+		// carrying no rival. Null is equally what an older message reads as — one sent before
+		// a fight recorded who it was against — and the two are the same thing to draw: a
+		// fight the game cannot name a second player for.
+		expect(combatFeedAdapter.fromBroadcast(announcement({ rival: null }))?.rival).toBeNull();
+		expect(combatFeedAdapter.fromBroadcast(announcement({ rival: undefined }))?.rival).toBeNull();
+		expect(
+			combatFeedAdapter.fromBroadcast(announcement({ rival: 'Ermessenda' }))?.rival
+		).toBeNull();
 	});
 
 	it('refuses a message that names no record or no town', () => {

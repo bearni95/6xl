@@ -27,7 +27,11 @@ const LAYER = {
 	]
 };
 
-const fight = (id: string, town: string) => ({
+/** The side a fight was picked against, as the channel sends one. Null on the fights
+ * below that do not pass one, which is a town still on its seeded house team. */
+const RIVAL = { id: 'p2', name: 'Ermessenda', character_id: null, color: 'blue', level: 7 };
+
+const fight = (id: string, town: string, extra: Record<string, unknown> = {}) => ({
 	id,
 	at: '2026-08-10T17:04:00.000Z',
 	outcome: 'win',
@@ -38,7 +42,9 @@ const fight = (id: string, town: string) => ({
 	town,
 	captured: false,
 	stale: false,
-	player: { id: 'p1', name: 'Guifré', character_id: null, color: 'red', level: 4 }
+	player: { id: 'p1', name: 'Guifré', character_id: null, color: 'red', level: 4 },
+	rival: null,
+	...extra
 });
 
 describe('the sheet of other fights', () => {
@@ -83,6 +89,46 @@ describe('the sheet of other fights', () => {
 	});
 
 	/**
+	 * A fight is two players, and the line says which of them won.
+	 *
+	 * The announcement is worded from whoever reported it — `outcome` is *their* result — so
+	 * a loss has to be turned round before it can be read as a duel: the side that held the
+	 * town is the winner of it. Getting that backwards is the failure this pins, and it is
+	 * one that reads perfectly well on screen while saying the opposite of what happened.
+	 */
+	it('opens the row with the winner, whichever side reported the fight', async () => {
+		// A loss: the reporter was beaten by the account holding the town.
+		combatFeedService.receive(
+			fight('lost', 'ES_08101', { outcome: 'lose', player: { id: 'p3', name: 'Berenguer', level: 2 }, rival: RIVAL })
+		);
+		const { container, findByText } = render(CombatFeedModal);
+		await findByText('Berenguer');
+
+		// Both sides on the row, and the winner first: the row lays the two halves out either
+		// side of the word between them, so reading it across is reading who beat whom.
+		const line = container.querySelector('button[aria-expanded]');
+		const said = (line?.textContent ?? '').replace(/\s+/g, ' ').trim();
+		expect(said.indexOf('Ermessenda')).toBeGreaterThanOrEqual(0);
+		expect(said.indexOf('Ermessenda')).toBeLessThan(said.indexOf('Berenguer'));
+		expect(said).toContain(ca.combat.feed.beat);
+	});
+
+	/**
+	 * A town nobody holds is fought against the house, and the house is not a player.
+	 *
+	 * Nothing is invented for that side — no name, no level, no face — and it is not left
+	 * blank either: a fight did happen against somebody's three, they simply were not an
+	 * account's.
+	 */
+	it('letters the seeded side as the house team rather than as a player', async () => {
+		combatFeedService.receive(fight('house', 'ES_08101'));
+		// All of them, because every fight the tests above left in the feed was over a town
+		// nobody held either — which is the state this is about.
+		const { findAllByText } = render(CombatFeedModal);
+		expect((await findAllByText(ca.combat.feed.house)).length).toBeGreaterThan(0);
+	});
+
+	/**
 	 * Pressing a line opens the whole announcement under it.
 	 *
 	 * A line says who, what and where; the record carries what it paid, how much of the team
@@ -94,17 +140,19 @@ describe('the sheet of other fights', () => {
 	it('drops the fight’s whole record out under the line it is pressed on', async () => {
 		// Its own player, because the fights the tests above left in the feed are still in it —
 		// the service is the one the page holds — and the town is not what tells them apart.
-		combatFeedService.receive({
-			...fight('opened', 'ES_08101'),
-			player: { id: 'p2', name: 'Ermessenda', character_id: null, color: 'blue', level: 7 }
-		});
+		combatFeedService.receive(
+			fight('opened', 'ES_08101', {
+				player: { id: 'p4', name: 'Ramon', character_id: null, color: 'blue', level: 9 },
+				rival: RIVAL
+			})
+		);
 		const { container, findByText } = render(CombatFeedModal);
 
 		// Closed until it is asked for: a sheet that opened every fight it holds would be a
 		// wall of JSON where a feed was wanted.
 		expect(container.querySelector('pre')).toBeNull();
 
-		const line = (await findByText('Ermessenda')).closest('button');
+		const line = (await findByText('Ramon')).closest('button');
 		expect(line).toBeTruthy();
 		await fireEvent.click(line!);
 
@@ -121,7 +169,10 @@ describe('the sheet of other fights', () => {
 			fielded: 3,
 			captured: false,
 			stale: false,
-			player: { name: 'Ermessenda', level: 7 }
+			player: { name: 'Ramon', level: 9 },
+			// The side that was fought, which is the whole of what the line could not have said
+			// before the announcement carried it.
+			rival: { name: 'Ermessenda', level: 7 }
 		});
 
 		// And it is a toggle: the same press puts it away again.

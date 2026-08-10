@@ -1,19 +1,27 @@
 <script lang="ts">
-	import classNames from 'classnames';
 	import { _ } from 'svelte-i18n';
+	import CombatFeedSide from '$components/core/CombatFeedSide.svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
-	import PlayerAvatar from '$components/core/PlayerAvatar.svelte';
 	import { combatFeedService } from '$services/combatFeed.service';
 	import restoreCatalanArticle from '$utils/string/restore-catalan-article';
-	import type { CombatFeedEntry } from '$types/combat-feed.type';
-	import type { CombatOutcome } from '$types/combat.type';
+	import type { CombatFeedEntry, CombatFeedPlayer } from '$types/combat-feed.type';
 
 	/**
 	 * Every fight that has finished elsewhere while this one has been going on, read out.
 	 *
-	 * It is the button's other half: the counter in the head of the fight says how many, and
-	 * this says which. One line a fight — who fought it, what it came to, and the town it
-	 * was over — newest first, on the same sheet every full view in this app is drawn on.
+	 * It is the button's other half: the counter at the corner of the orders panel says how
+	 * many, and this says which. One line a fight — **both** the players in it, which of
+	 * them won, and the town it was over — newest first, on the same sheet every full view
+	 * in this app is drawn on.
+	 *
+	 * A line used to name one player and read the fight from their side ("X won at Y"),
+	 * which is how the announcement is worded — `outcome` is stated from the account that
+	 * reported it — and it is not how a fight reads to anybody else: a win is somebody
+	 * beating somebody, and the feed was printing half of that. Both sides are on the row
+	 * now, facing each other across what happened between them, exactly as the head of a
+	 * fight lays out the town and whoever holds it. Which of them is the winner is settled
+	 * here ({@link duel}) rather than on the row, since the row should not have to know that
+	 * `lose` means the *other* one won.
 	 *
 	 * The list is the service's and arrives by socket, so nothing is fetched here and there
 	 * is nothing to refresh: a fight that finishes while this sheet is up is drawn onto it
@@ -65,7 +73,8 @@
 	// would have left every line standing at the id it was first drawn with.
 	$: lines = $entries.map((entry) => ({
 		entry,
-		town: townName(entry, $townNames)
+		town: townName(entry, $townNames),
+		duel: duel(entry)
 	}));
 
 	function townName(entry: CombatFeedEntry, known: ReadonlyMap<string, string> | null): string {
@@ -73,19 +82,34 @@
 		return name ? restoreCatalanArticle(name) : entry.locationId;
 	}
 
-	// What a fight came to, in the colours the fight itself is counted in: the player's own
-	// info blue for a win, the rivals' error red for a loss. A capture is the same win said
-	// louder, because taking a town is the only thing in this game that changes the map.
-	function outcomeLabel(entry: CombatFeedEntry): string {
-		if (entry.captured) return $_('combat.feed.captured');
-		return $_(`combat.feed.outcome.${entry.outcome}`);
+	/** A fight as two sides rather than as one account's account of it. `drawn` is the third
+	 * outcome, where the two are simply the two and neither of them beat anybody. */
+	interface Duel {
+		/** The one that won, or the reporter on a draw — the side the row opens with. */
+		winner: CombatFeedPlayer | null;
+		/** The one that was beaten, null where it was the town's own house team. */
+		loser: CombatFeedPlayer | null;
+		drawn: boolean;
 	}
 
-	const outcomeClasses: Record<CombatOutcome, string> = {
-		win: 'text-info',
-		lose: 'text-error',
-		draw: 'opacity-70'
-	};
+	/**
+	 * Which of the two won.
+	 *
+	 * The announcement is worded from the account that reported it, so `win` is the reporter
+	 * beating the side that held the town and `lose` is that side beating the reporter — the
+	 * one fact that has to be turned round before a line can name a winner. A draw has no
+	 * winner at all and keeps the reporter first, there being nothing to put ahead of them.
+	 *
+	 * Either of the two may be null: the reporter's account is always named, but a town on
+	 * its seeded house team belongs to nobody, and that is the side {@link CombatFeedSide}
+	 * letters as the house.
+	 */
+	function duel(entry: CombatFeedEntry): Duel {
+		if (entry.outcome === 'lose') {
+			return { winner: entry.rival, loser: entry.player, drawn: false };
+		}
+		return { winner: entry.player, loser: entry.rival, drawn: entry.outcome === 'draw' };
+	}
 
 	function close(): void {
 		combatFeedService.closeFeed();
@@ -100,49 +124,56 @@
 	<!-- The list scrolls inside the sheet rather than the sheet scrolling, as the leaderboard's
 	     table does: the title bar stays put however far down the feed a fight sits. -->
 	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-box bg-base-200/50">
-		{#each lines as { entry, town } (entry.id)}
+		{#each lines as { entry, town, duel } (entry.id)}
 			<!-- One fight: the line it is read as, and under it the whole of what was announced
 			     about it, while it is open. The rule the row carried moves out here, so a fight
 			     is one block however much of it is showing and the record is inside the same
 			     division as the line it belongs to. -->
 			<div class="flex flex-col border-b border-base-300/50 last:border-0">
-				<!-- One fight, read the way the game says one: whoever fought it on the left, wearing
-				     the avatar they wear everywhere else, then what they did and where, then the hour
-				     it happened at.
+				<!-- One fight, read across as a duel: the two that fought it facing each other over
+				     what happened between them, each wearing the avatar they wear everywhere else,
+				     and under the pair the town it was over with the hour at the far end.
+				     Two halves of one row (`flex-1` each), so a name of any length and a name of any
+				     length are laid out by the row and not by each other — the same rule the head of
+				     the fight lays its two cells out under. The winner opens the row and the beaten
+				     side closes it, faded, facing back into the middle: which of them won is said in
+				     words between them, and the fade is only what keeps the eye on the one that did.
 				     The whole line is the press, as the map's own rows are: there is one thing to do
 				     with a fight here and the line is the thing to press. It names itself in its own
-				     words — the player, the outcome, the town and the hour are what a screen reader
-				     reads out — so it carries no label of its own, only `aria-expanded`, which is the
-				     one thing about it the words do not say. -->
+				     words — the two players, what happened, the town and the hour are what a screen
+				     reader reads out — so it carries no label of its own, only `aria-expanded`, which
+				     is the one thing about it the words do not say. -->
 				<button
 					type="button"
-					class="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-base-300/40"
+					class="flex w-full cursor-pointer flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-base-300/40"
 					aria-expanded={opened.has(entry.id)}
 					on:click={() => toggle(entry.id)}
 				>
-					<PlayerAvatar
-						characterId={entry.player.characterId}
-						color={entry.player.color}
-						initial={(entry.player.name ?? '?').slice(0, 1).toUpperCase()}
-						size="w-10"
-						textClasses="text-base"
-						ownColors={false}
-					/>
-					<div class="flex min-w-0 flex-1 flex-col">
-						<span class="truncate font-semibold">
-							{entry.player.name ?? $_('combat.feed.anonymous')}
-							<span class="ml-1 text-xs font-normal opacity-60">
-								{$_('profile.levelBadge', { values: { level: entry.player.level } })}
-							</span>
+					<div class="flex w-full items-center gap-2">
+						<CombatFeedSide player={duel.winner} />
+						<!-- What happened between them, on the seam the two sides meet at: one word,
+						     which is either a verb with a subject on its left and an object on its
+						     right, or the noun a fight that settled nothing is. It keeps its own width
+						     and the two halves give, so the seam stays in the middle of the row
+						     whatever the names either side of it come to. -->
+						<span class="flex-none px-1 text-xs font-semibold tracking-wide uppercase opacity-70">
+							{duel.drawn ? $_('combat.feed.drew') : $_('combat.feed.beat')}
 						</span>
-						<span class="truncate text-sm">
-							<span class={classNames('font-semibold', outcomeClasses[entry.outcome])}>
-								{outcomeLabel(entry)}
-							</span>
-							<span class="opacity-70">{town}</span>
-						</span>
+						<CombatFeedSide player={duel.loser} reversed dimmed={!duel.drawn} />
 					</div>
-					<span class="flex-none text-xs opacity-60">{timeFormat.format(new Date(entry.at))}</span>
+					<!-- Where it happened, and when. Under the pair rather than beside either of them,
+					     because the town is the one thing on the row that is about neither side —
+					     until it changed hands, which is the winner's doing and is said here as the
+					     one thing a fight can do to the map. -->
+					<div class="flex w-full items-baseline justify-between gap-2 text-xs opacity-70">
+						<span class="truncate">
+							{#if entry.captured}<span class="font-semibold"
+									>{$_('combat.feed.captured')}</span
+								>{/if}
+							{town}
+						</span>
+						<span class="flex-none">{timeFormat.format(new Date(entry.at))}</span>
+					</div>
 				</button>
 				{#if opened.has(entry.id)}
 					<!-- The announcement itself, as the app holds it: the entry the adapter read off

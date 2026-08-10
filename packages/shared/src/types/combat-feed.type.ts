@@ -83,5 +83,20 @@ export interface CombatFeedEntry {
 	/** Whether it was fought against a generation that had already been superseded, in
 	 * which case it banked no ground whatever it was. */
 	stale: boolean;
+	/** The account that reported it. Which of the two sides this is depends on
+	 * {@link outcome}, which is stated from here: `win` is this player beating
+	 * {@link rival}, `lose` is the other way round. */
 	player: CombatFeedPlayer;
+	/**
+	 * The account on the other side of it — whoever was holding the town when the battle
+	 * was opened — or null for a town still on its seeded house team, which belongs to
+	 * nobody.
+	 *
+	 * Frozen with the battle rather than read off the map when the fight was reported, so
+	 * a fight that outlived a capture names the side it actually beat and not whoever has
+	 * moved in since (see `battles.holder_id`). A null therefore means the house team; the
+	 * only rows where it could also mean "not recorded" are ones written before the fight
+	 * kept it, and the feed is ten fights old at most.
+	 */
+	rival: CombatFeedPlayer | null;
 }

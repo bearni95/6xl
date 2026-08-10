@@ -1079,6 +1079,14 @@ export function ensureTables(): Promise<void> {
 					alter table combat_results add column if not exists location_id text;
 					alter table combat_results add column if not exists captured boolean not null default false;
 					alter table combat_results add column if not exists stale boolean not null default false;
+					-- WHO the fight was against: the account holding the town when the battle was
+					-- opened (battles.holder_id), null for a town on its seeded house team. Copied
+					-- off the battle rather than read off the map at report time, so a fight that
+					-- outlived a capture still names the side it actually beat. Null on rows written
+					-- before this too, which reads as the house — a distinction not worth a column,
+					-- since the feed only ever shows the last ten fights.
+					alter table combat_results
+						add column if not exists rival_id uuid references auth.users (id) on delete set null;
 					create index if not exists combat_results_user_day_idx
 						on combat_results (user_id, fought_at);
 					-- The feed's own read: everybody's fights as one list, newest first, which is
@@ -1322,6 +1330,11 @@ export function ensureTables(): Promise<void> {
 							-- The rival line-up in lane order, [{character_id, color}], frozen so a
 							-- resumed fight faces the same three whatever the town has done since.
 							rivals jsonb not null default '[]'::jsonb,
+							-- Whose those three are: the account holding the town when the battle
+							-- opened, null for a town still on its seeded house team. Frozen for the
+							-- same reason the line-up is, and what lets a finished fight be announced
+							-- as a fight between two players (see ../../supabase/battles.sql).
+							holder_id uuid references auth.users (id) on delete set null,
 							-- The player's own line-up in fielded order, [spawn_id, …], every one
 							-- of them checked against character_spawns before this row existed.
 							team jsonb not null default '[]'::jsonb,
@@ -1332,6 +1345,11 @@ export function ensureTables(): Promise<void> {
 						);
 					-- Battles opened before the team was proved simply carry none.
 					alter table battles add column if not exists team jsonb not null default '[]'::jsonb;
+					-- Battles opened before the defender was frozen carry none, and read as a
+					-- town nobody held. A battle is minutes long, so the two meanings never
+					-- need telling apart on a row anybody still reads.
+					alter table battles
+						add column if not exists holder_id uuid references auth.users (id) on delete set null;
 					-- A battle used to record the Catalan day whose challenge it spent, back
 					-- when a challenge was a day. There is no day to record now: the challenge
 					-- it belongs to is the one (user_id, location_id) row this one already names.
@@ -1440,11 +1458,15 @@ export function ensureTables(): Promise<void> {
 								set started_at = now(), settled_at = null, available_at = null,
 									voided_at = null
 							returning municipality_challenges.started_at into v_started;
+						-- The holder goes down with the line-up, off the very read that refused a
+						-- challenge to one's own town above: the three being fought are that
+						-- account's three, and which account it was cannot be asked of the map
+						-- again at the end of a fight it may have lost in the meantime.
 						insert into battles
-							(user_id, location_id, turnover, rivals, team, board)
+							(user_id, location_id, turnover, rivals, team, board, holder_id)
 							values (v_uid, p_location_id,
 								greatest(0, coalesce(p_turnover, 0)),
-								coalesce(p_rivals, '[]'::jsonb), v_team, null);
+								coalesce(p_rivals, '[]'::jsonb), v_team, null, v_holder);
 						town_id := p_location_id;
 						opened_at := v_started;
 						fielded_team := v_team;
@@ -1594,6 +1616,14 @@ export function ensureTables(): Promise<void> {
 							v_name text;
 							v_avatar_character text;
 							v_avatar_color text;
+							-- And who it was fought against, said the same way: the account is the
+							-- battle's own, frozen when the fight was picked, and the rest is read off
+							-- player_profiles at the announcement, as the caller's is.
+							v_rival uuid;
+							v_rival_name text;
+							v_rival_character text;
+							v_rival_color text;
+							v_rival_exp bigint;
 					begin
 							if v_uid is null then
 								raise exception 'You must be signed in to earn experience.';
@@ -1609,8 +1639,8 @@ export function ensureTables(): Promise<void> {
 							-- The fight has to be one the server opened. Everything about WHAT was
 							-- fought comes from here, not from the report; a report with no battle
 							-- behind it is not a fight that happened but a claim about one.
-							select b.location_id, b.turnover, b.rivals
-								into v_location, v_fought, v_rivals
+							select b.location_id, b.turnover, b.rivals, b.holder_id
+								into v_location, v_fought, v_rivals, v_rival
 								from battles b where b.user_id = v_uid;
 							if v_location is null then
 								raise exception 'You have no battle in progress to report.';
@@ -1853,9 +1883,9 @@ export function ensureTables(): Promise<void> {
 							-- that was not also paid.
 							insert into combat_results
 								(user_id, outcome, survivors, fielded, rivals_defeated,
-									level, level_span, exp_awarded, location_id, captured, stale)
+									level, level_span, exp_awarded, location_id, captured, stale, rival_id)
 								values (v_uid, p_outcome, v_standing, v_owned, v_felled,
-									v_level, v_span, v_award, v_location, v_captured, v_stale)
+									v_level, v_span, v_award, v_location, v_captured, v_stale, v_rival)
 								returning id, fought_at into v_result_id, v_fought_at;
 							-- The fight is over: close the battle, freeing the player to start
 							-- another. Every rejection above raises, which rolls this back with the
@@ -1873,6 +1903,11 @@ export function ensureTables(): Promise<void> {
 								select p.username, p.avatar_character_id, p.avatar_color
 									into v_name, v_avatar_character, v_avatar_color
 									from player_profiles p where p.user_id = v_uid;
+								-- The other side, when there is one. A town on its seeded house team
+								-- belongs to nobody and finds nothing here, so none is announced.
+								select p.username, p.avatar_character_id, p.avatar_color, p.exp
+									into v_rival_name, v_rival_character, v_rival_color, v_rival_exp
+									from player_profiles p where p.user_id = v_rival;
 								perform realtime.send(
 									jsonb_build_object(
 										'id', v_result_id,
@@ -1891,7 +1926,21 @@ export function ensureTables(): Promise<void> {
 											'character_id', v_avatar_character,
 											'color', v_avatar_color,
 											'level', level_for_exp(coalesce(v_total, v_exp))
-										)
+										),
+										-- Whoever was on the other side, said exactly as the caller is, and
+										-- null for a town nobody held. The outcome above is what says which
+										-- of the two won; a defender banks nothing either way, so the level
+										-- is simply their own, read live.
+										'rival', case
+											when v_rival is null then null::jsonb
+											else jsonb_build_object(
+												'id', v_rival,
+												'name', v_rival_name,
+												'character_id', v_rival_character,
+												'color', v_rival_color,
+												'level', level_for_exp(coalesce(v_rival_exp, 0))
+											)
+										end
 									),
 									'fight',
 									'combat-results',
@@ -1944,10 +1993,23 @@ export function ensureTables(): Promise<void> {
 								'character_id', p.avatar_character_id,
 								'color', p.avatar_color,
 								'level', level_for_exp(coalesce(p.exp, 0))
-							)
+							),
+							-- The side that was fought, off the account the fight recorded. Null is
+							-- a town nobody held, or a row from before the column existed.
+							'rival', case
+								when r.rival_id is null then null::jsonb
+								else jsonb_build_object(
+									'id', r.rival_id,
+									'name', q.username,
+									'character_id', q.avatar_character_id,
+									'color', q.avatar_color,
+									'level', level_for_exp(coalesce(q.exp, 0))
+								)
+							end
 						)
 						from combat_results r
 						left join player_profiles p on p.user_id = r.user_id
+						left join player_profiles q on q.user_id = r.rival_id
 						where r.location_id is not null
 						order by r.fought_at desc
 						limit least(greatest(coalesce(p_limit, 10), 1), 10);

@@ -311,12 +311,10 @@
 			"close": "Close the fights",
 			"empty": "No fight has finished yet.",
 			"anonymous": "Somebody",
-			"captured": "took",
-			"outcome": {
-				"win": "won at",
-				"lose": "lost at",
-				"draw": "drew at"
-			}
+			"house": "The house team",
+			"beat": "beat",
+			"drew": "drew",
+			"captured": "took"
 		},
 		"previousFighter": "Previous fighter",
 		"nextFighter": "Next fighter",
