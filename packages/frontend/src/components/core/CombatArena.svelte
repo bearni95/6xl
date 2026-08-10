@@ -8,7 +8,7 @@
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
-	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
+	import TownPlate from '$components/core/TownPlate.svelte';
 	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
 	import { combatColorHex } from '$utils/color/combat-color';
 	import { ORDER_ICONS } from '$utils/color/traits';
@@ -1602,31 +1602,11 @@
 								level={location.holder.level}
 							/>
 						{/if}
-						<!-- How far the town has been taken, on a cell of its own under the two: it is
-						     about both of them at once — the wins this player has banked against the
-						     side sitting there, and the bar the town's own turnover sets — so it is
-						     read across the whole head rather than tucked into either column. It is
-						     also the one thing here that is a picture of a quantity, and a bar is worth
-						     the full width it is given.
-						     Off the plate for that reason, which is why it brings the plate's own
-						     surface with it: TownChallenge draws no ground of its own (it is normally
-						     already standing on a pin's), so the flush plate is what it is laid on
-						     here, butting into the two cells above as one block of chrome.
-						     `col-span-2` only where there are two columns to span — in a one-column
-						     grid it would open an implicit second one and pull the head off centre. -->
-						{#if location?.challenge}
-							<div
-								class={classNames(PLATE_FLUSH_CLASSES, location.holder && 'col-span-2')}
-							>
-								<TownChallenge
-									siege={location.challenge.siege}
-									button={location.challenge.button}
-									unlocksAt={location.challenge.unlocksAt}
-									onUnlock={location.challenge.onUnlock}
-								/>
-							</div>
-						{/if}
 					</div>
+					<!-- The standing used to be a third cell across the foot of this grid. It is on
+					     the banner below now, in the middle of the score, which is where the fight is
+					     counted: what this one fight is one of belongs with how this one fight is
+					     going, not with the two things it is about. -->
 					{#if state && !state.outcome}
 					<!-- The score, at the head of the fight it is a score of, under the town being
 					     fought over.
@@ -1637,9 +1617,10 @@
 					     cells of a board rather than a length being filled, which is what the
 					     thing being counted is. Each side's three sit over the half of the board
 					     that side holds — the rivals' to the left, the player's to the right.
-					     Between them, the turn, which is the other thing a fight is counted
-					     in and belongs between the two counts rather than beside one of them.
-					     Both counts grow outwards from that turn, so the rivals' three are laid
+					     Between them, how far the town itself has been taken, which is the count
+					     this fight is one of and belongs between the two counts of the fight
+					     rather than beside one of them.
+					     Both counts grow outwards from that middle, so the rivals' three are laid
 					     out backwards and fill from the right: it is the same count read either
 					     way round, and the two then mirror each other across the middle rather
 					     than both running left to right. Both are drawn white — the ground down
@@ -1663,7 +1644,7 @@
 						     rather than a box with two marks beside it. Each keeps its square corner
 						     against the count nearest it and slopes away from there, the rivals'
 						     square corner at the top right and the player's at the top left, so the
-						     two lean outwards from the turn exactly as the counts do.
+						     two lean outwards from the middle exactly as the counts do.
 						     Drawn as a border rather than as a shape, which is what a triangle is in
 						     CSS: a box with no size at all, one side of it coloured and the side it
 						     leans on transparent, so the coloured side is cut off at 45°. Both legs
@@ -1714,10 +1695,21 @@
 									</span>
 								{/each}
 							</div>
-							<!-- The turn, and over it the way out of the fight — one slot in the middle
-							     of the banner holding both, because they are the same place read at two
-							     moments: what the fight is on now, and the one thing that can be done
-							     about the fight as a whole.
+							<!-- How far the town has been taken, and over it the way out of the fight —
+							     one slot in the middle of the banner holding both, because they are the
+							     same place read at two moments: what this fight is one of, and the one
+							     thing that can be done about the fight as a whole.
+							     The standing is what stands there now, where the turn number used to.
+							     A turn is a thing the board says by itself — whose orders are open and
+							     what has just been played out — and counting it added a figure to the
+							     middle of the score that nothing on the screen was waiting for. What a
+							     player actually wants over the board is what winning this one is worth:
+							     the wins banked against the wins the town costs, which is the only
+							     reading here that reaches past the fight in front of them. It fills the
+							     slot end to end (TownChallenge's bar is `w-full`, and with no control
+							     beside it takes the whole row), so the picture runs the full width the
+							     wings cut in to, and the slot keeps the width it was given for the
+							     button — the banner cannot change shape under the hand reaching for it.
 							     The way out is the only one there is: a battle is ended by a result,
 							     never by walking off, so giving it up reports the loss it is and closes
 							     the arena exactly as being wiped out would. Between turns only — a turn
@@ -1731,21 +1723,25 @@
 							     room of its own pushed both counts outwards the moment the pointer
 							     touched the banner, so the whole thing changed shape under the hand
 							     reaching for it. The turn goes invisible as the button arrives — the
-							     button is see-through, and the two of them stacked would be one line of
-							     type over another.
+							     button is see-through, and the two of them stacked would be a line of type
+							     over a bar with its own figures written across it.
 							     Reaching for it is a thing a pointer does, so this is the pointer's copy
-							     and it is scoped to `sm:` outright: below that the slot is the turn and
-							     nothing else — a touch screen has no hover to hide a control behind, and
-							     the emulated one a tap leaves behind would swap the turn for a button and
-							     leave it swapped. The phone is given the same control as a row of its
+							     and it is scoped to `sm:` outright: below that the slot is the standing
+							     and nothing else — a touch screen has no hover to hide a control behind,
+							     and the emulated one a tap leaves behind would swap the bar for a button
+							     and leave it swapped. The phone is given the same control as a row of its
 							     own, at the foot of the orders (above), where it can be seen to be
 							     there. -->
 							<div class="relative flex w-28 items-center justify-center">
-								<span
-									class="font-mono text-lg font-bold tabular-nums opacity-70 sm:group-hover:invisible"
-								>
-									{$_('combat.turn', { values: { turn: state.turn } })}
-								</span>
+								{#if location?.challenge}
+									<TownChallenge
+										siege={location.challenge.siege}
+										button={location.challenge.button}
+										unlocksAt={location.challenge.unlocksAt}
+										onUnlock={location.challenge.onUnlock}
+										classes="w-full sm:group-hover:invisible"
+									/>
+								{/if}
 								<button
 									type="button"
 									class="btn absolute inset-0 hidden btn-ghost btn-sm text-error sm:group-hover:inline-flex"
