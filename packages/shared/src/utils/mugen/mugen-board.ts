@@ -188,17 +188,24 @@ const DEFAULTS = {
 // both halves and in the column between them — what a cell belongs to is said by the
 // lattice ruled over it and by what stands on it, and never by the earth.
 //
-// Only the sheet's **top-left** tile is taken — the plain grass, the one square on a page
-// of flowers, sand, water and shrubs that says nothing but ground — and it is cut out of
-// the sheet as it loads rather than pointed at inside it: a sub-rectangle of a larger
-// bitmap has no edges of its own to wrap at, and a tile that cannot wrap is one tile with
-// an empty cell around it.
+// What is taken is the sheet's **first row**, which is where its plain grass is: seven
+// squares that differ only in where the blades fall, on a page that goes on to flowers,
+// sand, water and shrubs. One of the seven is drawn into each square of the ground, picked
+// at random, so a field of a hundred and eight of them is grass rather than one stamp
+// repeated a hundred and eight times.
 
-/** The vendored sheet the ground tile is cut from. */
+/** The vendored sheet the ground tiles are cut from. */
 const GROUND_TILE_SHEET = '/assets/tiles/j-treecko252/assorted-ground.png';
 
 /** The sheet's pitch: it is ruled into squares this size from its top-left corner. */
 const GROUND_TILE_PX = 16;
+
+/**
+ * How many of the first row's tiles are plain grass, counted from the left: the seven the
+ * ground may be laid with. The eighth is where the row starts turning into the dithered
+ * ground that borders on something else, and is not one square of grass among others.
+ */
+const GROUND_TILE_CHOICES = 7;
 
 /**
  * How many of those tiles a cell is laid with, across and down — nine to a cell, three
@@ -884,10 +891,11 @@ export class MugenBoard {
 	private cellPaint = new Map<string, Graphics>();
 	/** Loaded aura frame textures, keyed by aura color name. */
 	private auraTextures = new Map<string, Texture[]>();
-	/** The single grass tile every cell is laid with, cut from the sheet on the way in
-	 * ({@link loadGround}). Held so it can be freed with the board: it is built here rather
-	 * than fetched through `Assets`, so nothing else is keeping it. */
-	private groundTexture: Texture | null = null;
+	/** The grass tiles a square of ground may be laid with, cut from the sheet's first row
+	 * on the way in ({@link loadGround}) — empty if it could not be had. Held so they can be
+	 * freed with the board: they are built here rather than fetched through `Assets`, so
+	 * nothing else is keeping them. */
+	private groundTextures: Texture[] = [];
 	private iconTextures = new Map<string, Texture>();
 	/**
 	 * A cycle's crown offset in the artwork's own pixels ({@link crownOffset}), keyed by
@@ -1005,7 +1013,7 @@ export class MugenBoard {
 		// The board is ruled once its ground is in hand, the grass being drawn with the
 		// cells rather than laid over them afterwards. Nothing is on screen to wait for it:
 		// the canvas is hidden until the whole board is standing either way.
-		this.groundTexture = await ground;
+		this.groundTextures = await ground;
 		if (this.destroyed) return;
 
 		// One rectangular board: cells left of centre take the left leader's colour, right
@@ -1165,10 +1173,10 @@ export class MugenBoard {
 		// board built again builds its own.
 		this.sparkContext?.destroy();
 		this.sparkContext = null;
-		// The grass goes the same way, source and all: the tilings that drew it went with the
-		// stage, and this board cut the tile for itself out of the sheet.
-		this.groundTexture?.destroy(true);
-		this.groundTexture = null;
+		// The grass goes the same way, sources and all: the sprites that drew it went with the
+		// stage, and this board cut its tiles for itself out of the sheet.
+		for (const tile of this.groundTextures) tile.destroy(true);
+		this.groundTextures = [];
 		this.cellPaint.clear();
 		this.crownOffsets.clear();
 	}
@@ -1268,9 +1276,9 @@ export class MugenBoard {
 	 * guard rings and the orders stand on a field that is there to be seen. The fill's alpha
 	 * stays where the line's was, which is how the colour comes back if it is ever wanted.
 	 *
-	 * What every cell *does* have under it is ground: each is laid with the grass tile
+	 * What every cell *does* have under it is ground: each is laid with grass
 	 * ({@link layGround}) and ruled into that ground's own squares ({@link ruleGround}),
-	 * both below the lattice so the cells' red stays on top of them. A board whose tile
+	 * both below the lattice so the cells' red stays on top of them. A board whose tiles
 	 * could not be fetched keeps the ruling and loses the grass — the subdivision is the
 	 * board's and not the artwork's.
 	 *
@@ -1323,8 +1331,8 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Lay the grass over the cell at [q, r]: the tile drawn once into each of the cell's
-	 * nine squares, filling it corner to corner and no further.
+	 * Lay the grass over the cell at [q, r]: one of the sheet's grass tiles drawn into each
+	 * of the cell's nine squares, filling it corner to corner and no further.
 	 *
 	 * Every cell of the field takes it, whichever half it belongs to: the grass is the
 	 * ground the fight is fought on and not a marking, so it stops at the outer edge of the
@@ -1338,11 +1346,18 @@ export class MugenBoard {
 	 * measured the thirds again separately, two answers to where a tile ends that agree only
 	 * as long as the arithmetic does. Nine sprites is one answer. It costs nine quads a cell
 	 * — a hundred and eight on a board — which is nothing beside one MUGEN fighter.
+	 *
+	 * **Which** of the seven grass tiles a square gets is drawn at random and kept nowhere:
+	 * they are seven ways of saying grass, so no square wants a particular one and nothing
+	 * later reads back what it was given. A board is built once when the arena opens and
+	 * torn down when it closes, so a fight is fought on one field throughout; the next one
+	 * is somewhere else in the same meadow.
 	 */
 	private layGround(q: number, r: number): void {
-		if (!this.app || !this.groundTexture) return;
+		if (!this.app || this.groundTextures.length === 0) return;
 		for (const square of this.groundSquares(q, r)) {
-			const grass = new Sprite(this.groundTexture);
+			const tile = this.groundTextures[Math.floor(Math.random() * this.groundTextures.length)];
+			const grass = new Sprite(tile);
 			grass.position.set(square.x, square.y);
 			// The tile is 16px of artwork stretched over a ninth of a cell — sampled
 			// `nearest`, so what that magnifies is the artwork's own pixels.
@@ -1379,45 +1394,53 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Fetch the ground sheet and cut its top-left tile out as a texture of its own.
+	 * Fetch the ground sheet and cut the grass out of its first row: one texture per tile,
+	 * in the order they lie on the sheet, {@link GROUND_TILE_CHOICES} of them.
 	 *
-	 * `createImageBitmap` takes the crop rectangle itself, so the tile is the whole of the
-	 * bitmap that reaches the GPU and the rest of the sheet is never uploaded. Pointing at
-	 * the same 16 pixels *inside* the sheet would draw the same tile most of the time and
-	 * the flowers next to it at the edges: a magnified sample near the boundary of a frame
-	 * reaches for the texels beyond it, and on a page of tiles those belong to another tile.
-	 * Cut out, there is nothing beyond it to reach. Sampled `nearest`, this being pixel art
-	 * drawn at several times its own size — the one place on this board where linear
-	 * filtering would turn artwork into a smear — and set to wrap, so that a sample which
-	 * does run a hair past the edge comes back on the tile's other side, which is grass,
-	 * rather than smearing its last column.
+	 * One fetch and one blob, cut as many times as there are tiles — the sheet is a single
+	 * small file, and asking for it once per tile would be seven requests for seven
+	 * rectangles of the same picture.
+	 *
+	 * `createImageBitmap` takes the crop rectangle itself, so a tile is the whole of the
+	 * bitmap that reaches the GPU and no other part of the sheet is uploaded with it.
+	 * Pointing at the same 16 pixels *inside* the sheet would draw the right tile most of
+	 * the time and its neighbour at the edges: a magnified sample near the boundary of a
+	 * frame reaches for the texels beyond it, and on a page of tiles those belong to the
+	 * next one. Cut out, there is nothing beyond it to reach. Sampled `nearest`, this being
+	 * pixel art drawn at several times its own size — the one place on this board where
+	 * linear filtering would turn artwork into a smear — and set to wrap, so that a sample
+	 * which does run a hair past the edge comes back on the tile's other side, which is
+	 * grass, rather than smearing its last column.
 	 *
 	 * Built by hand rather than through `Assets`, which is keyed on what it is given and
-	 * would hold a cache entry per board for a bitmap no other board can name. Nothing else
-	 * holds it, so the board frees it on the way out ({@link destroy}).
+	 * would hold a cache entry per board for bitmaps no other board can name. Nothing else
+	 * holds them, so the board frees them on the way out ({@link destroy}).
 	 *
-	 * Resolves to null if it cannot be had — a board with no grass on it, which is a board.
+	 * Resolves to an empty list if the sheet cannot be had — a board with no grass on it,
+	 * which is a board.
 	 */
-	private async loadGround(): Promise<Texture | null> {
+	private async loadGround(): Promise<Texture[]> {
 		try {
 			const response = await fetch(GROUND_TILE_SHEET);
-			if (!response.ok) return null;
-			const tile = await createImageBitmap(
-				await response.blob(),
-				0,
-				0,
-				GROUND_TILE_PX,
-				GROUND_TILE_PX
+			if (!response.ok) return [];
+			const sheet = await response.blob();
+			const tiles = await Promise.all(
+				Array.from({ length: GROUND_TILE_CHOICES }, (_, index) =>
+					createImageBitmap(sheet, index * GROUND_TILE_PX, 0, GROUND_TILE_PX, GROUND_TILE_PX)
+				)
 			);
-			return new Texture({
-				source: new ImageSource({
-					resource: tile,
-					scaleMode: 'nearest',
-					addressMode: 'repeat'
-				})
-			});
+			return tiles.map(
+				(tile) =>
+					new Texture({
+						source: new ImageSource({
+							resource: tile,
+							scaleMode: 'nearest',
+							addressMode: 'repeat'
+						})
+					})
+			);
 		} catch {
-			return null;
+			return [];
 		}
 	}
 
