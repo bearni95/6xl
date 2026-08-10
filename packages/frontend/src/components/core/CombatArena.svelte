@@ -1301,6 +1301,19 @@
 			     nowhere to go: the turn commits itself and the panel closes to input, faded but
 			     still showing the fighter it was left on, since the plan is the thing being
 			     played out and taking it off the screen at that moment is exactly wrong.
+			     It takes whatever the board leaves and not a fixed height of its own: the canvas
+			     is `min(100vw, 100dvh × aspect)` and on a phone the width is what runs out, so
+			     what is under the board is however much of the view a board that shape did not
+			     need. The panel is the flex item that grows into it, the head and the board being
+			     sized by what is in them, and the character is drawn at the full height of what
+			     is left — so a tall phone gives the fighter a tall picture and a short one gives
+			     it a short one, with nothing between the foot of the board and the foot of the
+			     screen going spare. `min-h-0` so that on a view with nothing left over the panel
+			     yields rather than pushing the board off the bottom.
+			     The row of five is then laid *over* the foot of that picture rather than under
+			     it, which is what lets the picture have the whole band: the buttons are what has
+			     to be reached, so they take the end of the screen the thumb is at, and the
+			     character stands behind them.
 			     On its own fill: it is the foot of the sheet, where the page is graded down to
 			     nine tenths and the town is faintly through it, so the orders read off their own
 			     ground rather than off whatever is under there.
@@ -1308,11 +1321,11 @@
 			     spread end to end (above), so a block that arrived with the fight would have let
 			     the board settle at the bottom of the view first and then jump up as the orders
 			     came in. An empty one holds the place they are coming to. -->
-			<div class="flex w-full flex-col gap-2 p-3 sm:hidden">
+			<div class="min-h-0 w-full flex-1 p-3 sm:hidden">
 				{#if shownRow}
 					{@const row = shownRow}
 					<div
-						class={classNames('flex flex-col gap-2 rounded-box bg-base-100/80 p-2 shadow-xl', {
+						class={classNames('relative h-full rounded-box bg-base-100/80 p-2 shadow-xl', {
 							'pointer-events-none opacity-50': panelLocked
 						})}
 					>
@@ -1320,7 +1333,7 @@
 						     standing there, idling, as they are on the board. No veil — the reveal is a
 						     thing a card does when a player first meets it, and by here they are three
 						     fighters in a battle already under way. -->
-						<div class="h-20 w-full">
+						<div class="h-full w-full">
 							<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
 						</div>
 						<!-- Everything that can be pressed, on one row of five squares: the way back
@@ -1341,7 +1354,7 @@
 						     button's face. So the tile stays and the states are said over it — the chosen
 						     order in the fighter's own colour, the rest dark, and one out of reach faded
 						     rather than dropped, as the board's own column greys it. -->
-						<div class="grid grid-cols-5 gap-2">
+						<div class="absolute inset-x-2 bottom-2 grid grid-cols-5 gap-2">
 							<button
 								type="button"
 								class="col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
@@ -1385,28 +1398,6 @@
 							</button>
 						</div>
 					</div>
-				{/if}
-				<!-- Giving up, which on a phone exists nowhere else. On the banner it is reached
-				     for — hidden under the turn until the pointer is on the plate — and a phone has
-				     no pointer to put there, so that control was simply unreachable on a touch
-				     screen: the one thing a player can do about the fight as a whole could not be
-				     done. It is written out here instead, the last row of the column that is this
-				     screen's way of playing, under the orders because it is what is left when none
-				     of them is worth giving.
-				     The same button in every other respect — it reports the loss it is and closes
-				     the arena exactly as being wiped out would, and it is offered between turns
-				     only, a turn already being carried out settling itself. Off once the fight is
-				     decided: there is nothing left to give up, and the result panel's Close is the
-				     way out of a fight that is over. -->
-				{#if state && !state.outcome}
-					<button
-						type="button"
-						class="btn w-full border-0 bg-base-100/80 text-error shadow-xl"
-						disabled={state.phase !== 'planning'}
-						on:click={() => controller?.concede()}
-					>
-						{$_('combat.concede')}
-					</button>
 				{/if}
 			</div>
 			<!-- The head of the fight: what it is over, and then how it stands. Both are read
@@ -1594,6 +1585,29 @@
 							aria-hidden="true"
 						></span>
 					</div>
+					<!-- Giving up, which on a phone is here and nowhere else. On the banner it is
+					     reached for — hidden under the turn until the pointer is on the plate — and a
+					     phone has no pointer to put there, so that control needs a place of its own on
+					     a touch screen. It is the head's last row: the head is what is true of the
+					     fight as a whole, which is exactly what giving it up is about, and it is the
+					     one control on this screen that is not part of playing — so it stands at the
+					     end of the view the thumb is *not* resting at, away from the orders, where it
+					     cannot be taken for one of them.
+					     The same button in every other respect — it reports the loss it is and closes
+					     the arena exactly as being wiped out would, and it is offered between turns
+					     only, a turn already being carried out settling itself. Off once the fight is
+					     decided: there is nothing left to give up, and the result panel's Close is the
+					     way out of a fight that is over.
+					     Its own pointer: the head is a reading laid over the board and takes no taps,
+					     and this is the one thing in it that is pressed. -->
+					<button
+						type="button"
+						class="pointer-events-auto btn w-full border-0 bg-base-100/80 text-error shadow-xl sm:hidden"
+						disabled={state.phase !== 'planning'}
+						on:click={() => controller?.concede()}
+					>
+						{$_('combat.concede')}
+					</button>
 					{/if}
 				</div>
 			</div>
