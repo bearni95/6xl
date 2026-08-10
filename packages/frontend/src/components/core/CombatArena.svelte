@@ -820,47 +820,79 @@
 		// last closed turn wrote back is what this fight resumes from — and it is the same
 		// board `placement` stood the fighters up on.
 		controller = new CombatController(seeds, placement);
-		savedTurn = 0;
-		savingTurn = 0;
+		savedStamp = '';
+		savingStamp = '';
 		saveFailure = null;
 		unsubscribe = controller.subscribe((next) => (state = next));
 		if (board) controller.attachBoard(board);
 	}
 
-	// The turn whose board the server has taken, so each is written back once.
-	let savedTurn = 0;
-	// The turn being written back right now, or 0 while nothing is in flight — both the
-	// re-entry guard (the store emits several times a turn) and what the button reads.
-	let savingTurn = 0;
+	/**
+	 * Which board is on file, as `turn:stage`.
+	 *
+	 * A turn is written back **twice** — as it opens with nobody ordered, and again the
+	 * moment its orders are complete, which is the turn itself and is what the animation
+	 * is about to play out — so the turn number alone does not say which of the two the
+	 * server is holding. The stage does.
+	 */
+	const boardStamp = (current: CombatState): string =>
+		`${current.turn}:${current.ready ? 'ordered' : 'open'}`;
+
+	// The board the server has taken, so each is written back once.
+	let savedStamp = '';
+	// The board being written back right now, or '' while nothing is in flight — the
+	// re-entry guard (the store emits several times a turn), the one thing that keeps the
+	// two writes of a turn from going out at once, and what the button reads.
+	let savingStamp = '';
 	// Why the server would not take the last turn, or null. While it is set the fight
 	// holds: the next turn cannot be committed on top of one that was never recorded.
 	let saveFailure: string | null = null;
 
-	// Write the board back as each turn closes — and once as the fight opens, so a
-	// battle left before a single order is given still comes back to this board rather
-	// than to a freshly rolled one. `state` and `controller` are both named so Svelte's
-	// legacy reactive tracking sees them as dependencies.
-	$: void saveBoard(state, controller);
+	// Write the board back as each turn opens *and* as its orders close it, so a battle
+	// left before a single order is given comes back to this board rather than to a
+	// freshly rolled one, and a battle left the instant the orders were given comes back
+	// with those orders on it. `savingStamp` is named alongside `state` and `controller`
+	// so Svelte's legacy reactive tracking sees all three as dependencies: it is what
+	// re-runs this when a write lands, which is when the second of a turn's two boards
+	// gets its turn to go out.
+	$: void saveBoard(state, controller, savingStamp);
 
 	async function saveBoard(
 		current: CombatState | null,
-		ctrl: CombatController | null
+		ctrl: CombatController | null,
+		inFlight: string
 	): Promise<void> {
 		// Only between turns: mid-resolution the board is half-played, and a decided
 		// fight is about to be reported, which deletes the battle outright.
 		if (!current || !ctrl || current.phase !== 'planning' || current.outcome) return;
-		if (current.turn === savedTurn || current.turn === savingTurn) return;
-		await writeBoard(ctrl, current.turn);
+		// One write at a time. The board that was skipped for this is not lost: landing
+		// clears the stamp, which re-runs this with whatever the fight has moved on to.
+		if (inFlight) return;
+		// A refusal is answered by the player, not by this. Landing clears the stamp either
+		// way, so a write that came back refused would otherwise be sent again on the spot,
+		// and again, for as long as the server went on saying no.
+		if (saveFailure) return;
+		const stamp = boardStamp(current);
+		if (stamp === savedStamp) return;
+		await writeBoard(ctrl, stamp);
 	}
 
 	/**
-	 * Hand the board as this turn opens to the player's battle row, and only call the
-	 * turn before it closed once the server has it.
+	 * Hand the board to the player's battle row, and let the fight go on only once the
+	 * server has it.
 	 *
 	 * A turn is not over when it has been played out on screen — it is over when it has
-	 * been recorded, because the fight lives in that row and not in this tab. So a write
-	 * that fails is not shrugged off: the fight holds where it is, says so, and offers
-	 * the write again. Playing on over a refused save would build turns on top of a
+	 * been recorded, because the fight lives in that row and not in this tab. Which is
+	 * why the turn is written the moment it is *decided* rather than when it has finished
+	 * playing: the orders are the turn, everything after them is the same turn being
+	 * shown, and the animation is the one part of it a reload has no business waiting on.
+	 * So the write goes out first and the volley plays over it — a fight left, reloaded or
+	 * picked up on another device mid-volley comes back to a turn with its orders on it,
+	 * which plays itself out and hands the next one over, rather than to a turn whose
+	 * orders were never given.
+	 *
+	 * A write that fails is not shrugged off: the fight holds where it is, says so, and
+	 * offers the write again. Playing on over a refused save would build turns on top of a
 	 * board the server never took, and every one of them would be gone on the next
 	 * reload — which is exactly the thing being prevented.
 	 *
@@ -868,19 +900,19 @@
 	 * row the player has open (its primary key is the player), so a fight has exactly one
 	 * record of itself from the moment it is opened to the moment it is reported.
 	 */
-	async function writeBoard(ctrl: CombatController, turn: number): Promise<void> {
-		savingTurn = turn;
+	async function writeBoard(ctrl: CombatController, stamp: string): Promise<void> {
+		savingStamp = stamp;
 		saveFailure = null;
 		try {
 			await battleService.save(ctrl.snapshot());
-			savedTurn = turn;
+			savedStamp = stamp;
 		} catch (error) {
 			// The whole refusal to the console — Postgres' code, detail and hint — and its
 			// sentence to the player, as with a refused report.
 			console.error('Battle save refused', error);
 			saveFailure = refusal(error, $_('combat.saveRefused'));
 		} finally {
-			savingTurn = 0;
+			savingStamp = '';
 		}
 	}
 
@@ -891,28 +923,37 @@
 	// was a formality over a decision the orders had already made. Ordering the last
 	// fighter is therefore what plays the turn out.
 	//
-	// The board is still written before the turn moves, not after it: `saveBoard` runs
-	// first (it is declared above) and holds `savingTurn` while the write is in flight,
-	// so the fight cannot play on over a turn the server has not taken — the same hold
-	// the button sat under. Every name here is spelled out so Svelte's legacy reactive
-	// tracking sees all four as dependencies, `savingTurn` included: it is what re-runs
-	// this once a save lands.
-	$: commitWhenReady(state, controller, savingTurn, saveFailure);
+	// The ordered board goes out before the turn is played, never after it: `saveBoard`
+	// runs first (it is declared above) and holds `savingStamp` while the write is in
+	// flight, so the volley cannot start over a turn the server has not taken — the same
+	// hold the button sat under. Every name here is spelled out so Svelte's legacy
+	// reactive tracking sees all five as dependencies, `savingStamp` included: it is what
+	// re-runs this once the save lands.
+	//
+	// And never before there is a board to play it on. A turn given here is given by a
+	// player looking at the fight, so the board has long since been standing — but a turn
+	// **resumed** is complete the moment the controller is built, which can be before the
+	// canvas has said it is ready. Played then, the volley would run its full length with
+	// every move going nowhere, and the fight would arrive at the next turn having shown
+	// the player nothing of the one they came back to. So the engine is named here too,
+	// and attaching it is what lets the resumed turn go.
+	$: commitWhenReady(state, controller, board, savingStamp, saveFailure);
 
 	function commitWhenReady(
 		current: CombatState | null,
 		ctrl: CombatController | null,
-		saving: number,
+		engine: MugenBoardEngine | null,
+		saving: string,
 		failure: string | null
 	): void {
-		if (!current || !ctrl || !current.ready || saving !== 0 || failure) return;
+		if (!current || !ctrl || !engine || !current.ready || saving || failure) return;
 		ctrl.commit();
 	}
 
-	/** Write the same turn back again, after a refusal. */
+	/** Write the same board back again, after a refusal. */
 	function retrySave(): void {
-		if (!controller || !state || savingTurn) return;
-		void writeBoard(controller, state.turn);
+		if (!controller || !state || savingStamp) return;
+		void writeBoard(controller, boardStamp(state));
 	}
 
 	// The controller whose result has already been reported, so the award fires
@@ -1340,10 +1381,10 @@
 					</div>
 				{/if}
 				{#if state && !state.outcome && saveFailure}
-					<!-- The turn was played out and the server would not take it. The fight holds
-					     here rather than playing on over a turn nothing has recorded: everything
-					     after it would be built on a board that was never written, and gone the
-					     moment this page is reloaded.
+					<!-- The turn was given and the server would not take it. The fight holds here
+					     rather than playing it out over a turn nothing has recorded: the volley and
+					     everything after it would be built on a board that was never written, and
+					     gone the moment this page is reloaded.
 					     On the board like the rest of it, and in the middle like the end of the
 					     fight, which it cannot be up at the same time as: both are the fight stopped
 					     on something the player has to answer, and the middle of the board is where
@@ -1359,10 +1400,10 @@
 								<button
 									type="button"
 									class="btn btn-primary btn-block"
-									disabled={savingTurn !== 0}
+									disabled={savingStamp !== ''}
 									on:click={retrySave}
 								>
-									{#if savingTurn}
+									{#if savingStamp}
 										<span class="loading loading-spinner loading-xs"></span>
 										{$_('combat.saving', { values: { turn: state.turn } })}
 									{:else}

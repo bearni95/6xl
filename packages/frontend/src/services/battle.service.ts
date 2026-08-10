@@ -9,8 +9,10 @@ import type { MunicipalityChallenge } from '$types/territory.type';
  * The player's open battle: the one fight they may have running at a time.
  *
  * A fight lives in Supabase, not in this tab. {@link start} opens it (claiming the
- * town's challenge in the same transaction), {@link save} writes the
- * board back as each turn closes, and reporting the result through
+ * town's challenge in the same transaction), {@link save} writes the board back as each
+ * turn opens and again as its orders are given — before the volley that carries them out,
+ * so a turn is on file from the moment it is decided rather than from the moment it has
+ * finished playing — and reporting the result through
  * `authService.reportCombat` is what clears it. So {@link open} is the answer to
  * "is this player in a fight, and which one" — asked once on load, which is how
  * they are put back into it after closing the arena, reloading, or coming back on
@@ -108,13 +110,17 @@ class BattleService {
 	}
 
 	/**
-	 * Write the board back, as each turn closes. Throws if the server would not take it.
+	 * Write the board back, as each turn opens and again as its orders close it. Throws if
+	 * the server would not take it.
 	 *
 	 * This is what makes a turn a turn: a fight lives in that row, not in the tab playing
-	 * it, so a turn that has been played out but not written back has not happened as far
-	 * as anything outside this browser is concerned. The arena therefore waits on this and
-	 * holds the fight where it is if it fails, rather than stacking further turns on a
-	 * board the server never took — every one of which would be gone on the next reload.
+	 * it, so a turn that has been given but not written back has not happened as far as
+	 * anything outside this browser is concerned. Which is why the second of those two
+	 * writes goes out on the orders rather than on the volley that shows them: the orders
+	 * are the turn, and the animation is only that turn being watched. The arena therefore
+	 * waits on this before it plays a turn out, and holds the fight where it is if it
+	 * fails, rather than stacking further turns on a board the server never took — every
+	 * one of which would be gone on the next reload.
 	 *
 	 * It updates; it never inserts. `save_battle` writes the one row the caller has open —
 	 * the table's primary key is the player — so a fight has exactly one record of itself

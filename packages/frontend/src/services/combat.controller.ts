@@ -472,14 +472,19 @@ export class CombatController {
 
 	/**
 	 * The fight as it stands between turns, small enough to be written back to the
-	 * player's open battle every time a turn closes (see `battle.type`).
+	 * player's open battle twice a turn — as it opens, and again as the orders that close
+	 * it are given (see `battle.type`).
 	 *
 	 * Only what the fight cannot be rebuilt without is in here. Who is fighting comes
 	 * back from the line-up the arena fields, and everything derived — the score, whose
 	 * lane is settled, who may still shoot, the auras — falls out of these flags again
 	 * on the way in. The rivals' orders are included because they are decided *before*
 	 * the player gives theirs: a resumed fight that re-rolled them would be a fresh
-	 * blind guess, which is not the same turn.
+	 * blind guess, which is not the same turn. The player's own are in here for what
+	 * turns out to be the same reason — a turn is written down the moment it is decided
+	 * and before it is played out, so a fight picked up mid-volley is picked up on the
+	 * turn that was given, with both sides' orders standing, and plays it out from there
+	 * ({@link restore} hands it straight back to the arena as a ready one).
 	 */
 	snapshot(): BattleBoardSnapshot {
 		const lines: Record<FighterSide, Fighter[]> = { info: this.players(), error: this.rivals() };
@@ -535,7 +540,12 @@ export class CombatController {
 
 		this.turn = board.turn;
 		this.phase = 'planning';
-		this.status = `Turn ${this.turn} — give your orders.`;
+		// A board with every order already on it is a turn that was given and written down
+		// before it was played out: the arena picks that one straight up and plays it, so
+		// asking for orders over it would be asking for something already handed in.
+		this.status = this.isReady()
+			? `Turn ${this.turn} — orders are in.`
+			: `Turn ${this.turn} — give your orders.`;
 		return true;
 	}
 

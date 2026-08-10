@@ -106,6 +106,44 @@ describe('CombatController — leaving a fight and coming back to it', () => {
 		expect(resumedOrders).toEqual(rivalOrders);
 	}, 120000);
 
+	it('comes back on the turn that was given, orders and all, ready to play it out', async () => {
+		const controller = new CombatController(seeds(COLORS));
+		await playTurns(controller, 1);
+
+		// The turn now open, ordered but not yet carried out — which is the board the arena
+		// writes the moment the last fighter is given something to do, before a single blow
+		// is thrown. Everything after that write is the same turn being watched.
+		for (const fighter of get(controller).fighters) {
+			if (fighter.side !== 'info' || fighter.down) continue;
+			controller.setAction(fighter.id, fighter.canShoot ? 'shoot' : 'charge');
+		}
+		const given = get(controller);
+		expect(given.turn).toBeGreaterThan(1);
+		expect(given.ready).toBe(true);
+		const snapshot = controller.snapshot();
+
+		const resumed = new CombatController(seeds(COLORS), snapshot);
+		const after = get(resumed);
+		const orders = (state: CombatState) =>
+			state.fighters.filter((fighter) => fighter.side === 'info').map((fighter) => fighter.action);
+
+		expect(after.turn).toBe(given.turn);
+		expect(after.phase).toBe('planning');
+		// Both sides' orders come back standing, so the fight is ready on sight: the arena
+		// commits a ready turn the moment it sees one, which is what makes a fight picked up
+		// mid-volley play that turn out rather than ask for it a second time.
+		expect(orders(after)).toEqual(orders(given));
+		expect(after.ready).toBe(true);
+
+		resumed.commit();
+		while (get(resumed).phase === 'resolving') {
+			await new Promise((resolve) => setTimeout(resolve, 20));
+		}
+		// And it lands where the turn would have left it: the next turn, or the end of the
+		// fight if that turn settled it.
+		expect(get(resumed).turn > given.turn || !!get(resumed).outcome).toBe(true);
+	}, 120000);
+
 	it('survives a round trip through JSON, which is how it is stored', async () => {
 		const controller = new CombatController(seeds(COLORS));
 		await playTurns(controller, 5);
@@ -286,16 +324,14 @@ describe('CombatController — leaving a fight and coming back to it', () => {
 		const seeded = [
 			...place(['og-0', 'og-1', 'og-2'], RIVAL_CELLS, 'error'),
 			...place(team, PLAYER_CELLS, 'info')
-		].map(
-			(entry, index): FighterSeed => ({
-				id: `${entry.side}:${entry.spawnId}`,
-				spawnId: entry.spawnId,
-				name: `f${index}`,
-				side: entry.side,
-				color: 'red',
-				moves: []
-			})
-		);
+		].map((entry, index): FighterSeed => ({
+			id: `${entry.side}:${entry.spawnId}`,
+			spawnId: entry.spawnId,
+			name: `f${index}`,
+			side: entry.side,
+			color: 'red',
+			moves: []
+		}));
 
 		// A team read back off its own board must be the team that was put on it. Read in
 		// the wrong order it silently moves every fighter into somebody else's duel — and,
