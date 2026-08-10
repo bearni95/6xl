@@ -14,10 +14,11 @@
 	// column up in a document.
 	//
 	// The order is the pin's, and it is the order the blocks are read in: the side holding the
-	// place, the plate saying what the place is and whose it is, and what the town has waiting.
-	// Which of them appear is decided nowhere here — a pin carries the side only where the
-	// caller gave it one, a holder only where somebody holds the town, a standing only where
-	// there is something to take.
+	// place, the plate saying what the place is, and what the town has waiting. Which of them
+	// appear is decided nowhere here — a pin carries the side only where the caller gave it
+	// one, and a standing only where there is something to take. Whose the town is is not one
+	// of the blocks: the band over the side wears the holder's face (see TeamLineup's `owner`),
+	// and the plate no longer prints a row of it under them (see TownPlate).
 	//
 	// One thing is arranged differently from the mark on the terrain, and only where the town
 	// has both: the standing comes off the plate and stands as a row of its own directly under
@@ -71,11 +72,11 @@
 			town still fielding the three its own seed rolled, so its banner flies the map's grey
 			rather than the colour that roll happened to give the lead — the same rule the terrain
 			under it is painted by.
-			`owner` is the same fact said the other way round, and it is the very holder the plate
-			under this row names: the face on the banner is whoever is standing here, so a pin
-			says whose these three are twice over — on the band above and in the row below — off
-			one source. A town nobody holds hands over nothing and the band draws the robot, which
-			is what its grey already meant. -->
+			`owner` is the same fact said the other way round, and it is now the only place a pin
+			says it: the face on the banner is whoever is standing here. The plate under this row
+			printed the same face and their username a second time, which is why that row came off
+			it (see TownPlate). A town nobody holds hands over nothing and the band draws the
+			robot, which is what its grey already meant. -->
 		<!-- Keyed on the side itself, so a column that comes to hold three different characters
 			stands three new statues up rather than swapping the pictures inside the ones already
 			there. That is what lets the row arrive: a statue keeps its veil down once its own
@@ -117,20 +118,19 @@
 
 	<!-- Flush, because this is a column and not a point: the plate takes the width it is laid
 		in and squares its corners against what it is stacked with (see TownPlate).
-		Only where there is anything for it to hold: a plate that is not naming the place and
-		has neither an occupant nor a standing to print is a bare band of surface with nothing
-		written on it, which is a mark about a town that says nothing about the town.
+		Only where there is anything for it to hold: a plate that is not naming the place and has
+		no standing to print is a bare band of surface with nothing written on it, which is a
+		mark about a town that says nothing about the town.
 		The standing is the plate's only where it is not already standing under the side: a pin
 		carries it there by default (which is what the arena's plate and the map's own marks
 		draw), and handing it over twice would print the same bar and the same button in two
 		places on one mark. -->
-	{#if named || marker.holder || (marker.challenge && !underTheSide)}
+	{#if named || (marker.challenge && !underTheSide)}
 		<TownPlate
 			iconSvg={marker.iconSvg ?? null}
 			frameClasses={marker.frameClasses ?? null}
 			title={marker.title}
 			subtitle={marker.subtitle}
-			holder={marker.holder}
 			challenge={underTheSide ? null : marker.challenge}
 			{named}
 			flush

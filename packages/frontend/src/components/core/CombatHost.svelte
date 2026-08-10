@@ -20,12 +20,12 @@
 	// The same plate surface the town's card carries, flush: the two are one block of
 	// chrome at the top of the screen rather than two cards that happen to be stacked.
 
-	// What to call them — already worded for a player who never chose a name, exactly as
-	// the plate's own holder row takes it.
+	// What to call them — already worded for a player who never chose a name, by whoever
+	// read the holder row this is built from.
 	export let name: string;
 	// The two halves of the avatar being worn, which are only ever read together — both
 	// null is the initial-letter avatar, drawn off the name beside it. Told not to fall
-	// back to the reader's own team colour, for the reason TownHolder is: a stranger's
+	// back to the reader's own team colour, for the reason a team's banner is: a stranger's
 	// letter printed on the reader's colours says something untrue about that stranger.
 	export let characterId: string | null = null;
 	export let color: SpawnColor | null = null;

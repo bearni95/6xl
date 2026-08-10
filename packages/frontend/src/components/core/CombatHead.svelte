@@ -94,13 +94,13 @@
 		     told which rather than left to be turned round from outside.
 		     Flush: laid into a cell it takes the cell's width and squares its corners, where a
 		     pin's plate settles its own width and rounds them.
-		     Without its holder row, which is the one thing a pin's plate says that this head now
-		     says better: the row is a face and a name squeezed under the place, which is all a pin
-		     has room for, and the cell beside this is the whole account. Said twice, side by side,
-		     the second saying reads as a second player. The plate keeps the row everywhere else —
-		     this is the caller leaving it out, exactly as it leaves out the challenge button. -->
+		     The plate has no holder row to leave out any more — it carried a face and a name
+		     squeezed under the place, which was all a pin had room for, and it came off every
+		     plate in the game (see TownPlate). The cell beside this is the whole account, which is
+		     the same reading given the room it wants. The challenge is still the caller's to leave
+		     out, a fight already under way not being a fight to be started. -->
 		{#if location}
-			<TownPlate {...location} holder={null} challenge={null} flush mirrored />
+			<TownPlate {...location} challenge={null} flush mirrored />
 		{/if}
 		<!-- How far the town itself has been taken, upright on the seam between the two cells: the
 		     count this one fight is one of, standing between the place it is about and the account

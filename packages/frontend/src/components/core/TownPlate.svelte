@@ -23,23 +23,28 @@
 
 <script lang="ts">
 	import classNames from 'classnames';
-	import TownHolder from '$components/core/TownHolder.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
-	import type { MapChallenge, MapMarker } from '$types/map.type';
+	import type { MapChallenge } from '$types/map.type';
 
 	// Everything a mark says about a place, on one surface: the show's glyph on a tile in
-	// the region's colour, the place's name and the show it flies beside it, whose it is
-	// under them, and how far it has been taken under that — what the place is, whose it is,
-	// and what may be done about it, in the order they are read.
+	// the region's colour, the place's name and the show it flies beside it, and how far it
+	// has been taken under them — what the place is and what may be done about it, in the
+	// order they are read.
 	//
 	// The same plate the map's pins carry, drawn wherever a place has to be named away from
 	// the map: the arena names the town a fight is over with it, so the card over the board
 	// is the card that was pressed to get there rather than a second way of saying one town.
 	//
-	// It decides nothing about what it draws. Whether there is a holder to name, whether
-	// there is a standing to count out and whether that standing comes with a control are all
-	// the caller's — the arena hands over a challenge with no button, because a fight already
-	// under way is not a fight to be started.
+	// It does not name whose the place is. A row of the holder's face and username stood
+	// between the head and the standing for a while, on every plate a town was printed on;
+	// the band over the side already carries that face (see TeamLineup's `owner`), so the row
+	// was one player said twice on one mark. Who is standing on a town is said by the side
+	// standing on it.
+	//
+	// It decides nothing else about what it draws either: whether there is a standing to count
+	// out and whether that standing comes with a control are both the caller's — the arena
+	// hands over a challenge with no button, because a fight already under way is not a fight
+	// to be started.
 
 	// The show's glyph, inlined so it paints in the tile's own ink rather than a baked
 	// colour (see inlineIconMarkup). Null is lettering alone: with no colour either, no tile.
@@ -50,7 +55,6 @@
 	export let title: string;
 	// The place's name — the top line, and the one that takes the ink.
 	export let subtitle: string | undefined = undefined;
-	export let holder: MapMarker['holder'] = null;
 	export let challenge: MapChallenge | null = null;
 	// Laid into a column rather than dropped on a point: the plate takes its container's
 	// width instead of finding its own, and squares its corners (see the class lists above).
@@ -58,8 +62,8 @@
 	// Whether the plate says the place's own name. A plate dropped on terrain has to — it is
 	// the only thing naming the point it stands on — but one laid into a column that has just
 	// named the place at its head would be saying it twice, and the second saying is the one
-	// that reads as a stray row. What is left is what only the plate says: whose the place is
-	// and how far it has been taken.
+	// that reads as a stray row. What is left is what only the plate says: how far the place
+	// has been taken.
 	export let named: boolean = true;
 	// Which end of the head row the tile is at. A plate is read tile-first everywhere it stands
 	// on its own — a pin on the map, a card in a column — because a picture is where a reading
@@ -111,10 +115,6 @@
 				<span class="truncate text-xs font-medium text-white/70">{title}</span>
 			</div>
 		</div>
-	{/if}
-
-	{#if holder}
-		<TownHolder name={holder.name} characterId={holder.characterId} color={holder.color} />
 	{/if}
 
 	{#if challenge}

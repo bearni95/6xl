@@ -4,7 +4,6 @@
 	import type L from 'leaflet';
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import TownChallenge from '$components/core/TownChallenge.svelte';
-	import TownHolder from '$components/core/TownHolder.svelte';
 	import { PLATE_CLASSES, TILE_CLASSES } from '$components/core/TownPlate.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import { levelIndexForView } from '$utils/geo/level-of-detail';
@@ -1138,20 +1137,12 @@
 		head.appendChild(lines);
 		plate.appendChild(head);
 
-		// Whose the place is, between what it is called and how far it has been taken —
-		// which is the order the three are read in: the town, its occupant, and what may be
-		// done about them. Only where somebody has actually taken it; a town still on its
-		// seeded house team belongs to no player and the plate says nothing about a holder
-		// rather than saying there is none.
-		//
-		// Mounted rather than built here, exactly as the challenge bar is, because the face
-		// it draws is the player's own avatar and that is a component (a sprite sheet loaded
-		// and cropped), not markup a string can carry.
-		if (marker.holder) {
-			const held = document.createElement('div');
-			trackPinMount(marker.id, mount(TownHolder, { target: held, props: { ...marker.holder } }));
-			plate.appendChild(held);
-		}
+		// (Whose the place is stood here, between what it is called and how far it has been
+		// taken: a row of the holder's face and their username, mounted rather than built
+		// because an avatar is a sprite sheet loaded and cropped and not markup a string can
+		// carry. It is off every plate now — the band over the side already wears that same
+		// face (see TeamLineup's `owner`), so a mark carrying both said one player twice, and
+		// the one that went is the one that only ever had room for a name.)
 
 		// What can be done about the place, on the plate that names it: the siege standing and
 		// the one control that acts on it, under the head row. Mounted and tracked exactly as

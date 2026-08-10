@@ -2803,7 +2803,9 @@
 	// bounds: being occupied is a fact about the place, not about its being picked, and a
 	// place only a town can be. It is read off `holders` — the occupant's live name and worn
 	// avatar, joined on in Supabase — so a town nobody has taken yet says nothing about a
-	// holder, its seeded house team being no player's.
+	// holder, its seeded house team being no player's. It is *drawn* by the band over the
+	// side alone (see TeamLineup's `owner`): the plate printed the same face and username as
+	// a row of its own for a while, which was one player said twice on one mark.
 	function buildMarkers(
 		nodes: RegionNode[],
 		geometry: RegionGeometry,
@@ -3892,8 +3894,8 @@
 			`buildMarkers`, the very function the map's own marks are built by, so this and the
 			pin on the terrain cannot come to say two things about one town.
 			`named={false}`: the town's name is the band at the top of the page, so the plate
-			is drawn for the rest of what it holds and is left off entirely where there is
-			neither a holder nor a standing to print (see TownPin).
+			is drawn for the rest of what it holds and is left off entirely where there is no
+			standing to print (see TownPin).
 			Only a town has one at all, which is what the first tab is enabled by rather than
 			what this block is: the block stands at every tier and at the top view, because the
 			third of its tabs is the list of places and there is a level to list wherever the map
