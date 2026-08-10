@@ -28,6 +28,7 @@ import {
 	cellSide,
 	type CellSide,
 	FIRST_COLUMN,
+	FIRST_LANE_ROW,
 	FIRST_ROW,
 	findClosestApproach,
 	findMeleeMeeting,
@@ -228,6 +229,21 @@ const GROUND_TILES_PER_CELL = 3;
  * thing the fight is played on, and its nine tiles are the ground inside it.
  */
 const GROUND_LINE = combatColorHex('yellow');
+
+/**
+ * The light blue the board's top row is painted, square by square, in place of grass.
+ *
+ * That row is the one no line opens on ({@link FIRST_LANE_ROW}) — board the lanes have
+ * over them, walked over and measured across but never fought for. So it is not laid with
+ * the ground the fight is fought on: its squares are filled flat, which reads as the field
+ * ending and something else beginning above it, and its yellow ruling is drawn over the
+ * fill exactly as it is over the grass, so the row is the same nine squares as any other.
+ *
+ * Stated here rather than read off combat's table, which holds the six colours a fighter
+ * can be and has no light blue in it — this is not a side's colour and must not be
+ * mistaken for one, the blue half's own being that table's `blue`.
+ */
+const SKY_FILL = 0x7dd3fc;
 
 /** Below the ruled lattice (0), and so below everything that stands on the board. */
 const GROUND_Z = -1;
@@ -1284,10 +1300,11 @@ export class MugenBoard {
 	 * stays where the line's was, which is how the colour comes back if it is ever wanted.
 	 *
 	 * What every cell *does* have under it is ground: each is laid with grass
-	 * ({@link layGround}) and ruled into that ground's own squares ({@link ruleGround}),
-	 * both below the lattice so the cells' red stays on top of them. A board whose tiles
-	 * could not be fetched keeps the ruling and loses the grass — the subdivision is the
-	 * board's and not the artwork's.
+	 * ({@link layGround}) — or, on the row no line opens on, filled with {@link SKY_FILL}
+	 * instead — and ruled into that ground's own squares ({@link ruleGround}), both below
+	 * the lattice so the cells' red stays on top of them. A board whose tiles could not be
+	 * fetched keeps the ruling and the top row's fill and loses the grass alone: the
+	 * subdivision is the board's and not the artwork's.
 	 *
 	 * The yellow is a **second** Graphics rather than more calls on this one, because
 	 * adjacent cells share their edges: drawn together, the yellow of a cell laid later
@@ -1298,20 +1315,23 @@ export class MugenBoard {
 		if (!this.app) return;
 		const graphics = new Graphics();
 		const groundLines = new Graphics();
+		const groundFill = new Graphics();
 		for (const { q, r } of boardCells()) {
 			// q alone decides the side; the central column (q = 0) is the shared
 			// white ground.
 			const side = cellSide(q);
 			const color = side === 'red' ? leftColor : side === 'blue' ? rightColor : centerColor;
 
-			this.layGround(q, r);
+			this.layGround(groundFill, q, r);
 			this.ruleGround(groundLines, q, r);
 
 			graphics.poly(this.cellOutline(q, r));
 			graphics.fill({ color, alpha: 0 });
 			graphics.stroke({ width: 2, color: GRID_LINE, alpha: 1 });
 		}
+		groundFill.zIndex = GROUND_Z;
 		groundLines.zIndex = GROUND_LINE_Z;
+		this.app.stage.addChild(groundFill);
 		this.app.stage.addChild(groundLines);
 		this.app.stage.addChild(graphics);
 	}
@@ -1338,12 +1358,21 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Lay the grass over the cell at [q, r]: one of the sheet's grass tiles drawn into each
+	 * Lay the ground over the cell at [q, r]: one of the sheet's grass tiles drawn into each
 	 * of the cell's nine squares, filling it corner to corner and no further.
 	 *
-	 * Every cell of the field takes it, whichever half it belongs to: the grass is the
+	 * Every cell that is fought on takes it, whichever half it belongs to: the grass is the
 	 * ground the fight is fought on and not a marking, so it stops at the outer edge of the
 	 * board and nowhere inside it.
+	 *
+	 * **The board's top row is not fought on and is not grassed.** No line opens there
+	 * ({@link FIRST_LANE_ROW}) — it is the board the lanes have over them — so its squares
+	 * are filled flat in {@link SKY_FILL} instead, into the shared fill object the caller
+	 * hands over. Square by square off the same list, not one wash across the row: the row
+	 * is ruled into nine squares per cell like every other, and what fills them has to be
+	 * what those squares are, or the yellow would be lying about what it divides. A flat
+	 * fill also needs nothing loaded, so that row looks the same whether the sheet arrived
+	 * or not.
 	 *
 	 * **One sprite per square, off the same list the ruling is drawn from** ({@link
 	 * groundSquares}) — so a square of grass and the yellow border round it are the same
@@ -1362,8 +1391,16 @@ export class MugenBoard {
 	 * stored: the same board is the same field every time it is built, which is what a
 	 * pattern is and a scatter is not.
 	 */
-	private layGround(q: number, r: number): void {
-		if (!this.app || this.groundTextures.length === 0) return;
+	private layGround(fill: Graphics, q: number, r: number): void {
+		if (!this.app) return;
+		if (r < FIRST_LANE_ROW) {
+			for (const square of this.groundSquares(q, r)) {
+				fill.rect(square.x, square.y, square.width, square.height);
+				fill.fill({ color: SKY_FILL, alpha: 1 });
+			}
+			return;
+		}
+		if (this.groundTextures.length === 0) return;
 		for (const square of this.groundSquares(q, r)) {
 			const tile = this.groundTextures[(square.column + square.row) % this.groundTextures.length];
 			const grass = new Sprite(tile);
