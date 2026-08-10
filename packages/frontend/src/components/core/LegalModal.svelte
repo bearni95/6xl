@@ -3,8 +3,9 @@
 	import { _, json } from 'svelte-i18n';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import LegalDocument from '$components/core/LegalDocument.svelte';
+	import AnalyticsOptOut from '$components/core/AnalyticsOptOut.svelte';
 	import { closeLegalDocument, legalModalDocument } from '$services/legalModal';
-	import { LEGAL_DOCUMENTS, type LegalDocumentId } from '$types/legal.type';
+	import { LEGAL_DOCUMENTS, LegalDocumentId } from '$types/legal.type';
 
 	// The four documents, on the same full-view sheet the roster and the leaderboard are
 	// drawn on — because they are the same kind of thing: a page of content laid over the
@@ -58,6 +59,21 @@
 			{#key current}
 				<LegalDocument document={current} classes="mx-auto max-w-3xl" />
 			{/key}
+
+			<!-- The one control that stands on a document, under the one document that
+				explains it. The storage note's §4 tells the reader how to switch the visit
+				counter off; a page that says "you can turn this off" and then leaves them
+				to find the setting is a page that has only half told them. It is drawn
+				here rather than inside `LegalDocument` because that component renders the
+				catalogue and nothing else — a document is prose, and the prose must stay
+				exactly what was written and accepted.
+
+				Reachable with no account, which is the point: everybody is counted, so
+				everybody has to be able to object. The settings sheet's copy of this is
+				the same component over the same store. -->
+			{#if current === LegalDocumentId.Cookies}
+				<AnalyticsOptOut classes="mx-auto mt-6 max-w-3xl" />
+			{/if}
 		</div>
 	</FullScreenModal>
 {/if}

@@ -389,6 +389,15 @@
 			"acceptedRow": "{document} · versió {version} · {date}",
 			"acceptedEmpty": "Encara no hi ha cap acceptació registrada."
 		},
+		"analytics": {
+			"heading": "Comptador de visites",
+			"intro": "El joc compta les visites amb un programa nostre, en un servidor nostre, sense galetes i sense que les dades arribin a ningú altre. Serveix per saber si algú l'obre i quines pàgines mira. Si no vols que hi compti les teves, apaga'l aquí.",
+			"toggle": "Compta les meves visites",
+			"on": "Ara mateix es compten. El canvi és immediat i el joc funciona exactament igual amb el comptador apagat.",
+			"off": "Ara mateix no es compten. Aquest navegador no envia res al comptador.",
+			"unavailable": "Aquest navegador no ens deixa desar res en local, i és allà on es desa aquesta tria. Bloquejar umami.bearni.io amb una extensió de bloqueig fa el mateix efecte.",
+			"readMore": "Què es compta, exactament"
+		},
 		"documents": {
 			"terms": {
 				"title": "Condicions del servei",
@@ -537,7 +546,7 @@
 							"Per guardar les acceptacions legals i la declaració d'edat: compliment d'una obligació legal (article 6.1.c) i interès legítim a poder demostrar que vam informar i que ens van acceptar (articles 5.2 i 7.1).",
 							"Per protegir el joc de trampes, abusos i atacs: interès legítim (article 6.1.f) a que el joc sigui jugable i el servei segur. Hem valorat que aquest interès no passa per sobre dels teus drets, perquè les dades implicades són les mateixes de la partida i no se'n dedueix res de la teva vida privada.",
 							"Per mesurar l'audiència del web: també interès legítim (article 6.1.f) a saber si el joc l'obre algú i quines parts, que és l'única manera de decidir què val la pena mantenir i què no. Hem valorat que aquest interès tampoc no passa per sobre dels teus drets, perquè la mesura és nostra i no arriba a ningú més, no fa servir galetes, no desa res al teu navegador, no et segueix per altres webs i el que se'n treu són recomptes i no fitxes de persones.",
-							"D'aquest últim tractament t'hi pots oposar quan vulguis (article 21 del RGPD), i no cal que ens ho demanis: l'apartat 4 de la Política de galetes i emmagatzematge local explica les dues maneres d'apagar-lo tu mateix en un moment.",
+							"D'aquest últim tractament t'hi pots oposar quan vulguis (article 21 del RGPD), i no cal que ens ho demanis ni que esperis resposta: hi ha un botó per apagar el comptador al final de la Política de galetes i emmagatzematge local, que és un document que pots obrir tinguis compte o no, i el mateix botó és a la configuració del compte. Té efecte immediat.",
 							"No demanem el teu consentiment com a base legal per a res del que hi ha aquí, i per tant no hi ha res que hagis de retirar: el que et demanem és que acceptis un contracte i que confirmis una edat, que no és el mateix."
 						]
 					},
@@ -585,6 +594,7 @@
 						"body": [
 							"Tens dret a accedir a les teves dades, a rectificar-les, a suprimir-les, a limitar-ne el tractament, a oposar-t'hi i a la portabilitat, tal com diuen els articles 15 a 22 del RGPD.",
 							"Els dos que més s'usen els tens a la configuració del compte i no cal demanar-los a ningú: el botó de descàrrega et dona un fitxer JSON amb tot el que guardem de tu, en un format que qualsevol programa pot llegir, i el botó d'esborrar el compte executa la supressió a l'instant.",
+							"El dret d'oposició també és un botó, i aquest no demana ni tenir compte: el comptador de visites s'apaga des de la mateixa configuració o des del final de la Política de galetes i emmagatzematge local, i s'atura de seguida. Els altres dos tractaments que fem per interès legítim — defensar el joc de trampes i poder demostrar què vas acceptar — no tenen botó, perquè aturar-los seria deixar el joc sense defensa i el registre sense sentit; si t'hi vols oposar, escriu-nos exposant la teva situació i ho valorarem, que és el que demana l'article 21.",
 							"Per a la resta, o si prefereixes fer-ho per escrit, escriu al correu de contacte. Respondrem en el termini d'un mes, ampliable a dos si la petició és complexa, i t'ho direm si passa. No cobrem res per exercir cap d'aquests drets.",
 							"Si consideres que no t'hem atès bé, pots reclamar davant l'Agència Espanyola de Protecció de Dades (www.aepd.es). Si vius en un altre estat de la Unió Europea, pots fer-ho davant l'autoritat de control del teu país."
 						]
@@ -644,7 +654,7 @@
 							"music-player: quina emissora escoltaves i si la ràdio estava engegada. És una preferència teva i es queda fins que la canviïs.",
 							"legal-consent-pending: guarda momentàniament les caselles que has marcat mentre ets a la pantalla de Google, perquè en tornar es pugui registrar l'acceptació. S'esborra tot just en registrar-la.",
 							"Claus que comencen per array-service: i object-service:, que guarden l'estat local del joc, com ara la vista del mapa on eres.",
-							"El comptador de visites no surt en aquesta llista perquè no hi desa res. L'única clau que té a veure amb ell és umami.disabled, i no la posa ell: la poses tu si el vols apagat, i llavors ell la llegeix per callar. A l'apartat 4 hi ha com.",
+							"umami.disabled: hi és només si has apagat el comptador de visites amb el botó de l'apartat 4. La marca la desem nosaltres quan ho demanes, i el comptador la llegeix abans d'enviar res per saber que ha de callar. Si el comptador està engegat, aquesta clau no existeix: comptar no desa res al teu navegador, només apagar-ho.",
 							"Tot això és emmagatzematge local del navegador, no galetes enviades al servidor a cada petició. No hi ha res que viatgi sol."
 						]
 					},
@@ -653,8 +663,9 @@
 						"body": [
 							"L'article 5.3 de la Directiva 2002/58/CE i l'article 22.2 de la Llei 34/2002 espanyola eximeixen del consentiment l'emmagatzematge estrictament necessari per prestar un servei que la persona ha demanat expressament.",
 							"Tot el que hi ha a la llista de dalt hi encaixa: la sessió és el servei, i la preferència de ràdio i la vista del mapa són coses que has triat tu i que serveixen per tornar-te-les tal com les vas deixar. No hi ha res per anunciar ni per vendre.",
-							"El comptador de visites hi encaixa per un motiu més senzill encara: aquell article parla de desar informació al teu aparell o d'accedir-hi, i Umami no fa ni l'una cosa ni l'altra. No hi posa cap galeta ni cap clau, no li cal llegir res teu per comptar una visita, i la petició que envia va expressament sense galetes de cap mena.",
-							"Igualment compleix les condicions que les autoritats de protecció de dades demanen a la mesura d'audiència per no haver de demanar permís: és estrictament nostra, només serveix per treure estadístiques agregades d'aquest lloc, no es creua amb cap altre tractament, no et segueix per altres webs i no es comparteix amb ningú. Que no calgui demanar-te permís, però, no vol dir que no el puguis retirar: l'apartat següent explica com apagar-lo.",
+							"El comptador de visites hi encaixa per un motiu més senzill encara: aquell article parla de desar informació al teu aparell o d'accedir-hi, i per comptar una visita Umami no fa ni l'una cosa ni l'altra. No hi posa cap galeta ni cap clau, no li cal llegir res teu per comptar, i la petició que envia va expressament sense galetes de cap mena.",
+							"L'única cosa que arriba a desar-se al teu aparell per culpa del comptador és la marca de quan l'apagues, i aquella la demanes tu: és exactament l'emmagatzematge que la persona ha sol·licitat, que és el que aquells articles eximeixen. Dit d'una altra manera: comptar no toca el teu navegador, i no comptar només l'hi toca perquè ho has demanat.",
+							"Igualment compleix les condicions que les autoritats de protecció de dades demanen a la mesura d'audiència per no haver de demanar permís: és estrictament nostra, només serveix per treure estadístiques agregades d'aquest lloc, no es creua amb cap altre tractament, no et segueix per altres webs i no es comparteix amb ningú. Que no calgui demanar-te permís, però, no vol dir que no el puguis aturar: l'apartat següent hi té el botó.",
 							"Per això no hi ha cap finestra de galetes: una finestra que demana permís per a una cosa que no en necessita només ensenya la gent a fer clic sense llegir."
 						]
 					},
@@ -664,7 +675,7 @@
 							"En obrir el joc, el navegador demana coses a fora, i tota petició implica que la teva adreça IP arribi a qui la rep, tinguis compte o no. Són tres, i totes tres es poden desactivar.",
 							"La tipografia Genos, que es carrega des de Google Fonts: Google és un tercer. Ho pots evitar bloquejant fonts.googleapis.com i fonts.gstatic.com; el joc funciona igual amb una altra lletra.",
 							"Les imatges de satèl·lit del mapa, que venen dels servidors d'Esri, també un tercer. Sense elles el mapa es veu sense fons, però les regions i les partides continuen funcionant.",
-							"El comptador de visites, que va a umami.bearni.io i no és cap tercer sinó un servidor nostre. L'apagues de qualsevol de dues maneres: bloquejant umami.bearni.io amb una extensió de bloqueig, o desant la clau umami.disabled amb el valor 1 a l'emmagatzematge local del navegador, que és el senyal que el mateix programa busca abans d'enviar res i que, si el troba, el fa callar del tot. Amb qualsevol de les dues el joc funciona exactament igual.",
+							"El comptador de visites, que va a umami.bearni.io i no és cap tercer sinó un servidor nostre. Aquest l'apagues aquí mateix: al final d'aquest document hi ha el botó, i també és a la configuració del compte si en tens. Té efecte de seguida, no cal recarregar res i el joc funciona exactament igual amb el comptador apagat. Si t'estimes més no dependre de nosaltres per a això, bloquejar umami.bearni.io amb una extensió de bloqueig fa el mateix.",
 							"Cap de les tres no desa res al teu navegador per compte nostre. Ni la lletra ni el mapa saben res del teu compte; del comptador de visites, l'apartat 2 de la Política de privadesa explica l'únic cas en què una adreça de pàgina en pot portar l'identificador."
 						]
 					},
@@ -673,7 +684,7 @@
 						"body": [
 							"Tancar la sessió esborra la sessió desada.",
 							"Esborrar les dades del lloc des de la configuració del navegador ho treu tot, incloent-hi les preferències. El joc tornarà a començar de zero pel que fa a l'aparença; la teva partida és al servidor i no es perd.",
-							"Compte amb una cosa: si havies desat umami.disabled per apagar el comptador de visites, esborrar les dades del lloc també se l'emporta i el comptador torna a comptar. Caldrà tornar-la a posar.",
+							"Compte amb una cosa: si havies apagat el comptador de visites, la marca que ho recorda també és emmagatzematge local, de manera que esborrar les dades del lloc se l'emporta i el comptador torna a comptar. Caldrà tornar-lo a apagar.",
 							"Navegar en finestra privada fa que res d'això sobrevisqui en tancar-la."
 						]
 					}

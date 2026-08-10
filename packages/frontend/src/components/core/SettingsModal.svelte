@@ -9,6 +9,7 @@
 	import { isValidUsername } from '$utils/profile/username';
 	import ProfileCard from '$components/core/ProfileCard.svelte';
 	import AccountDataRights from '$components/core/AccountDataRights.svelte';
+	import AnalyticsOptOut from '$components/core/AnalyticsOptOut.svelte';
 
 	// The account's settings: the picture it wears, the name it goes by, the details of
 	// how it signs in, and the way out of it. What the account has *earned* is not here —
@@ -196,6 +197,13 @@
 				"delete your account" under somebody's first minute answers a question
 				nobody asked. -->
 			{#if $settingsModalOpen}
+				<!-- The visit counter's switch, above the rights it is not one of: being
+					counted is not personal data the account holds, so it is not something
+					`export_player_data` answers for or that deleting the account settles.
+					It is here because this is the sheet a player opens to change what the
+					game does about them — and it is *also* on the storage note, which is
+					where somebody with no account has to be able to reach it. -->
+				<AnalyticsOptOut classes="mt-4" linkToDocument />
 				<AccountDataRights classes="mt-4" />
 			{/if}
 

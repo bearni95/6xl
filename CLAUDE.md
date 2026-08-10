@@ -674,17 +674,36 @@ session, the radio preference and the held acceptance are all either strictly ne
 or user-requested, which is the ePrivacy art. 5(3) / LSSI art. 22.2 exemption, and the
 **Umami** tag in `app.html` neither writes nor reads anything on the device to do its
 counting — it sets no cookie, sends its request `credentials: 'omit'`, and the one key
-it touches (`umami.disabled`) is a key the *reader* sets to switch it off. Art. 5(3)
-governs storage and access; a beacon that does neither is outside it, and the audience
+it touches (`umami.disabled`) is written only when a reader asks for it to be, which is
+storage the person explicitly requested and exempt on that ground. Art. 5(3) governs
+storage and access; a beacon that does neither to count is outside it, and the audience
 measurement it does is first-party, self-hosted, aggregate and shared with nobody, which
 is the exemption the DPAs describe. **Anything that stores an identifier on the device,
 or that hands a third party the measurement, changes that answer and needs the banner.**
 
+**The objection is a switch** (`AnalyticsOptOut.svelte` over
+`$services/analytics.service`). Art. 21 gives a right to object to anything run on
+6(1)(f), and a right exercised only by writing an email — or by typing a key into a
+devtools console, which is where this stood — is one nobody exercises. So there is a
+toggle, and it is drawn **twice over one store**: under the storage note inside
+`LegalModal` (the sheet anybody can raise from the menu) and on the settings sheet
+beside `AccountDataRights`. Twice, because `SettingsModal` is signed-in-only and the
+counter counts everybody — an opt-out that first asked for an account would be worse
+than none — and one store, because two switches that could disagree would each be a
+different answer to the same question. It is *not* in the acceptance ledger and not on
+the server: counting does not run on consent, so the state is an objection rather than a
+permission, and an objection stored against an account would need the account identified
+to be honoured. `umami.disabled` is the one localStorage key in the game that skips the
+service classes' namespacing, because the program that reads it is not ours; write the
+key, never a falsy value for "on" (the tracker tests truthiness, so `'false'` would
+silence it while the switch read as on) — remove it instead.
+
 What the analytics *does* need is to be described, because a lawful basis and a
 disclosure are separate obligations: it runs on art. 6(1)(f), it is written down in the
 privacy notice (§2 what is sent, §3 the basis and the art. 21 objection, §5 that it is
-our own server and not a recipient, §7 how long, §10 the CCPA categories) and in the
-storage note (§1, §2, §3 and §4's opt-out). **Change what the tag sends and those
+our own server and not a recipient, §7 how long, §8 the objection switch, §10 the CCPA
+categories) and in the storage note (§1, §2's key, §3 why no banner, §4 the switch, §5
+that clearing site data undoes it). **Change what the tag sends and those
 sections are part of the change** — including `data-performance` or any
 `data-umami-event`, neither of which is used today. One honest wrinkle is recorded there
 rather than hidden: Umami stores the *address* of each page, and `/profile/<id>` carries

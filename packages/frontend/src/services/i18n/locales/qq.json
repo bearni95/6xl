@@ -83,6 +83,13 @@
 		}
 	},
 	"map": {
+		"radar": {
+			"nearest": "QQQQQ"
+		},
+		"side": {
+			"expand": "QQQQQ",
+			"collapse": "QQQQQ"
+		},
 		"search": {
 			"label": "QQQQQ",
 			"placeholder": "QQQQQ",
@@ -158,7 +165,6 @@
 		"clear": "QQQQQ",
 		"noMatches": "QQQQQ",
 		"clearFilters": "QQQQQ",
-		"claimedIn": "QQQQQ",
 		"addToTeam": "QQQQQ",
 		"removeFromTeam": "QQQQQ",
 		"colors": {
@@ -174,13 +180,116 @@
 		"title": "QQQQQ",
 		"close": "QQQQQ"
 	},
+	"faq": {
+		"title": "QQQQQ",
+		"open": "QQQQQ",
+		"close": "QQQQQ",
+		"entries": [
+			{
+				"question": "QQQQQ",
+				"answer": "QQQQQ"
+			},
+			{
+				"question": "QQQQQ",
+				"answer": "QQQQQ"
+			},
+			{
+				"question": "QQQQQ",
+				"answer": "QQQQQ"
+			}
+		]
+	},
+	"credits": {
+		"title": "QQQQQ",
+		"open": "QQQQQ",
+		"close": "QQQQQ",
+		"tabs": {
+			"characters": "QQQQQ",
+			"map": "QQQQQ"
+		},
+		"characters": {
+			"intro": "QQQQQ",
+			"name": "QQQQQ",
+			"artist": "QQQQQ",
+			"unknown": "QQQQQ"
+		},
+		"map": {
+			"intro": "QQQQQ",
+			"data": "QQQQQ",
+			"source": "QQQQQ",
+			"entries": [
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				},
+				{
+					"data": "QQQQQ",
+					"source": "QQQQQ"
+				}
+			]
+		}
+	},
 	"booster": {
 		"title": "QQQQQ",
 		"withBoxes": "QQQQQ",
 		"close": "QQQQQ",
 		"open": "QQQQQ",
 		"openPack": "QQQQQ",
-		"window": "QQQQQ"
+		"window": "QQQQQ",
+		"choose": {
+			"close": "QQQQQ",
+			"open": "QQQQQ",
+			"noShows": "QQQQQ"
+		},
+		"welcome": {
+			"title": "QQQQQ",
+			"intro": "QQQQQ"
+		},
+		"level": {
+			"title": "QQQQQ",
+			"intro": "QQQQQ",
+			"button": "QQQQQ"
+		}
 	},
 	"combat": {
 		"notConfigured": "QQQQQ",
@@ -192,7 +301,6 @@
 		"openRoster": "QQQQQ",
 		"rivalWins": "QQQQQ",
 		"yourWins": "QQQQQ",
-		"turn": "QQQQQ",
 		"won": "QQQQQ",
 		"lost": "QQQQQ",
 		"draw": "QQQQQ",
@@ -206,6 +314,21 @@
 		"saving": "QQQQQ",
 		"saveAgain": "QQQQQ",
 		"saveRefused": "QQQQQ",
+		"feed": {
+			"title": "QQQQQ",
+			"open": "QQQQQ",
+			"close": "QQQQQ",
+			"empty": "QQQQQ",
+			"anonymous": "QQQQQ",
+			"captured": "QQQQQ",
+			"outcome": {
+				"win": "QQQQQ",
+				"lose": "QQQQQ",
+				"draw": "QQQQQ"
+			}
+		},
+		"previousFighter": "QQQQQ",
+		"nextFighter": "QQQQQ",
 		"orders": {
 			"charge": "QQQQQ",
 			"defend": "QQQQQ",
@@ -265,6 +388,15 @@
 			"acceptedHeading": "QQQQQ",
 			"acceptedRow": "QQQQQ",
 			"acceptedEmpty": "QQQQQ"
+		},
+		"analytics": {
+			"heading": "QQQQQ",
+			"intro": "QQQQQ",
+			"toggle": "QQQQQ",
+			"on": "QQQQQ",
+			"off": "QQQQQ",
+			"unavailable": "QQQQQ",
+			"readMore": "QQQQQ"
 		},
 		"documents": {
 			"terms": {
@@ -401,14 +533,6 @@
 							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ",
-							"QQQQQ"
-						]
-					},
-					{
-						"heading": "QQQQQ",
-						"body": [
-							"QQQQQ",
-							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ"
@@ -418,13 +542,6 @@
 						"heading": "QQQQQ",
 						"body": [
 							"QQQQQ",
-							"QQQQQ",
-							"QQQQQ"
-						]
-					},
-					{
-						"heading": "QQQQQ",
-						"body": [
 							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ",
@@ -447,12 +564,35 @@
 							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
 							"QQQQQ"
 						]
 					},
 					{
 						"heading": "QQQQQ",
 						"body": [
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ"
+						]
+					},
+					{
+						"heading": "QQQQQ",
+						"body": [
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ"
+						]
+					},
+					{
+						"heading": "QQQQQ",
+						"body": [
+							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ",
@@ -503,6 +643,29 @@
 						"heading": "QQQQQ",
 						"body": [
 							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ"
+						]
+					},
+					{
+						"heading": "QQQQQ",
+						"body": [
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ"
+						]
+					},
+					{
+						"heading": "QQQQQ",
+						"body": [
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
+							"QQQQQ",
 							"QQQQQ"
 						]
 					},
@@ -520,22 +683,6 @@
 						"heading": "QQQQQ",
 						"body": [
 							"QQQQQ",
-							"QQQQQ",
-							"QQQQQ"
-						]
-					},
-					{
-						"heading": "QQQQQ",
-						"body": [
-							"QQQQQ",
-							"QQQQQ",
-							"QQQQQ",
-							"QQQQQ"
-						]
-					},
-					{
-						"heading": "QQQQQ",
-						"body": [
 							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ"
@@ -593,6 +740,7 @@
 					{
 						"heading": "QQQQQ",
 						"body": [
+							"QQQQQ",
 							"QQQQQ",
 							"QQQQQ"
 						]
