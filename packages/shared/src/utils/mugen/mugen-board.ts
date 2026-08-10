@@ -528,10 +528,21 @@ const PACE_FRAME_RATE = 2;
 const AURA_FRAMES = 4;
 /** How long each aura frame shows (ms). */
 const AURA_FRAME_MS = 120;
-/** How far the aura flame overhangs the character it envelops, per axis: the
- * flame is stretched to this multiple of the actor's nominal display size. */
-const AURA_WIDTH_RATIO = 1.7;
-const AURA_HEIGHT_RATIO = 1.25;
+/**
+ * How far the aura flame overhangs the character it envelops, per axis: the flame is
+ * stretched to this multiple of the fighter's own paintwork — the reach of its standing
+ * cycle either side of its mark ({@link Actor.reachLeft}/{@link Actor.reachRight}) and the
+ * height of its tallest frame — so a small character wears a small flame and a wide one a
+ * wide flame, and neither is measured against anything but itself.
+ *
+ * Both are read against paint on both sides of the comparison: a frame of the aura is the
+ * fire and nothing else (see `generate-auras.js`), and a decoded character frame is the
+ * character and nothing else. They used to stretch the *bands* the aura sheet was cut into,
+ * which carried a sixth of their width and a twentieth of their height in margin, so the
+ * figures here were the larger ones (1.7 and 1.25) that came to the same fire on screen.
+ */
+const AURA_WIDTH_RATIO = 1.4;
+const AURA_HEIGHT_RATIO = 1.2;
 /**
  * How long the flame takes to well up from the fighter's feet to its full height.
  *
@@ -560,6 +571,37 @@ const LEAD_CELLS: [Cell, Cell] = [
 /** The cell a half's lead character stands on: its own `q`/`r`, or `fallback`. */
 const leadCell = (grid: BoardGrid, fallback: Cell): Cell =>
 	'q' in grid.character ? { q: grid.character.q, r: grid.character.r } : fallback;
+
+/**
+ * How far the paintwork of one or more cycles reaches either side of the mark the sprite is
+ * drawn on, in screen px: `left` negative, `right` positive, over every frame handed in.
+ *
+ * A frame is drawn anchored on its own MUGEN axis and scaled by the fit, so its edges are
+ * `-anchorX` and `1 - anchorX` of its width away from the mark — signed by the sprite's own
+ * x-scale, which is negative on the mirrored half and swaps the two, so `scaleX` is passed
+ * signed and this never has to know which half it is measuring. Decoded frames are cropped
+ * to their artwork, so a frame's edges are the character's.
+ *
+ * The axis is between the fighter's feet and nowhere near the middle of it: a sheet drawn
+ * for a side-on brawler leans, sweeps a tail, holds a sword out. So the two answers are not
+ * each other's negative, and the gap between them is the whole reason anything drawn
+ * *around* a fighter — its aura — cannot simply be centred on the mark.
+ *
+ * Seeded at the mark, so a cycle that measures nothing gives a span of nothing rather than
+ * one running from infinity to infinity, and every answer contains the ground the fighter
+ * stands on.
+ */
+const figureReach = (frames: LoadedFrame[], scaleX: number): { left: number; right: number } => {
+	let left = 0;
+	let right = 0;
+	for (const frame of frames) {
+		const near = -frame.anchorX * frame.width * scaleX;
+		const far = (1 - frame.anchorX) * frame.width * scaleX;
+		left = Math.min(left, near, far);
+		right = Math.max(right, near, far);
+	}
+	return { left, right };
+};
 
 /** A cycle's loaded frames as {@link crownCorrection} reads them — the correction is
  * canvas work over pixels, so it knows nothing of Pixi's textures. */
@@ -756,6 +798,21 @@ interface Aura {
 	 * the end of it the aura is simply burning. */
 	rise: number;
 }
+
+/**
+ * Where an actor's aura stands: the middle of the fighter as it is drawn this instant.
+ *
+ * Two corrections to the mark, and they answer different questions. **Which side of the
+ * mark the fighter is on** is {@link Actor.reachLeft}/{@link Actor.reachRight} — the axis a
+ * MUGEN sprite is anchored on sits between its feet, so a fighter leaning on one leg stands
+ * mostly to one side of its own mark, and a flame centred on the mark burns off its
+ * shoulder. **Where the fighter is standing this frame** is `sprite.x` rather than
+ * {@link Actor.x}: a paced fighter shifts its weight across its cell without its mark moving
+ * ({@link MugenBoard.updatePace}), and a flame is a thing the fighter is on fire with rather
+ * than a thing burning on the ground it left.
+ */
+const auraMark = (actor: Actor): number =>
+	actor.sprite.x + (actor.reachLeft + actor.reachRight) / 2;
 
 /**
  * The guard drawn round a fighter turning a blow aside: the arc itself, the way it is
@@ -1011,6 +1068,21 @@ interface Actor {
 	 * from its base animation frames; sizes the aura that envelops it. */
 	displayWidth: number;
 	displayHeight: number;
+	/**
+	 * How far the character's paintwork reaches either side of {@link Actor.x}, in screen px
+	 * — `reachLeft` negative, `reachRight` positive ({@link figureReach} over the base cycle).
+	 *
+	 * Where {@link displayWidth} says how wide the character is, these say *where* it is: the
+	 * mark is the MUGEN axis between its feet, and a fighter leaning on one leg with a tail
+	 * out stands mostly to one side of it. Their middle is the middle of the fighter as a
+	 * viewer sees it, which is what the aura is centred on — measured against `x` rather than
+	 * against the cell, so the crown correction the sprite was placed with is already in them.
+	 *
+	 * Taken over the standing cycle and kept, like {@link displayWidth}: a flame that
+	 * re-measured itself pose by pose would jump about as the fighter moved.
+	 */
+	reachLeft: number;
+	reachRight: number;
 	x: number;
 	y: number;
 	targetX: number;
@@ -1965,6 +2037,10 @@ export class MugenBoard {
 		// the character's full reach rather than by frame one's.
 		const displayWidth = Math.max(...baseFrames.map((frame) => frame.width)) * fitScale;
 		const displayHeight = Math.max(...baseFrames.map((frame) => frame.height)) * fitScale;
+		// And which side of its mark that width is actually on ({@link Actor.reachLeft}). The
+		// sprite's own x-scale is the fit signed by the flip, which is what turns the two round
+		// on the mirrored half.
+		const reach = figureReach(baseFrames, flip ? -fitScale : fitScale);
 		// And which line of its cell that height leaves it standing on ({@link figureFootDrop}):
 		// the floor for a fighter taller than the cell, the foot line for one that fits in it.
 		// A cell is square, so the box the fit was given its width is also the cell's height.
@@ -2009,6 +2085,8 @@ export class MugenBoard {
 			orders: null,
 			displayWidth,
 			displayHeight,
+			reachLeft: reach.left,
+			reachRight: reach.right,
 			crownShift,
 			footDrop,
 			x: stand.x,
@@ -2259,7 +2337,7 @@ export class MugenBoard {
 				aura.scaleY * t
 			);
 		}
-		aura.sprite.x = actor.x;
+		aura.sprite.x = auraMark(actor);
 		aura.sprite.y = actor.y;
 		aura.sprite.zIndex = actor.y - 0.5;
 	}
@@ -2349,10 +2427,11 @@ export class MugenBoard {
 	 * meant to be the fighter moving rather than the picture being dragged.
 	 *
 	 * The offset goes on the **sprite** and never on {@link Actor.x}. What a fighter's own
-	 * `x` carries is where it is standing, crown correction and all, and that is what the
-	 * aura round it and every walk it is later sent on are measured from — a mark that
-	 * drifted with the pace would leave the fighter half a step off its cell the moment it
-	 * stopped.
+	 * `x` carries is where it is standing, crown correction and all, and that is what every
+	 * walk it is later sent on is measured from — a mark that drifted with the pace would
+	 * leave the fighter half a step off its cell the moment it stopped. What is drawn *round*
+	 * the fighter follows the sprite instead, since it belongs to the fighter and not to the
+	 * ground: see {@link auraMark}.
 	 */
 	private updatePace(actor: Actor, dt: number): void {
 		const pace = actor.pace;
@@ -2435,11 +2514,10 @@ export class MugenBoard {
 	 * mark, in screen px: `left` negative, `right` positive, measured over every frame of
 	 * both walks so no frame of either can be the one that pokes out of the cell.
 	 *
-	 * A frame is drawn anchored on its own axis and scaled by the fit, so its edges are
-	 * `-anchorX` and `1 - anchorX` of its width away from the mark — signed by the sprite's
-	 * own x-scale, which is negative on the mirrored half and swaps the two. Reading it off
-	 * `sprite.scale.x` is what keeps this in step with however the fighter was placed,
-	 * rather than restating the fit and the flip here.
+	 * The measurement is {@link figureReach}'s, the same one the aura is sized and centred by;
+	 * what is this method's own is *which cycles* go into it. The scale it is read at comes
+	 * off `sprite.scale.x`, which keeps it in step with however the fighter was placed rather
+	 * than restating the fit and the flip here.
 	 *
 	 * The walks are what is measured because the walks are what is drawn while pacing — both
 	 * of them, whichever way the fighter happens to be going this moment, so the room it has
@@ -2452,20 +2530,10 @@ export class MugenBoard {
 			(name) => actor.animations[name]
 		);
 		const cycles = walks.length > 0 ? walks : [this.standing(actor)];
-		const scaleX = actor.sprite.scale.x;
-		// Seeded at the mark itself, so a cycle that somehow measures nothing gives a span of
-		// nothing rather than one running from infinity to infinity.
-		let left = 0;
-		let right = 0;
-		for (const name of cycles) {
-			for (const frame of actor.animations[name] ?? []) {
-				const near = -frame.anchorX * frame.width * scaleX;
-				const far = (1 - frame.anchorX) * frame.width * scaleX;
-				left = Math.min(left, near, far);
-				right = Math.max(right, near, far);
-			}
-		}
-		return { left, right };
+		return figureReach(
+			cycles.flatMap((name) => actor.animations[name] ?? []),
+			actor.sprite.scale.x
+		);
 	}
 
 	/**
@@ -3187,18 +3255,24 @@ export class MugenBoard {
 		this.clearAura(id);
 
 		const sprite = new Sprite(frames[0]);
-		// Base-down behind the character: bottom-centre on the actor's feet. The
-		// flame is stretched per axis to envelop the character's nominal size, so
-		// wide and tall sprites alike sit inside their aura. The anchor at the foot
-		// is also what the rise is measured from — scaling this sprite's height moves
-		// its top and leaves its base on the ground.
+		// Base-down over the fighter: the flame's own foot on the fighter's feet, its own
+		// middle on the middle of the fighter. Both ends of that are paint — a frame of the
+		// fire is cropped to the fire, so its bottom edge is the foot of the flame and not a
+		// margin under it. The anchor at the foot is also what the rise is measured from:
+		// scaling this sprite's height moves its top and leaves its base on the ground.
 		sprite.anchor.set(0.5, 1);
-		const scaleX = (actor.displayWidth * AURA_WIDTH_RATIO) / frames[0].width;
+		// Sized by the fighter: how far its own paintwork reaches either way, and how tall its
+		// tallest frame stands, each overhung by its ratio. Its *reach* and not the width of
+		// its widest frame, so a cycle that leans one way in one pose and the other way in
+		// another is enveloped across both. The four frames of a flame are cropped to
+		// themselves and so differ in size, which is the fire moving — one scale off the first
+		// of them carries that through instead of ironing them all out to one rectangle.
+		const scaleX = ((actor.reachRight - actor.reachLeft) * AURA_WIDTH_RATIO) / frames[0].width;
 		const scaleY = (actor.displayHeight * AURA_HEIGHT_RATIO) / frames[0].height;
 		// Flat on the ground to begin with: the first tick brings it up (see updateAura).
 		sprite.scale.set(scaleX * AURA_RISE_WIDTH, 0);
 		sprite.alpha = 0.85;
-		sprite.x = actor.x;
+		sprite.x = auraMark(actor);
 		sprite.y = actor.y;
 		sprite.zIndex = actor.y - 0.5;
 		this.app.stage.addChild(sprite);
