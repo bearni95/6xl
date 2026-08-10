@@ -4,12 +4,9 @@
 	import { _ } from 'svelte-i18n';
 	import CombatFlanks from '$components/core/CombatFlanks.svelte';
 	import CombatGround from '$components/core/CombatGround.svelte';
-	import CombatHost from '$components/core/CombatHost.svelte';
-	import GameGlyph from '$components/core/GameGlyph.svelte';
+	import CombatHead from '$components/core/CombatHead.svelte';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
-	import TownChallenge from '$components/core/TownChallenge.svelte';
-	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
 	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
 	import { combatColorHex } from '$utils/color/combat-color';
 	import { ORDER_ICONS } from '$utils/color/traits';
@@ -165,18 +162,6 @@
 	// `traitIcons`), so a charge, a guard and a shot are one picture each wherever the game
 	// speaks of them.
 	const ACTION_ICONS: Record<CombatAction, string> = ORDER_ICONS;
-
-	// The lanes of the fight, 1..n, for the score: one square per lane, filled once that
-	// many have been taken. A lane is a fighter of each side and the white cell between
-	// them, so there are as many of them as a team has members — the score is drawn from
-	// the same count the team is built to, and cannot come to say a fight is longer or
-	// shorter than it is.
-	const LANES = Array.from({ length: TEAM_SIZE }, (_, index) => index + 1);
-
-	// The rivals' half of the score is read the other way round, so its squares are laid
-	// out backwards and its count fills from the right — see the score's own note. The
-	// order is the whole of the difference between the two: same squares, same rule.
-	const RIVAL_LANES = [...LANES].reverse();
 
 	const characterById = new Map(availableCharacters.map((option) => [option.id, option]));
 
@@ -1050,7 +1035,24 @@
 		return message.trim() || fallback;
 	}
 
+	// Whether the view is lying down, which is the one thing about the arena's layout that
+	// cannot be said in CSS. Everything else that changes with the shape of the screen changes
+	// in a class (`landscape:` on the board, the sky, the flanks and the panel), but *where the
+	// head of the fight is mounted* is not a thing a media query decides: it is one block, and
+	// the two places it stands — laid over the board standing up, at the top of the orders panel
+	// lying down — are far enough apart that drawing both and hiding one would mean a second
+	// town plate, a second avatar and a second flag alive on the screen for one fight.
+	// Watched rather than read once, since a phone is turned and a window is dragged, and it
+	// starts saying no: standing up is the arrangement that is right on a screen nothing has
+	// been measured about yet, and the first measurement moves the head a tick later if it is
+	// wrong.
+	let lyingDown = false;
+
 	onMount(() => {
+		const orientation = window.matchMedia('(orientation: landscape)');
+		const syncOrientation = () => (lyingDown = orientation.matches);
+		syncOrientation();
+		orientation.addEventListener('change', syncOrientation);
 		// The engine, as the sheet goes up, rather than once there is a board to mount on it.
 		// Everything above this — the session, the player's cards, the line-up — has to
 		// settle before the board's own component exists, and the chunk it would then ask
@@ -1058,6 +1060,7 @@
 		// them. Nothing here waits on it; the board itself does, and finds it in hand.
 		void loadBoardEngine();
 		authService.init();
+		return () => orientation.removeEventListener('change', syncOrientation);
 	});
 
 	onDestroy(() => unsubscribe?.());
@@ -1368,7 +1371,10 @@
 			     every desktop alike — the board is limited by its height and takes the whole of it,
 			     and what is left is width: the board is put against the left edge of the view and
 			     the panel takes the whole of the rest, out of the flow entirely (`absolute`, so the
-			     board is never sized against it) and the full height of the view. It is anchored to
+			     board is never sized against it) and the full height of the view. That is room
+			     enough for more than the orders, so lying down this is the whole side of the fight
+			     that is not the fight: a column of the head and then the fighter, the head at the
+			     size it reads at and the fighter taking everything under it. It is anchored to
 			     the canvas's right edge and runs to the screen's — `left` is the canvas's own eight
 			     squares and `right` is nothing, with no width of its own to keep the two in step,
 			     the figures spelled again in CSS as `CombatFlanks` and `CombatGround` spell them,
@@ -1428,7 +1434,7 @@
 			     the board settle at the bottom of the view first and then jump up as the orders
 			     came in. An empty one holds the place they are coming to. -->
 			<div
-				class="relative min-h-0 w-full flex-1 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:left-[calc(8*min(100vw/8,100dvh/11))] landscape:w-auto"
+				class="relative flex min-h-0 w-full flex-1 flex-col gap-3 p-3 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:left-[calc(8*min(100vw/8,100dvh/11))] landscape:w-auto"
 			>
 				<!-- What the band stands on: the board's own ground, carried on into the document
 				     past the last row the canvas had room to draw. It is laid under the whole of
@@ -1443,10 +1449,30 @@
 				<div class="absolute inset-0 landscape:hidden" aria-hidden="true">
 					<CombatGround />
 				</div>
+				<!-- The head of the fight, lying down: the town, whoever holds it, the way out and
+				     the score, at the top of this column and across the whole of it. It is where
+				     the head goes once the board is against the left edge of the view and this
+				     panel has all the width past it — the room beside a fight is where a reading of
+				     the fight belongs, and laying it over the board there would be taking room off
+				     the board while a screen's worth of it stood empty over here.
+				     Above the fighter and never over it: what the fight is about is read first and
+				     what there is to do about it is under that, which is the same order the head
+				     and the board are in standing up. `shrink-0` because it is the block that says
+				     what it says at the size it says it — a short panel takes it out of the
+				     fighter's picture below, which is the thing here with room to give. -->
+				{#if lyingDown}
+					<CombatHead
+						{location}
+						wins={state && !state.outcome ? state.wins : null}
+						concedeReady={state?.phase === 'planning'}
+						classes="relative shrink-0"
+						on:concede={() => controller?.concede()}
+					/>
+				{/if}
 				{#if shownRow}
 					{@const row = shownRow}
 					<div
-						class={classNames('relative h-full rounded-box bg-base-100/80 p-2 shadow-xl', {
+						class={classNames('relative min-h-0 flex-1 rounded-box bg-base-100/80 p-2 shadow-xl', {
 							'pointer-events-none opacity-50': panelLocked
 						})}
 					>
@@ -1552,14 +1578,17 @@
 					</div>
 				{/if}
 			</div>
-			<!-- The head of the fight: what it is over, and then how it stands. Both are read
-			     before the board and in that order — the town is the reason there is a fight at all
-			     and the score is what has become of it — so they are stacked at the top rather than
-			     set beside each other, with the score's banner hanging under the card.
-			     Hung off the sheet and not off the canvas, which is why it is not in the box above:
-			     the board is centred in the viewport and is only as tall as it is, so a head taking
-			     the canvas's own top edge floated somewhere down the middle of the screen with a
-			     band of live map above it. The top of the fight is the top of the view.
+			<!-- The head of the fight: what it is over, who it is with, the way out of it, and how
+			     it stands (see CombatHead, which is the whole block). It is drawn here on a screen
+			     taller than it is wide, and in the sidebar with the orders on one lying down — a
+			     real conditional either way, because the two are not one box moved but one block
+			     put in one of two places, and mounting both would put two of every plate, avatar
+			     and flag on the screen for one fight.
+			     Standing up it is hung off the sheet and not off the canvas, which is why it is not
+			     in the box above: the board is centred in the viewport and is only as tall as it
+			     is, so a head taking the canvas's own top edge floated somewhere down the middle of
+			     the screen with a band of live map above it. The top of the fight is the top of the
+			     view.
 			     From `sm:` up it is laid *on* the board's top edge — the board has the whole box and
 			     is drawn as large as the viewport allows, so anything the head took would come off
 			     the fight — and it is written after the board so that it stands over it: both are
@@ -1568,256 +1597,28 @@
 			     is what puts it back at the head of the column it is written at the foot of. The
 			     board follows it there rather than under it, out of the room a width-limited canvas
 			     leaves standing empty.
-			     Neither takes the pointer except where it has to (see the banner's plate): they are
-			     readings laid over the board, and the board underneath is what is played.
-			     Every row of the column is the width of the column, so the head is one block of
-			     chrome and not two objects that happen to be stacked: on a phone that is the whole
-			     width of the view, and from `sm:` up it is whatever the two cells come to, with the
-			     score stretched to them. Centred by the row it sits in rather than by centring its
-			     own contents, which is what leaves the stretching to it.
-			     What it is centred *in* is the board's own column and not the view, once the two
-			     stop being the same thing: lying down the board is against the left edge and the
-			     orders have everything past it, so a head centred on the screen would be laid half
-			     over the panel. So it is given the canvas's own eight squares to be centred in
-			     (`landscape:left-0` and that width, the `sm:inset-x-0` released with
-			     `landscape:inset-x-auto`), which is the top of the fight rather than the top of the
-			     page. -->
-			<div
-				class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto landscape:inset-x-auto landscape:left-0 landscape:w-[calc(8*min(100vw/8,100dvh/11))]"
-			>
-				<!-- The head's own column. It takes the whole width it is given and only settles
-				     its own from `sm:` up, where the wrapper stops being the viewport: a phone gets
-				     a head that runs the full width of the screen — the two cells, and the score
-				     across the foot of them — rather than a block of chrome shrunk to its longest
-				     word and floated in the middle of a view it could have spanned. -->
-				<div class="flex w-full flex-col sm:w-auto">
-					<!-- The two things the fight is about, side by side: the place on the left and
-					     whoever is sitting on it on the right. They are of a kind — what is being
-					     fought for, and who it is being fought with — so they are read across rather
-					     than stacked, and the grid is what makes the two cells the same width whatever
-					     either of them holds: a name of any length and a town of any length are laid
-					     out by the head, not by each other.
-					     Two cells whoever is sitting on the town. Where nobody is — a town still on
-					     its seeded house team — the second is the same plate with nothing printed on
-					     it. It stood as a single wide column for a while, on the reading that an
-					     empty plate says there is a player and we have lost them; what it actually
-					     says is that there is nobody over there to name, which is the truth about a
-					     seeded town. And the head has a middle to keep: the way out of the fight is
-					     laid on the seam between the two cells (below), so a row that is sometimes
-					     one cell wide is a mark that moves depending on who holds the place. -->
-					<div class="relative grid grid-cols-2 items-stretch">
-						<!-- The town, on the very plate its pin carries on the map: the same mark, drawn
-						     the same way, showing what was pressed to get here. Only the challenge button
-						     is missing, and the caller is what leaves it out — a fight already under way
-						     has nothing left to start.
-						     Flush: laid into a cell it takes the cell's width and squares its corners,
-						     where a pin's plate settles its own width and rounds them.
-						     Without its holder row, which is the one thing a pin's plate says that this
-						     head now says better: the row is a face and a name squeezed under the place,
-						     which is all a pin has room for, and the cell beside this is the whole
-						     account. Said twice, side by side, the second saying reads as a second
-						     player. The plate keeps the row everywhere else — this is the caller
-						     leaving it out, exactly as it leaves out the challenge button. -->
-						{#if location}
-							<TownPlate {...location} holder={null} challenge={null} flush />
-						{/if}
-						<!-- Whose town it is — the account behind the line-up on the other side of the
-						     board, said the way this game says a player wherever it says one: the face
-						     they wear, the name they chose and the level they have reached. Written
-						     second, so it takes the right-hand cell. -->
-						{#if location?.holder}
-							<CombatHost
-								name={location.holder.name}
-								characterId={location.holder.characterId}
-								color={location.holder.color}
-								level={location.holder.level}
-							/>
-						{:else}
-							<!-- Nobody holds the town, so nobody is named — and the cell stays, on the
-							     very surface the cell beside it is printed on. What it says is that the
-							     line-up on the other side of the board is the town's own and not a
-							     player's, and an empty plate is how a head with two halves says it. -->
-							<div class={PLATE_FLUSH_CLASSES}></div>
-						{/if}
-						<!-- The way out of the fight, laid over the seam between the two cells: the
-						     place and whoever holds it are what the fight is about, and giving it up is
-						     the one thing on this screen that is about the fight as a whole rather than
-						     a part of playing it. So it stands at the middle of that row, absolutely —
-						     over both cells at once and belonging to neither, which is the one spot in a
-						     two-cell row that is not part of either reading.
-						     A picture and no words: a flag flown is a sentence nobody has to read. The
-						     label it used to carry is still said in words, to a screen reader and to a
-						     pointer resting on it.
-						     A red disc with the flag drawn white on it: a mark on its own over two plates
-						     is a picture, and what makes it read as a thing to press is a filled shape
-						     with an edge of its own. Round, because the button is as wide as it is tall —
-						     a shape with no words in it has no side to be the longer one — and because it
-						     is laid on the seam of two squared cells, where a circle is the one outline
-						     that belongs to neither. The glyph is inlined rather than served as a picture
-						     precisely so the white it is drawn in can reach it (see GameGlyph).
-						     It had two copies before this — one in the middle of the score banner, out of
-						     sight until the pointer was on the plate, and a full-width row under it for
-						     the phone, which has no pointer to hide a control behind. One mark standing
-						     in the open answers both, so both are gone.
-						     Between turns only, as it always was: a turn already being carried out
-						     settles itself, and a fight already decided has nothing left to give up — the
-						     result panel's Close is the way out of that one. Its own pointer, since the
-						     head is a reading laid over the board and takes no taps otherwise. -->
-						{#if state && !state.outcome}
-							<button
-								type="button"
-								class="pointer-events-auto absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-red-500 bg-red-500 btn text-white btn-circle btn-sm"
-								disabled={state.phase !== 'planning'}
-								title={$_('combat.concede')}
-								aria-label={$_('combat.concede')}
-								on:click={() => controller?.concede()}
-							>
-								<GameGlyph name="lorc/flying-flag" classes="[&>svg]:size-6" />
-							</button>
-						{/if}
-					</div>
-					<!-- The standing used to be a third cell across the foot of this grid. It is on
-					     the banner below now, in the middle of the score, which is where the fight is
-					     counted: what this one fight is one of belongs with how this one fight is
-					     going, not with the two things it is about. -->
-					{#if state && !state.outcome}
-					<!-- The score, at the head of the fight it is a score of, under the town being
-					     fought over.
-					     The fight is three duels, each played for one cell of the white column
-					     down the middle of the board, so the score is drawn as that ground:
-					     three squares a side, one per lane, filled white as that side takes it.
-					     A number said how many; these say which of a known three, and they are
-					     cells of a board rather than a length being filled, which is what the
-					     thing being counted is. Each side's three sit over the half of the board
-					     that side holds — the rivals' to the left, the player's to the right.
-					     Between them the room the way out is reached for in, and *under* all
-					     three of them — the plate's whole width and its whole depth — how far
-					     the town itself has been taken: the count this one fight is one of,
-					     which is why it is read with the score rather than up with the two
-					     things the fight is about. The banner is one row deep for that: the
-					     bar is the ground the counts stand on, not a second band under them.
-					     Both counts grow outwards from that middle, so the rivals' three are laid
-					     out backwards and fill from the right: it is the same count read either
-					     way round, and the two then mirror each other across the middle rather
-					     than both running left to right. Both are drawn white — the ground down
-					     the middle they are played for is white, and a count of it says so at a
-					     glance.
-					     While the fight is running only: a decided one reads its score off the
-					     panel in the middle of the board, and the same score at both ends of
-					     one canvas would be one score too many. -->
-					<!-- On the same plate the map's breadcrumb bar stands on: the base colour at four
-					     fifths so the board reads through it, white type and a shadow to lift it off what
-					     it covers. The score and the path are the same kind of thing — a line of state laid
-					     over a picture that fills the view — so they are drawn as one thing and not two.
-					     It runs the full width of the head, which is the width of the two cells above it:
-					     the head is one block of chrome and every row of it is the same width, so a phone
-					     gets a band across the top of the view rather than a label floating in the middle
-					     of one. It had a triangular wing at either end for a while, which made the row a
-					     banner narrower than the rows above it — a shape, and shapes do not butt against
-					     anything.
-					     The counts keep their own width at the two ends and the room between them is what
-					     gives (`flex-1`), so a wider head is a wider bar, never two counts drifting apart
-					     from the halves of the board they are about. -->
-					<div
-						class="pointer-events-auto relative flex h-7 w-full items-stretch gap-2 bg-base-100/80 text-white shadow-xl"
-					>
-						<!-- How far the town itself has been taken, and the whole plate is what it is drawn
-						     on: the bar is laid *under* the counts rather than beside them or below them —
-						     `absolute inset-0`, so it is the plate's own width and the plate's own depth,
-						     every pixel of the row. It had a row to itself for a moment, which
-						     doubled the depth of the banner to carry one bar: a band laid over the board is
-						     the last thing that should be growing, and a quantity does not need a line of its
-						     own when what stands on it is three discs and three discs. So the counts stand on
-						     it, and the fill is the ground they are counted on — which is what the standing
-						     is: this fight is one of the wins that bar is measuring.
-						     Squared and stretched to the plate by the variants below, which reach past the
-						     bar's own `h-6` — a height meant for the plate of a pin, where this one is the
-						     banner itself. It takes no pointer — there is nothing on this row to press: the
-						     way out of the fight, which used to stand in the middle of it and hid these
-						     figures whenever the pointer came near, is a mark at the middle of the head
-						     above now. So the figures stand in the middle of the plate and stay there. -->
-						{#if location?.challenge}
-							<TownChallenge
-								siege={location.challenge.siege}
-								button={location.challenge.button}
-								unlocksAt={location.challenge.unlocksAt}
-								onUnlock={location.challenge.onUnlock}
-								classes="pointer-events-none absolute inset-0 [&>div]:h-full [&_progress]:h-full [&_progress]:rounded-none"
-							/>
-						{/if}
-						<!-- Each side's count is three cells in a row, laid out as cells of the
-						     board because that is what is being counted: three equal columns over
-						     `w-24`, which is three of the plate's own former depth — the two blocks
-						     are the same width as each other and read together whatever the plate
-						     comes to.
-						     `relative`, and that is not decoration: the bar behind them is
-						     positioned, and a positioned box paints over the in-flow content of the
-						     same stack. Giving each block a position of its own is what puts the
-						     discs back on top of the ground they are counted on.
-						     Nothing is ruled between them. The cells were divided by a line down each
-						     of their sides, and what the lines were dividing is three discs in a row
-						     with a plate's own width of air around them — a thing already read as
-						     three from across the room, since a count of three is what a disc apart
-						     from another disc says. So the rules were drawing a grid over a figure
-						     that did not need one, and the busiest mark on the banner was the one
-						     carrying the least. The grid still sets the spacing; it simply is not
-						     drawn any more.
-						     A lane taken is a disc in its cell rather than the cell painted in: the
-						     ground a lane is played for is one white cell of the middle column, and
-						     a mark set in a cell reads as something standing on that ground where a
-						     filled cell reads as the ground itself having changed. The disc is
-						     always drawn and simply carries no colour until the lane is won, so the
-						     three cells hold their spacing whatever the score is. -->
-						<div
-							class="relative grid h-full w-24 grid-cols-3 py-1"
-							role="progressbar"
-							aria-label={$_('combat.rivalWins')}
-							aria-valuemin={0}
-							aria-valuemax={TEAM_SIZE}
-							aria-valuenow={state.wins.error}
-						>
-							{#each RIVAL_LANES as lane}
-								<span class="flex items-center justify-center">
-									<span
-										class={classNames(
-											'size-4 rounded-full',
-											lane <= state.wins.error && 'bg-white'
-										)}
-									></span>
-								</span>
-							{/each}
-						</div>
-					<!-- The room between the two counts, and it is deliberately empty. Two things
-					     have stood here and neither belonged: the turn number, a figure nothing on the
-					     screen was waiting for, and after it the way out of the fight, out of sight
-					     until the pointer was on the plate. The way out is one mark at the middle of
-					     the head now (above), where it is seen without being reached for and where a
-					     phone can reach it too — so what is left here is the room itself, which is
-					     what the middle of a score is.
-					     It is what gives as the head gets wider (`flex-1`), the counts keeping the
-					     width they are drawn at: a count is three cells of the board and means nothing
-					     stretched, where the space between two counts is only ever space. -->
-					<div class="flex-1"></div>
-					<div
-						class="relative grid h-full w-24 grid-cols-3 py-1"
-						role="progressbar"
-						aria-label={$_('combat.yourWins')}
-						aria-valuemin={0}
-						aria-valuemax={TEAM_SIZE}
-						aria-valuenow={state.wins.info}
-					>
-						{#each LANES as lane}
-							<span class="flex items-center justify-center">
-								<span
-									class={classNames('size-4 rounded-full', lane <= state.wins.info && 'bg-white')}
-								></span>
-							</span>
-						{/each}
-						</div>
-					</div>
-					{/if}
+			     It takes no pointer except where it has to (the banner and the flag ask for their
+			     own): laid over the board, it is a reading, and the board underneath is what is
+			     played.
+			     Centred by the row it sits in rather than by centring its own contents, which is
+			     what leaves the score's stretching to it: the head settles its own width only from
+			     `sm:` up, where the wrapper stops being the viewport. A phone gets a head that runs
+			     the full width of the screen — the two cells, and the score across the foot of them
+			     — rather than a block of chrome shrunk to its longest word and floated in the
+			     middle of a view it could have spanned. -->
+			{#if !lyingDown}
+				<div
+					class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
+				>
+					<CombatHead
+						{location}
+						wins={state && !state.outcome ? state.wins : null}
+						concedeReady={state?.phase === 'planning'}
+						classes="sm:w-auto"
+						on:concede={() => controller?.concede()}
+					/>
 				</div>
-			</div>
+			{/if}
 		</div>
 	{/if}
 </div>
