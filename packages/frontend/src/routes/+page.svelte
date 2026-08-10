@@ -3641,19 +3641,20 @@
 								strip's own flow, first in the document and so above the band, which is what
 								this strip being anchored to the map's bottom edge already gives: it grows
 								upward over the terrain and costs the band below nothing.
-								Half the width (`w-1/2`), because a song title is the shorter reading of the
-								two and a banner as wide as the map would be a line of mostly nothing — and
-								because the terrain beside it stays visible. So it is a plate rather than a
-								band: it stands against the map's left edge and the row below it, and is clear
-								on the right, which is the one corner it rounds. Same surface as the band
-								under it (`bg-base-100/80`, TownPlate's PLATE_SURFACE), the two of them being
-								one thing laid along the same edge.
+								Half the width (`w-1/2`) and centred on it (`mx-auto`), because a song title is
+								the shorter reading of the two and a banner as wide as the map would be a line
+								of mostly nothing — and because the terrain either side of it stays visible. So
+								it is a plate rather than a band: it stands on the row below it and is clear of
+								both of the map's sides, which is what rounds the two corners it has free
+								(`rounded-t-lg`). Same surface as the band under it (`bg-base-100/80`,
+								TownPlate's PLATE_SURFACE), the two of them being one thing laid along the same
+								edge.
 								It has been the middle of the band across the top of the page, a third cell on
 								the band below this one, and the last line of the pin the map stands on the
 								open place. Empty until a song is loaded — the slot holds its room, so the
 								band under it never moves when the music stops. -->
 							<div
-								class="pointer-events-auto flex w-1/2 min-w-0 items-center rounded-tr-lg bg-base-100/80 p-2 shadow-xl"
+								class="pointer-events-auto mx-auto flex w-1/2 min-w-0 items-center rounded-t-lg bg-base-100/80 p-2 shadow-xl"
 							>
 								<MusicBanner />
 							</div>

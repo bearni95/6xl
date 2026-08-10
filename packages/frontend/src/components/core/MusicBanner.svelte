@@ -5,7 +5,8 @@
 	import { musicService } from '$services/music.service';
 
 	// The radio: the play/pause and the song running past beside it, on a row of its own along the
-	// map's bottom edge — half the map's width, directly over the band that names the open place.
+	// map's bottom edge — half the map's width, centred, directly over the band that names the
+	// open place.
 	//
 	// It has been the middle of the band across the top of the page, a third cell on that band
 	// below it, and before either the last line of the pin the map stands on the open place. The
