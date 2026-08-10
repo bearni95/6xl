@@ -545,17 +545,19 @@
 			// Both sides wear a column; only the player's is a way of giving an order. The
 			// rival's is the same three glyphs read back to the player.
 			//
-			// Each stands off the inner shoulder of its own fighter — the player's team holds
-			// the right-hand half of the board and wears its columns to the left, the rivals
-			// the left half and theirs to the right. So the two blocks of orders face each
-			// other across the ground the lanes are fought over, which is where the reading
-			// is: what a fighter has been told to do stands on the side it is doing it on.
+			// Every one of them stands in the board's central column, on its own fighter's
+			// lane, against whichever of that column's two borders its half of the board is
+			// on: the rivals hold the left half, so their orders are read off the left-hand
+			// line, and the player's team the right half and the right-hand one. So the two
+			// sides' orders face each other across the ground the lanes are fought over, each
+			// team's three are one straight run down the middle of the board, and nothing
+			// stands out over a half where a fighter might walk into it.
 			engine.setOrders(
 				fighter.id,
 				fighter.side === 'info'
 					? orderButtons(fighter, current.phase, current.turn)
 					: rivalOrderButtons(fighter, current.turn),
-				fighter.side === 'info' ? 'left' : 'right'
+				fighter.side === 'info' ? 'right' : 'left'
 			);
 		}
 	}
