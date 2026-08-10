@@ -261,6 +261,15 @@
 	// $effects (markers, focus, restyle) can drive the map after it exists.
 	let Leaf: typeof import('leaflet') | null = null;
 	let mapInstance: L.Map | null = null;
+	// True from the moment this component is torn down. The mount is async — a dynamic
+	// import of Leaflet, then a fetch of every overlay — and a map may be walked off in the
+	// middle of either: the arena bounces a visit with nothing staged back here, and this
+	// page stages the open battle and goes straight back to it, so the whole of that mount
+	// can run against a component that is already gone. Nulling `mapInstance` on destroy
+	// answers for what happens after the map exists; this answers for what happens before
+	// there is one to null, where the only sign of the teardown would be a container that is
+	// no longer in the document.
+	let destroyed = false;
 	// The geoJSON layer groups, in overlay order, captured at mount so the
 	// highlight/hidden-stroke $effect can repaint reactively.
 	let overlayGroups: L.GeoJSON[] = [];
@@ -2673,6 +2682,10 @@
 		Leaf = await import('leaflet');
 		await import('leaflet/dist/leaflet.css');
 
+		// Gone while the module was loading: there is no container left to build on, and a map
+		// built here would be one nothing ever removes — onDestroy has already run.
+		if (destroyed) return;
+
 		mapInstance = Leaf.map(mapContainer, {
 			minZoom,
 			maxZoom,
@@ -2827,8 +2840,12 @@
 			})
 		);
 
-		// Guard against the component unmounting while fetches were in flight.
-		if (!mapInstance) return;
+		// Guard against the component unmounting while fetches were in flight. This is the
+		// likeliest place for that to happen — the geo layers are megabytes and the whole rest
+		// of the mount waits on them — and it only holds because onDestroy nulls the field: a
+		// removed Leaflet map is still a perfectly truthy object, with its panes gone, so
+		// adding a layer to one throws inside Leaflet rather than being caught here.
+		if (destroyed || !mapInstance) return;
 
 		overlays.forEach((overlay, index) => {
 			// A `properties.id → layer` lookup for this overlay, populated below when
@@ -2921,6 +2938,7 @@
 	});
 
 	onDestroy(() => {
+		destroyed = true;
 		mapContainer?.removeEventListener('wheel', onWheelZoom);
 		if (wheelFrame) cancelAnimationFrame(wheelFrame);
 		if (maskTimer) clearTimeout(maskTimer);
@@ -2928,6 +2946,11 @@
 		unmountPinMounts();
 		unmountBoxMounts();
 		mapInstance?.remove();
+		// Removed is not gone: Leaflet takes the panes down and leaves the object standing, so
+		// everything that reads this field to decide whether there is still a map — the mount's
+		// own guards, and every $effect that runs one last time on the way out — was reading a
+		// map with nothing under it and getting yes. Let go of it here, and the answer is no.
+		mapInstance = null;
 	});
 </script>
 
