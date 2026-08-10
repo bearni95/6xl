@@ -14,6 +14,7 @@
 	import RegionCurrentBadge from '$components/core/RegionCurrentBadge.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import MusicBanner from '$components/core/MusicBanner.svelte';
+	import MusicToggle from '$components/core/MusicToggle.svelte';
 	import BandMenu from '$components/core/BandMenu.svelte';
 	import RegionLocationList from '$components/core/RegionLocationList.svelte';
 	import ShowShareGrid from '$components/core/ShowShareGrid.svelte';
@@ -3633,28 +3634,35 @@
 						<div
 							class="pointer-events-none absolute inset-x-0 bottom-0 z-[900]"
 						>
-							<!-- The radio, on a row of its own directly over the band that names the place:
-								the play/pause and the song running past it, and the whole of it is the press
-								(see MusicBanner). Two rows and not two cells of one — what is playing and
-								where the map is standing are two statements, and a reader who wants the
-								second should not have to read past the first to reach it. Stacked in the
-								strip's own flow, first in the document and so above the band, which is what
-								this strip being anchored to the map's bottom edge already gives: it grows
-								upward over the terrain and costs the band below nothing.
-								Half the width (`w-1/2`) and centred on it (`mx-auto`), because a song title is
-								the shorter reading of the two and a banner as wide as the map would be a line
-								of mostly nothing — and because the terrain either side of it stays visible. So
-								it is a plate rather than a band: it stands on the row below it and is clear of
-								both of the map's sides, which is what rounds the two corners it has free
-								(`rounded-t-lg`). Same surface as the band under it (`bg-base-100/80`,
+							<!-- What is playing, on a row of its own directly over the band that names the
+								place (see MusicBanner). Two rows and not two cells of one — what is playing and
+								where the map is standing are two statements, and a reader who wants the second
+								should not have to read past the first to reach it. Stacked in the strip's own
+								flow, first in the document and so above the band, which is what this strip being
+								anchored to the map's bottom edge already gives: it grows upward over the terrain
+								and costs the band below nothing.
+								Three fifths of the width (`w-3/5`), because a song title is the shorter reading
+								of the two and a banner as wide as the map would be a line of mostly nothing —
+								and because the terrain beside it stays visible. Held against the map's far edge
+								(`ml-auto`) rather than centred, over the end of the band below, where the
+								play/pause square stands: the control and the title it letters are one corner of
+								the map read together, instead of a mark at one end of a row and its reading in
+								the middle of another. So it is a plate rather than a band — against the map's
+								right edge and standing on the row under it, clear on the left, which is the one
+								corner it rounds (`rounded-tl-lg`). Same surface as that band (`bg-base-100/80`,
 								TownPlate's PLATE_SURFACE), the two of them being one thing laid along the same
 								edge.
+								Nothing on this row is pressed. The whole of it was the press for a while, the
+								mark at the head of the line and the title after it; the play/pause is a square
+								at the far end of the band below now (see MusicToggle), because a play/pause is a
+								button and a reader looking for one looks for a button rather than for a line of
+								text that happens to answer.
 								It has been the middle of the band across the top of the page, a third cell on
-								the band below this one, and the last line of the pin the map stands on the
-								open place. Empty until a song is loaded — the slot holds its room, so the
-								band under it never moves when the music stops. -->
+								the band below this one, and the last line of the pin the map stands on the open
+								place. Nothing at all until a song is loaded, and the band under it is anchored
+								to the map's edge, so it never moves for what happens above it. -->
 							<div
-								class="pointer-events-auto mx-auto flex w-1/2 min-w-0 items-center rounded-t-lg bg-base-100/80 p-2 shadow-xl"
+								class="pointer-events-auto ml-auto flex w-3/5 min-w-0 items-center rounded-tl-lg bg-base-100/80 px-3 py-2 shadow-xl"
 							>
 								<MusicBanner />
 							</div>
@@ -3746,14 +3754,30 @@
 										on:select={(event) => openFromColumn(event.detail.key)}
 									/>
 
-									<!-- (What is playing stood here, in a third cell beside the two of them, and it is
-										the row directly above this one now — the play/pause and the song: see
-										MusicBanner and the plate over this band. It is still along this edge because
-										the map turns the dial as the reader walks and the badge beside it letters the
-										station already; it is no longer ON this row because everything else about the
-										radio — that it is on, what is on, that it goes on playing while the reader
-										walks from town to town and while a full view is open over the map — is not
-										about the open place at all, and two statements read as two rows.) -->
+									<!-- The radio's play/pause, last on the row and a square like the dots at the head of
+										it: same 32px outlined tile, same white over terrain, so everything on this band
+										that is pressed rather than read is the same shape (see MapBreadcrumbs'
+										`squareClasses`, which this matches by hand rather than by sharing — the two
+										buttons are the same size and colour because the band asks that of anything
+										standing on it, not because one of them is the other).
+										It is a button and nothing else, which is what a play/pause is. The whole slot
+										above was the press for a while, the mark inside it drawn as a picture rather
+										than as a control; what that gave a reader was a thing to press with no edge to
+										find, and a title running past under a finger. So the mark comes down here where
+										the row's other press already stands, and what is left above is the reading.
+										`flex-none` so the badge between the two squares keeps whatever they leave.
+										What it presses is the station of the place the map is open on: the map turns the
+										dial as the reader walks (see musicService.follow) and a press that starts sound
+										tunes to wherever the dial has got to before it starts anything (see
+										musicService.toggle), so this square never begins the last town's show. Nothing
+										at all until a song is loaded — a map whose music never arrived is a map with no
+										music control on it, not one with a dead button (see MusicToggle) — and the row
+										simply closes up, as it does where there is nothing above the open place either. -->
+
+									<MusicToggle
+										classes="btn btn-square btn-outline btn-sm flex-none border-white/60 text-white hover:border-white hover:bg-white/10 hover:text-white"
+										iconClasses="size-4"
+									/>
 							</div>
 						</div>
 					</div>
