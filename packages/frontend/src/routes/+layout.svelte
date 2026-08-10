@@ -6,8 +6,6 @@
 	import LegalModal from '$components/core/LegalModal.svelte';
 	import LegalGate from '$components/core/LegalGate.svelte';
 	import WelcomeBoosterModal from '$components/core/WelcomeBoosterModal.svelte';
-	import RosterModal from '$components/core/RosterModal.svelte';
-	import { rosterModalOpen } from '$services/rosterModal';
 
 	let { children } = $props();
 </script>
@@ -15,15 +13,12 @@
 {@render children?.()}
 <AvatarPickerModal />
 <SettingsModal />
-<!-- The player's own cards. Out here rather than on the map, because the two ways in are on
-	two different routes now: the Roster button on the map's panel, and the arena's "no active
-	team" card, which is a page of its own (/combat) since the fight stopped being a modal.
-	Mounted only while it is open — it builds a card canvas of its own, and every mount is a
-	fresh WebGL context the browser hands out a limited number of. It is drawn after the
-	route's own content, so it stands over whatever raised it. -->
-{#if $rosterModalOpen}
-	<RosterModal />
-{/if}
+<!-- The player's own cards are not here. They were, for as long as they were a sheet raised
+	from two different routes — the side in the map's corner and the arena's "no active team"
+	card — and they are a route of their own now (/roster), reached from both by a navigation
+	(see $services/roster). Which also gives back for free what mounting it only while it was
+	open was buying: the card canvas, and the WebGL context every mount of it asks the browser
+	for, exist only while that page is the page. -->
 <!-- The way in, out here with the rest of them: the corner at the foot of the map is one
 	button now, and everything it asks is asked on this box. Out here it also survives the
 	documents being read over it, which is the whole reason a visitor can tick the gate and

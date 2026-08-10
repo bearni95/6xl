@@ -56,7 +56,7 @@
 	import { characters as availableCharacters } from '@3xl/data';
 	import { authService } from '$services/auth.service';
 	import { openSignIn } from '$services/signInModal';
-	import { rosterModalOpen } from '$services/rosterModal';
+	import { openRoster } from '$services/roster';
 	import { spawnService } from '$services/spawn.service';
 	import { teamService, TEAM_SIZE } from '$services/team.service';
 	import { AuthStatus } from '$types/profile.type';
@@ -1125,12 +1125,12 @@
 				<p class="text-sm opacity-70">
 					{$_('combat.noTeamBody', { values: { size: TEAM_SIZE } })}
 				</p>
-				<!-- The roster is a modal over the map, not a page, so this raises it right
-					over the arena rather than navigating out of the fight. -->
-				<button
-					class="btn btn-primary btn-sm w-fit"
-					on:click={() => rosterModalOpen.set(true)}
-				>
+				<!-- The roster is a page of its own now, so this walks out of the arena to it —
+					and back here when it is left, the roster leaving for wherever it was opened
+					from. Nothing is lost by going: the fight is the server's record and the
+					staging outlives the page (see $services/combat), so what is come back to is
+					this same fight with its town on it. -->
+				<button class="btn btn-primary btn-sm w-fit" on:click={() => void openRoster()}>
 					{$_('combat.openRoster')}
 				</button>
 			</div>

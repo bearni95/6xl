@@ -32,7 +32,7 @@
 	import CreditsModal from '$components/core/CreditsModal.svelte';
 	import BoosterModal from '$components/core/BoosterModal.svelte';
 	import LevelBoosterModal from '$components/core/LevelBoosterModal.svelte';
-	import { rosterModalOpen } from '$services/rosterModal';
+	import { openRoster } from '$services/roster';
 	import { collectionModalOpen } from '$services/collectionModal';
 	import { settingsModalOpen } from '$services/settingsModal';
 	import { openSignIn } from '$services/signInModal';
@@ -1883,7 +1883,9 @@
 	//
 	// The sheets themselves are untouched and all still mounted at the foot of this file: each
 	// is raised by its own store, so anything that wants one asks for it by name (see
-	// rosterModal, collectionModal, settingsModal, legalModal).
+	// collectionModal, settingsModal, legalModal). The roster is not among them any more —
+	// the side in the corner is a press that goes to `/roster` (see $services/roster), the
+	// way the Challenge button goes to `/combat`.
 
 	// Fight this town: claim its challenge, then snapshot whichever team currently sits
 	// on it — the holder's if a player has taken it, the seeded roll otherwise — into
@@ -4300,7 +4302,7 @@
 										type="button"
 										class="w-full cursor-pointer rounded-box focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 										aria-label={$_('roster.open')}
-										on:click={() => rosterModalOpen.set(true)}
+										on:click={() => void openRoster()}
 									>
 										<TeamLineup
 										members={playerTeamLineup}
@@ -4322,7 +4324,7 @@
 									<button
 										type="button"
 										class="btn btn-primary w-full shadow-xl"
-										on:click={() => rosterModalOpen.set(true)}
+										on:click={() => void openRoster()}
 									>
 										{$_('roster.open')}
 									</button>
@@ -4440,11 +4442,11 @@
 	still owes the arena are handed over with it: the frozen line-up and the town's own plate.
 	Everything a settled fight changes here is re-read by this page being walked back onto. -->
 
-<!-- The roster is not here either: it went out to the layout when the fight left this page,
-	because the arena's "no active team" card is one of the two things that raise it and the
-	arena is no longer standing over this page to raise it with (see +layout.svelte). It is
-	still opened from the Roster button on the row above the panel's card grid, through the
-	same `rosterModalOpen`. -->
+<!-- The roster is not here either, and is not a sheet at all any more: it is `/roster`, for
+	the same reasons the fight is a page — a view that takes the whole viewport, reached from
+	two different routes (the side standing in this page's corner, and the arena's "no active
+	team" card), and worth an address of its own. Pressing the side goes there and leaving
+	comes back here (see $services/roster). -->
 
 <!-- The album, on the same sheet and over the map like the roster. Mounted only while it is
 	open, which is what keeps a cast of forty-odd sprites off every other page: the show

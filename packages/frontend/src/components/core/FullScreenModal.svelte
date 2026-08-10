@@ -41,10 +41,12 @@
 	// all. So this component has no `open` prop: it exists while the modal is up, it
 	// dispatches `close`, and the host's store is what decides.
 	//
-	// z-[1300] puts it above the map's furniture (z-[900]–z-[1000]). The combat arena wears
-	// this same sheet, so two of these can be up at once — the arena is one of the
-	// places that sends the player to the roster — and which of them is in front is
-	// decided by the order the page mounts them in, the roster being the later. The
+	// z-[1300] puts it above the map's furniture (z-[900]–z-[1000]). The two views that are
+	// pages rather than sheets — the combat arena and the roster — wear this same sheet, so
+	// two of these can be up at once wherever a modal mounted at the layout root is raised
+	// over one of them; which is in front is decided by the order they are mounted in, the
+	// route's own content being drawn before the layout's modals. The two pages can never
+	// stack on each other, going between them being a navigation. The
 	// sheet is a full-height flex column: the title bar takes what it needs and the
 	// slot gets the rest, which is what a scroll box inside it is sized from. A `bare`
 	// sheet has neither the bar nor the padding round it — the slot is the viewport, and

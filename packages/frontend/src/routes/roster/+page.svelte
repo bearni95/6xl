@@ -3,9 +3,11 @@
 	import { onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { characters } from '@3xl/data';
+	import { goto } from '$app/navigation';
 	import { authService } from '$services/auth.service';
 	import { openSignIn } from '$services/signInModal';
-	import { rosterModalOpen } from '$services/rosterModal';
+	import { leaveRoster } from '$services/roster';
+	import { MAP_ROUTE } from '$services/combat';
 	import { spawnService } from '$services/spawn.service';
 	import { teamService, TEAM_SIZE } from '$services/team.service';
 	import { showLogos, loadShowLogos } from '$services/shows.service';
@@ -18,14 +20,21 @@
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import { SPAWN_FILL_CLASSES, SPAWN_SQUARE_GLYPHS } from '$components/core/spawn-colors';
 
-	// The roster is a modal now, so it is only ever mounted while it is open — the
-	// host raises it with `rosterModalOpen`, and everything below (the spawn load,
-	// the face fetches, the card canvas's WebGL context) starts with the mount and
-	// goes with the close. The sheet it is drawn on, the slide it arrives with, its
-	// title bar and Escape are FullScreenModal's; what is inside it is this
-	// component's, and closing is still this component's to do since the store is.
+	// The cards, on their own page. They were a sheet raised over the map for a long time,
+	// set true by the side standing in the map's corner and false by their own ✕ — which
+	// meant the roster had no address, could not be linked to or reloaded into, and was
+	// mounted at the layout root so that the arena, on a route of its own, could raise it
+	// over a fight. So the roster has a route, exactly as the fight does, and the two ways
+	// in are navigations now (see $services/roster): whoever sends the player to their cards
+	// goes here, and leaving goes back to wherever that was.
+	//
+	// What is drawn is unchanged, the sheet included: this is still the app's one full-view
+	// surface, with its title bar, its blur in and out and its Escape. Nothing is mounted
+	// until the page is — the spawn load, the face fetches, the card canvas's WebGL context
+	// all start with the visit and go when it is left — which is what mounting the modal only
+	// while it was open used to buy.
 	function close(): void {
-		rosterModalOpen.set(false);
+		void leaveRoster();
 	}
 
 	// The view is two grids, and every count in it is fixed. From lg up they stand side by
@@ -570,9 +579,12 @@
 
 </script>
 
-<!-- The sheet, the slide, the title bar and Escape are the modal's; everything below is
-	the roster. The toolbar takes what it needs of that column and the grid gets the rest,
-	which is what its scroll box is sized from. -->
+<!-- The sheet, the blur, the title bar and Escape are the modal's; everything below is
+	the roster. The sheet stays even though this is a page now, for the same reason the
+	arena's does: it is the one full-view surface this game has, and a fight and a roster
+	being routes rather than sheets is about where they live, not about what they look like.
+	The toolbar takes what it needs of that column and the grid gets the rest, which is what
+	its scroll box is sized from. -->
 <FullScreenModal title={$_('roster.title')} closeLabel={$_('roster.close')} on:close={close}>
 	{#if $status === AuthStatus.SignedIn && $spawns.length > 0}
 		{#if $teamError}
@@ -595,8 +607,10 @@
 			<div class="card max-w-md bg-base-200">
 				<div class="card-body gap-4">
 					<p class="text-sm opacity-70">{$_('roster.signInBody')}</p>
-					<!-- The way in is a box over the map, under this sheet, so the prompt puts
-					     the sheet away and raises it rather than stacking one behind the other. -->
+					<!-- The way in is a box mounted at the layout root, so it would stand over this
+					     page perfectly well — but a player signing in has nothing to read here until
+					     they have, so the prompt leaves the roster the way they came and raises the
+					     sheet there. Coming back is the same press that brought them. -->
 					<button
 						class="btn btn-primary btn-sm w-fit"
 						on:click={() => {
@@ -619,7 +633,10 @@
 			<div class="card max-w-md bg-base-200">
 				<div class="card-body gap-4">
 					<p class="text-sm opacity-70">{$_('roster.emptyBody')}</p>
-					<button class="btn btn-primary btn-sm w-fit" on:click={close}>
+					<!-- A player with no cards is sent to the map rather than back the way they
+					     came: the box that gives them their first one is drawn on a town, and the
+					     button says so. Everywhere else here, leaving is going back. -->
+					<button class="btn btn-primary btn-sm w-fit" on:click={() => void goto(MAP_ROUTE)}>
 						{$_('roster.openMap')}
 					</button>
 				</div>
