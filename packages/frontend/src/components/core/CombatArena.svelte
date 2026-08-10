@@ -1129,7 +1129,7 @@
 			     (#7dd3fc) until the document needed the same blue over the board as in it — one
 			     sky, painted once, rather than a colour kept in step across a canvas and a
 			     stylesheet.
-			     It is the **board's own column** and not the whole sheet: nine squares wide,
+			     It is the **canvas's own column** and not the whole sheet: nine squares wide,
 			     which is the canvas's own width (`CombatGround` has the figures), centred on the
 			     same middle the canvas is. On a phone that is the whole width and there is no
 			     difference; on anything wider the canvas is limited by the height and leaves a
@@ -1140,7 +1140,7 @@
 			     it: the head, the board, and the ground below the board, which is drawn on this
 			     the way the field's own bottom fringe is. -->
 			<div
-				class="pointer-events-none absolute inset-y-0 left-1/2 w-[calc(9*min(100vw/9,100dvh/13))] -translate-x-1/2 bg-sky-300"
+				class="pointer-events-none absolute inset-y-0 left-1/2 w-[calc(9*min(100vw/9,100dvh/12))] -translate-x-1/2 bg-sky-300"
 				aria-hidden="true"
 			></div>
 			<!-- The board, and nothing round it. No card, no body, no column, and no border: the

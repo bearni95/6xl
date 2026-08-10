@@ -255,6 +255,24 @@ export const APRON_DEPTH = 1 / GROUND_TILES_PER_CELL;
 const APRON_ROW = LAST_ROW + 1;
 
 /**
+ * The **brow**: the board's topmost row of ground squares, which the canvas is cut below.
+ * A third of a cell, the apron's depth taken off the other end — so the picture is twelve
+ * squares deep where the board is thirteen, and the whole of it is three cells by four.
+ *
+ * Nothing is lost with it. That row is the top third of the row no line opens on, and since
+ * the sky became the page's ({@link layGround}) there is nothing drawn on it at all: it was
+ * a strip of empty picture over a picture that is scaled to whatever room it is given, which
+ * is scale taken off the fight for nothing.
+ *
+ * What the row above the lanes is *for* survives the cut, which is the thing to check before
+ * making it: it is headroom for the line standing on the first lane row, and a fighter is
+ * drawn {@link CHAR_HEIGHT_RATIO} cells tall standing three quarters of the way down its own
+ * cell, so the tallest of them reaches 0.55 of a cell above that cell's top edge. Two thirds
+ * of a cell are left there. The head still clears.
+ */
+const BROW_DEPTH = APRON_DEPTH;
+
+/**
  * The field's first and last rows of squares, counted in ground squares down from the top
  * of the board: the top of the first row a lane opens on, which is where the sky stops,
  * and the apron, which is where the board stops. They are the rows the two edge tiles are
@@ -989,7 +1007,9 @@ export class MugenBoard {
 	 * is cropped to the grid once everything is on it ({@link MugenBoard.fitToContent}) and
 	 * then scaled to fit its box, so what these figures decide between them is the board's
 	 * proportions and its resolution. The padding is room to draw in during the layout, and
-	 * the crop takes it back off — nothing is reserved around the finished board.
+	 * the crop takes it back off — nothing is reserved around the finished board. The
+	 * {@link BROW_DEPTH} the crop also takes off the top is left standing here for the same
+	 * reason the padding is: it is room the board is drawn in and not room it is seen in.
 	 */
 	get dimensions(): { width: number; height: number } {
 		const { cellSize, padding } = this.options;
@@ -1166,15 +1186,21 @@ export class MugenBoard {
 	 * untouched, so no cell shifts.
 	 *
 	 * All four edges are geometry rather than a measurement — the outer sides of the first
-	 * and last columns, the top edge of the first row and the foot of the {@link APRON_DEPTH}
-	 * of ground under the last, at the size a cell is drawn — so the crop does not depend on
-	 * the frame it happens to be taken in, and is the same board however the fighters
-	 * standing on it are posed. Nothing is read off what is drawn. What running the board out
-	 * to every canvas edge costs is on {@link contentCrop}.
+	 * and last columns, the foot of the {@link BROW_DEPTH} of board over the first row and
+	 * the foot of the {@link APRON_DEPTH} of ground under the last, at the size a cell is
+	 * drawn — so the crop does not depend on the frame it happens to be taken in, and is the
+	 * same board however the fighters standing on it are posed. Nothing is read off what is
+	 * drawn. What running the board out to every canvas edge costs is on
+	 * {@link contentCrop}.
+	 *
+	 * The two thirds of a cell are the picture's ends and not the board's: the brow's squares
+	 * are ruled and the apron's are laid like every other, and the crop is the one thing that
+	 * decides which of what is drawn is seen — as it already does for a fighter's limbs at
+	 * the sides and for the half-cell a beaten one is pushed out by.
 	 */
 	private fitToContent(): void {
 		if (!this.app) return;
-		const topLeft = this.project(0, 0);
+		const topLeft = this.project(0, BROW_DEPTH);
 		const bottomRight = this.project(BOARD_WIDTH, BOARD_HEIGHT + APRON_DEPTH);
 		const { left, top, width, height } = contentCrop({
 			left: topLeft.x,
@@ -1199,8 +1225,9 @@ export class MugenBoard {
 	 * never stretched, only scaled.
 	 *
 	 * Two terms and no third: a host has no say in this at all, and the same two figures
-	 * answer every screen. The board is three columns by four rows now, so it is taller than
-	 * it is wide and a wide screen is limited by its height, a phone by its width — either
+	 * answer every screen. The picture is three columns by four rows — the board's twelve
+	 * square-rows less the brow and plus the apron, which come to the same — so it is taller
+	 * than it is wide and a wide screen is limited by its height, a phone by its width; either
 	 * way the whole field is on the view, at the largest size that fits, with the axis that
 	 * did not run out spending what is left over on the room round the board rather than on
 	 * board nobody can see. (The host used to be able to push a column off the sides; see

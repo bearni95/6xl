@@ -4,11 +4,12 @@ import { contentCrop, type GridSpan } from '$utils/mugen/mugen-board';
 /**
  * Where the canvas is cut around the board.
  *
- * It is cut to the grid, both ways: the field's own four edges and nothing else, so the
- * board runs corner to corner of the canvas. The canvas is scaled to fit its box, so canvas
- * that is not board is scale the board does not get — a strip beside the grid or a band
- * above it is the whole board drawn smaller for it. Room a fighter needs over its head is
- * given as board instead (the row above the lanes), not as canvas held back.
+ * It is cut to the span it is handed and to nothing else, so whatever the board says its
+ * edges are runs corner to corner of the canvas. The canvas is scaled to fit its box, so
+ * canvas that is not board is scale the board does not get — a strip beside the grid or a
+ * band above it is the whole board drawn smaller for it. Room a fighter needs over its head
+ * is given as board instead (the row above the lanes), not as canvas held back; which two
+ * thirds of that row the board hands over is the board's business, not this function's.
  *
  * Pure arithmetic over the grid's geometry, so no Pixi app is booted and no WebGL context
  * is asked for — and nothing here is read off what happens to be drawn.

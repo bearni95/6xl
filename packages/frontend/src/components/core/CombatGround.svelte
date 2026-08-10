@@ -13,14 +13,15 @@
 	 * taking no pointer, saying nothing to a reader — the panel's own plate is drawn over it
 	 * and the orders are read off that.
 	 *
-	 * **The figures are the board's, spelled again in CSS.** A Tailwind class is a literal,
+	 * **The figures are the picture's, spelled again in CSS.** A Tailwind class is a literal,
 	 * so what `ground.ts` and `grid.ts` say in TypeScript this has to say a second time in
-	 * `calc()`: the board is nine squares across and thirteen down (three columns and four
-	 * rows of cells, three squares to a cell, plus the apron's third of a cell), so one
-	 * square is `min(100vw/9, 100dvh/13)` — the same two limits the canvas sizes itself
-	 * between, which is what makes a square here exactly a square there. The sheet is
-	 * sixteen tiles across, so drawing one tile at one square is a background sixteen
-	 * squares wide with the wanted tile's column scrolled into view.
+	 * `calc()`: the canvas is nine squares across and twelve down — three columns and four
+	 * rows of cells at three squares a cell, less the brow the crop takes off the top and
+	 * plus the apron it leaves at the foot, which come to the same third of a cell — so one
+	 * square is `min(100vw/9, 100dvh/12)`, the same two limits the canvas sizes itself
+	 * between. That is what makes a square here exactly a square there. The sheet is sixteen
+	 * tiles across, so drawing one tile at one square is a background sixteen squares wide
+	 * with the wanted tile's column scrolled into view.
 	 */
 	import classNames from 'classnames';
 	import { BOARD_HEIGHT, BOARD_WIDTH } from '$utils/mugen/grid';
@@ -42,7 +43,7 @@
 
 	/**
 	 * How many rows to draw. Ten is more than any phone has room for: the band under the
-	 * board is `100dvh − 13 squares`, which at nine squares to the width is `9 × dvh/vw − 13`
+	 * board is `100dvh − 12 squares`, which at nine squares to the width is `9 × dvh/vw − 12`
 	 * rows, and no phone is more than about two and a half times as tall as it is wide. The
 	 * rest is cut off by the clip, which is what the overflow is for — the grid is allowed to
 	 * run past the foot of the view, and never to be scrolled to.
@@ -53,7 +54,7 @@
 	 * its own pixels rather than smeared (`pixelated`) — the canvas samples the same artwork
 	 * `nearest` for the same reason. */
 	const SQUARE =
-		'size-[min(100vw/9,100dvh/13)] [background-image:url(/assets/tiles/grass-16x16.png)] [background-size:calc(16*min(100vw/9,100dvh/13))_calc(16*min(100vw/9,100dvh/13))] [image-rendering:pixelated]';
+		'size-[min(100vw/9,100dvh/12)] [background-image:url(/assets/tiles/grass-16x16.png)] [background-size:calc(16*min(100vw/9,100dvh/12))_calc(16*min(100vw/9,100dvh/12))] [image-rendering:pixelated]';
 
 	/**
 	 * Which tile of the sheet a square shows, by that tile's column on it: the background is
@@ -63,9 +64,9 @@
 	 * none of them is pulled up.
 	 */
 	const EARTH_COLUMN_CLASSES: Record<number, string> = {
-		6: '[background-position:calc(-6*min(100vw/9,100dvh/13))_0]',
-		7: '[background-position:calc(-7*min(100vw/9,100dvh/13))_0]',
-		8: '[background-position:calc(-8*min(100vw/9,100dvh/13))_0]'
+		6: '[background-position:calc(-6*min(100vw/9,100dvh/12))_0]',
+		7: '[background-position:calc(-7*min(100vw/9,100dvh/12))_0]',
+		8: '[background-position:calc(-8*min(100vw/9,100dvh/12))_0]'
 	};
 
 	// The whole grid, filled a row at a time, each square asking the shared rule which earth
