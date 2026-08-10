@@ -2486,9 +2486,9 @@ export class MugenBoard {
 	 *
 	 * `side` says which of its shoulders the column stands off, and is the caller's to
 	 * decide because it is about the fight and not about the board: the two teams stand on
-	 * opposite halves, so a column on the outer shoulder of each puts every one of them
-	 * clear of the ground being fought over, and puts a team's columns together on that
-	 * team's own side of the screen.
+	 * opposite halves, so one shoulder faces the ground being fought over and the other the
+	 * team's own edge of the screen, and which of those an order should be read on is a
+	 * thing about the game.
 	 *
 	 * Called on every change of the fight's state, so it rebuilds only when the *set*
 	 * of orders changes and otherwise just repaints the buttons it already has: a
