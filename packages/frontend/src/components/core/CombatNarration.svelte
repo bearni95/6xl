@@ -5,16 +5,18 @@
 	import { pickNarrationLine, type CombatNarrationCue } from '$types/combat-narration.type';
 
 	/**
-	 * What the fight is saying about the move being played out, laid over the player's panel.
+	 * What the fight is saying about the encounter being played out, laid over the player's
+	 * panel — **one sentence per row of the board**, and no more than that.
 	 *
 	 * The board draws no word over any fighter — a callout at the reveal gives the turn away
 	 * and a callout after the fact only letters a picture that has just been drawn (see the
 	 * controller's `showOrders`) — so the words stand somewhere else entirely: here, on the
-	 * one plate the player is already reading the fight off, one line at a time, replaced as
-	 * the canvas moves on to the next thing.
+	 * one plate the player is already reading the fight off. A row's line goes up as the blow
+	 * settles it and stands through the fall, the ground changing hands and the beat after
+	 * it, until the next row has something of its own to say.
 	 *
-	 * It words nothing itself. The fight hands over a cue — which of its events it was, and
-	 * the fighters it happened to — and the sentence is one of the authored lines for that
+	 * It words nothing itself. The fight hands over a cue — how the encounter went, and the
+	 * two fighters it was between — and the sentence is one of the authored lines for that
 	 * event, filled in ({@link pickNarrationLine}), from the collection the admin
 	 * `/narration` screen writes. Which of them is seeded off the cue, so the words hold
 	 * still for as long as the cue does rather than re-rolling on every render.

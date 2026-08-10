@@ -376,13 +376,15 @@ export interface CombatState {
 	/** What the turn being resolved amounted to, one line per event. */
 	log: string[];
 	/**
-	 * What the fight is announcing at this very moment, or null between turns.
+	 * The encounter being played out, as one line's worth: how the row went and the two
+	 * fighters it went that way for. Null between turns, and while a turn is on its way to
+	 * its first encounter.
 	 *
-	 * The fight names the *event* and the fighters it happened to; the words for it are
-	 * authored elsewhere entirely (`public/combat-narration.json`, via the admin
-	 * `/narration` screen) and looked up by the page that draws them. So this is a cue,
-	 * not a caption: nothing in here is a sentence, and nothing in the rules ever reads
-	 * a sentence back. See `$types/combat-narration.type`.
+	 * The fight names the *event* and the fighters; the words for it are authored elsewhere
+	 * entirely (`public/combat-narration.json`, via the admin `/narration` screen) and
+	 * looked up by the page that draws them. So this is a cue, not a caption: nothing in
+	 * here is a sentence, and nothing in the rules ever reads a sentence back. See
+	 * `$types/combat-narration.type`.
 	 */
 	cue: CombatNarrationCue | null;
 	/** True when every player fighter still standing has a complete order. */
@@ -430,10 +432,11 @@ export class CombatController {
 	private turn = 1;
 	private status = '';
 	private log: string[] = [];
-	/** What is being said over the turn right now — see {@link CombatState.cue}. */
+	/** The encounter being played out, in words — see {@link CombatState.cue}. */
 	private cue: CombatNarrationCue | null = null;
-	/** Cues announced so far this fight. It is what seeds which of an event's authored
-	 * lines is picked, so two identical blows are not narrated in identical words. */
+	/** Encounters announced so far this fight. It is what seeds which of an event's
+	 * authored lines is picked, so two identical blows are not narrated in identical
+	 * words. */
 	private cues = 0;
 	private outcome: CombatOutcome | null = null;
 	/** Which fighters are currently wearing an aura, so it is only redrawn when a
@@ -730,7 +733,7 @@ export class CombatController {
 		// sooner: the running order is the board's, not a rating's. The one exception is a
 		// lane that attacked both ways, whose two blows are one event (see groupShots).
 
-		this.announce('orders', { turn: String(this.turn) }, 'Orders are revealed.');
+		this.setStatus('Orders are revealed.');
 		this.showOrders(acting);
 		await pause(REVEAL_MS);
 
@@ -891,11 +894,13 @@ export class CombatController {
 	private async playShot(shot: Shot): Promise<void> {
 		const { shooter, target, extra } = shot;
 		const from = extra ? `${shooter.name}'s free shot` : `${shooter.name} shoots`;
-		// Said as the attacker sets off, so the line is up for the length of the walk and
-		// the blow at the end of it — and is replaced by what the blow amounted to, below,
-		// only once the blow has actually been thrown.
+		// The two names this encounter's one sentence is written about. Nothing is announced
+		// yet: what is said about a row is how it went, and how it went is settled by the
+		// blow at the end of the walk out (see the branches below). A line put up as the
+		// attacker set off would either say nothing yet or give the answer away before the
+		// picture had shown it.
 		const lane = { attacker: shooter.name, target: target.name };
-		this.announce('advance', lane, `${shooter.name} goes at ${target.name}.`);
+		this.setStatus(`${shooter.name} goes at ${target.name}.`);
 
 		// The fighter opposite braces first, if covering is what it chose.
 		//
@@ -968,9 +973,9 @@ export class CombatController {
 		} else {
 			target.down = true;
 			this.log.push(`${from} — ${target.name} is down.`);
-			// Before the fall is played, not after it: the words and the picture are the one
-			// blow landing, and a line that arrived once the fighter was already on the floor
-			// would be lettering something over.
+			// The whole encounter in one line, said as the blow lands and left standing over
+			// the fall and the ground changing hands after it: those are this same event being
+			// shown to its end, not two more things to say (see {@link settleLane}).
 			this.announce('hit', lane);
 			// Sparks come off it in the colour of whoever's blow got through, and are all that
 			// is said about it: the spray, the fighter reeling and then falling out of the lane
@@ -1048,11 +1053,10 @@ export class CombatController {
 		const ground: Cell = { q: WON_COLUMN, r: row };
 		const back: Cell = { q: fallenColumn(loser.side, row), r: row };
 		if (!isBoardCell(ground.q, ground.r) || !isBoardCell(back.q, back.r)) return;
-		this.announce(
-			'ground',
-			{ winner: winner.name, loser: loser.name },
-			`${winner.name} takes the ground; ${loser.name} falls back.`
-		);
+		// Nothing is said here: the ground changing hands is the end of the encounter whose
+		// blow is already on screen in words, and a second line under it would be narrating
+		// one thing twice.
+		this.setStatus(`${winner.name} takes the ground; ${loser.name} falls back.`);
 		winner.cell = ground;
 		loser.cell = back;
 		// Together: one fighter withdrawing as the other comes forward is a single thing
@@ -1188,9 +1192,10 @@ export class CombatController {
 		for (const fighter of this.fighters) fighter.action = null;
 		this.planRivals();
 		this.phase = 'planning';
-		// Nothing is being carried out any more, so nothing is being narrated: the line that
-		// closed the last turn comes off with it rather than standing over a board that is
-		// waiting to be told what to do next.
+		// The turn's last encounter comes off with the turn: a line about a blow that was
+		// thrown a moment ago has no business standing over a board that is waiting to be
+		// told what to do next. A fight that *ended* keeps its last one, since the encounter
+		// that decided it is the last thing that happened (see {@link end}).
 		this.cue = null;
 		this.setStatus(`Turn ${this.turn} — give your orders.`);
 	}
@@ -1201,15 +1206,9 @@ export class CombatController {
 		this.outcome = outcome;
 		this.board?.clearAuras();
 		this.aura.clear();
-		// The last thing said over the fight, and the one cue that outlives the turn it was
-		// announced on: the result panel says how it ended in the game's own words, and this
-		// says it in the author's. Both counts are the player's way round — the score above
-		// the board is counted like that too — whichever side took it.
-		this.announce(
-			outcome,
-			{ wins: String(this.lanesWon('info')), losses: String(this.lanesWon('error')) },
-			detail
-		);
+		// Nothing is announced: how a fight ended is not an encounter, and it is read out on
+		// the panel that comes up in the middle of the board, over the fight it is about.
+		this.setStatus(detail);
 	}
 
 	// --- The rival side -------------------------------------------------------
@@ -1344,17 +1343,23 @@ export class CombatController {
 	}
 
 	/**
-	 * Announce a beat of the turn being carried out, and put it on the store.
+	 * Announce how an encounter went, and put it on the store.
 	 *
-	 * Every call is one moment on the board — an attacker setting off, a blow answered, a
-	 * lane walked out — and the cue stands until the next one replaces it, so what is on
-	 * screen is always the thing the canvas is doing. The fight never words any of it: it
-	 * names the event and the fighters, and the sentence is looked up against the authored
-	 * collection where the page draws it.
+	 * **One call per encounter**, and there are only two places to call it from: a lane that
+	 * fired both ways ({@link playExchange}) and a lane that fired one way ({@link playShot}),
+	 * whose four branches are the four ways that one blow can end. Everything else a turn
+	 * does — the reveal, the charges, the walk out, the fall, the ground changing hands, the
+	 * result — is silent: those are either the same encounter still being shown, or not an
+	 * encounter at all.
+	 *
+	 * The cue stands until the next encounter replaces it, so the sentence on screen is the
+	 * row the canvas is playing. The fight never words any of it: it names the event and the
+	 * two fighters, and the sentence is looked up against the authored collection where the
+	 * page draws it.
 	 *
 	 * `status` is the fight's own English record of the same moment, unchanged and
-	 * unrelated: it is passed here only so a beat is one store write rather than two.
-	 * Beats with nothing to add to it leave it standing.
+	 * unrelated: it is passed here only so an encounter is one store write rather than two.
+	 * A call with nothing to add to it leaves it standing.
 	 */
 	private announce(
 		event: CombatNarrationEvent,

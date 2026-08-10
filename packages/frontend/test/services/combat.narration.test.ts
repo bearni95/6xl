@@ -9,13 +9,13 @@ import type { CombatColor } from '$types/character-definition.type';
 import type { CombatNarrationCue } from '$types/combat-narration.type';
 
 /**
- * What the fight *says* while it plays a turn out.
+ * What the fight *says* while it plays a turn out: **one sentence per encounter**.
  *
- * The board deliberately prints no word over any fighter, so the words are announced as
- * cues instead — an event id and the fighters it happened to — and worded somewhere else
- * entirely, off the authored collection. What has to hold here is that the cues are the
- * beats of the turn: they arrive in the order the animation reaches them, they name the
- * right fighters, and they come off the screen when the turn is handed back.
+ * An encounter is a row of the board — the duel between the two fighters standing in it —
+ * and the whole of it is one thing that happened, however many frames it takes to show.
+ * So what has to hold here is a count as much as a wording: a row that was played produces
+ * exactly one cue, said when the blow settles it, naming the two fighters it was between.
+ * Everything else a turn does is silent, and a turn that came to nothing says nothing.
  *
  * The rival side chooses for itself, so Math.random is pinned to 0 as the rest of the
  * combat suite pins it: a rival with nothing banked and nothing to fear loads.
@@ -56,21 +56,18 @@ function silentBoard() {
 }
 
 /**
- * Every cue the fight announced, in order — one entry per cue rather than per store
- * write, since the store is written several times a turn and most of those say nothing
- * new. The gaps between them matter too, so the clearing of a cue is recorded as a null.
+ * Every cue the fight announced, in order — one entry per cue rather than per store write,
+ * since the store is written several times a turn and most of those say nothing new.
  */
-function record(controller: CombatController): (CombatNarrationCue | null)[] {
-	const said: (CombatNarrationCue | null)[] = [];
+function record(controller: CombatController): CombatNarrationCue[] {
+	const said: CombatNarrationCue[] = [];
 	controller.subscribe((state: CombatState) => {
-		const last = said[said.length - 1];
-		if (state.cue?.seq !== last?.seq) said.push(state.cue);
+		if (state.cue && state.cue.seq !== said[said.length - 1]?.seq) said.push(state.cue);
 	});
 	return said;
 }
 
-const events = (said: (CombatNarrationCue | null)[]): string[] =>
-	said.filter(Boolean).map((cue) => cue!.event);
+const events = (said: CombatNarrationCue[]): string[] => said.map((cue) => cue.event);
 
 describe('what the fight says while it plays a turn out', () => {
 	beforeEach(() => {
@@ -92,7 +89,10 @@ describe('what the fight says while it plays a turn out', () => {
 		expect(get(controller).cue).toBeNull();
 	});
 
-	it('opens the turn by announcing the reveal, and names which turn it is', async () => {
+	it('says nothing about a turn where no encounter was played', async () => {
+		// Blue against blue with nothing banked: both sides load, nobody fires, and a turn
+		// where nothing was thrown at anybody has nothing to be said about it. The reveal
+		// and the charges are not encounters — the aura is what says a fighter loaded.
 		const controller = new CombatController([
 			seed('r0', 'error', 'blue'),
 			seed('p0', 'info', 'blue')
@@ -102,23 +102,11 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.setAction('p0', 'charge');
 		controller.commit();
 		await vi.runAllTimersAsync();
-		expect(said.filter(Boolean)[0]).toMatchObject({ event: 'orders', values: { turn: '1' } });
-	});
-
-	it('takes the caption off again when the next turn is handed back', async () => {
-		const controller = new CombatController([
-			seed('r0', 'error', 'blue'),
-			seed('p0', 'info', 'blue')
-		]);
-		controller.attachBoard(silentBoard());
-		controller.setAction('p0', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
-		expect(get(controller).phase).toBe('planning');
+		expect(said).toEqual([]);
 		expect(get(controller).cue).toBeNull();
 	});
 
-	it('walks an attack out in beats: the approach, and then what the blow amounted to', async () => {
+	it('says one sentence for the row, and says it when the blow settles it', async () => {
 		// The one opening that leaves a fighter in front of a bullet, as the rest of the
 		// combat suite stages it: red opposite blue. Turn one both load, red fires the free
 		// shot its colour owes it out of the charge it just banked, and blue's free guard
@@ -138,21 +126,34 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.commit();
 		await vi.runAllTimersAsync();
 
-		const spoken = events(said);
-		expect(spoken[0]).toBe('orders');
-		// The approach is said as the attacker sets off and the answer once the blow has
-		// been thrown, in that order — a turn narrated the other way round would be telling
-		// the player how it went before it had happened.
-		const advance = spoken.indexOf('advance');
-		expect(advance).toBeGreaterThan(0);
-		expect(spoken.slice(advance + 1)).toContain('hit');
-		// The lane it settled, walked out under its own line.
-		expect(spoken).toContain('ground');
+		// One row was played, so one thing was said about it — not the setting off, the
+		// landing and the ground changing hands as three sentences over one event.
+		expect(events(said)).toEqual(['hit']);
+		expect(said[0].values).toEqual({ attacker: 'P0', target: 'R0' });
+	});
 
-		const lane = said.find((cue) => cue?.event === 'advance');
-		expect(lane?.values).toEqual({ attacker: 'P0', target: 'R0' });
-		const ground = said.find((cue) => cue?.event === 'ground');
-		expect(ground?.values).toEqual({ winner: 'P0', loser: 'R0' });
+	it('says one sentence per row when a turn plays more than one', async () => {
+		// Two lanes, both of them fired down: each red fires the free shot its colour owes
+		// it, and each blue turns it aside with the guard its own colour owes.
+		const controller = new CombatController([
+			seed('r0', 'error', 'red'),
+			seed('r1', 'error', 'red'),
+			seed('p0', 'info', 'blue'),
+			seed('p1', 'info', 'blue')
+		]);
+		controller.attachBoard(silentBoard());
+		const said = record(controller);
+		controller.setAction('p0', 'charge');
+		controller.setAction('p1', 'charge');
+		controller.commit();
+		await vi.runAllTimersAsync();
+
+		expect(events(said)).toEqual(['freeGuard', 'freeGuard']);
+		// One line per row, each about the two fighters standing in that row and no others.
+		expect(said.map((cue) => cue.values)).toEqual([
+			{ attacker: 'R0', target: 'P0' },
+			{ attacker: 'R1', target: 'P1' }
+		]);
 	});
 
 	it('says a blow that was covered, not one that landed', async () => {
@@ -168,14 +169,26 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.commit();
 		await vi.runAllTimersAsync();
 
-		const spoken = events(said);
-		expect(spoken).toContain('advance');
-		expect(spoken).toContain('blocked');
-		expect(spoken).not.toContain('hit');
+		expect(events(said)).toEqual(['blocked']);
 		expect(get(controller).fighters.find((fighter) => fighter.id === 'p0')?.down).toBe(false);
 	});
 
-	it('ends with the result, in the score the player reads it in', async () => {
+	it('takes the sentence off again when the next turn is handed back', async () => {
+		const controller = new CombatController([
+			seed('r0', 'error', 'red'),
+			seed('p0', 'info', 'blue')
+		]);
+		controller.attachBoard(silentBoard());
+		controller.setAction('p0', 'charge');
+		controller.commit();
+		await vi.runAllTimersAsync();
+		// The turn was played, something was said about it, and the fight is back to waiting
+		// on the player — so the line comes off with the turn it was about.
+		expect(get(controller).phase).toBe('planning');
+		expect(get(controller).cue).toBeNull();
+	});
+
+	it('leaves the encounter that decided the fight standing, and announces no result', async () => {
 		const controller = new CombatController([
 			seed('r0', 'error', 'red'),
 			seed('p0', 'info', 'blue')
@@ -190,16 +203,15 @@ describe('what the fight says while it plays a turn out', () => {
 		await vi.runAllTimersAsync();
 
 		expect(get(controller).outcome).toBe('win');
-		// The last thing said, and the one cue that outlives the turn it was said on: the
-		// result panel is up over the board and this is the line under it.
-		const last = said.filter(Boolean).at(-1);
-		expect(last).toMatchObject({ event: 'win', values: { wins: '1', losses: '0' } });
-		expect(get(controller).cue?.event).toBe('win');
+		// How a fight ended is not an encounter: it is read off the panel that comes up in
+		// the middle of the board. What stays on the panel is the blow that ended it.
+		expect(events(said)).toEqual(['freeGuard', 'hit']);
+		expect(get(controller).cue?.event).toBe('hit');
 	});
 
 	it('is a cue and never a sentence — the fight words nothing itself', async () => {
 		const controller = new CombatController([
-			seed('r0', 'error', 'blue'),
+			seed('r0', 'error', 'red'),
 			seed('p0', 'info', 'blue')
 		]);
 		controller.attachBoard(silentBoard());
@@ -207,10 +219,11 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.setAction('p0', 'charge');
 		controller.commit();
 		await vi.runAllTimersAsync();
-		// Every value is a name or a number the collection writes into a line of its own.
-		for (const cue of said.filter(Boolean)) {
-			expect(Object.values(cue!.values).every((value) => typeof value === 'string')).toBe(true);
-			expect(cue!.seq).toBeGreaterThan(0);
+		expect(said.length).toBeGreaterThan(0);
+		// Every value is a fighter's name, which the collection writes into a line of its own.
+		for (const cue of said) {
+			expect(Object.keys(cue.values).sort()).toEqual(['attacker', 'target']);
+			expect(cue.seq).toBeGreaterThan(0);
 		}
 	});
 });

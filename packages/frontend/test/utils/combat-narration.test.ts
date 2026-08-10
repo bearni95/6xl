@@ -50,14 +50,21 @@ describe('narration lines', () => {
 	});
 
 	it('names the tokens an event cannot fill', () => {
-		expect(unknownNarrationTokens('orders', 'Torn {turn}.')).toEqual([]);
-		expect(unknownNarrationTokens('orders', 'Torn {turn}, {attacker} obre.')).toEqual(['attacker']);
+		expect(unknownNarrationTokens('hit', '{attacker} tomba {target}.')).toEqual([]);
+		expect(unknownNarrationTokens('hit', 'Torn {turn}: {attacker} tomba {target}.')).toEqual([
+			'turn'
+		]);
 	});
 
-	it('knows which events the fight can announce', () => {
+	it('knows which encounters the fight can announce', () => {
 		expect(isNarrationEvent('hit')).toBe(true);
+		// The beats *within* a row are not announced — a row is one event, so the one
+		// sentence about it is said when the blow settles it.
+		expect(isNarrationEvent('advance')).toBe(false);
+		expect(isNarrationEvent('ground')).toBe(false);
 		expect(isNarrationEvent('nothing-like-this')).toBe(false);
-		expect(narrationPlaceholders('ground')).toEqual(['winner', 'loser']);
+		// Two names, because an encounter is two fighters.
+		expect(narrationPlaceholders('hit')).toEqual(['attacker', 'target']);
 		expect(narrationPlaceholders('nothing-like-this')).toEqual([]);
 	});
 });
@@ -100,7 +107,8 @@ describe('the checked-in collection', () => {
 
 	it('has something to say about every one of them', () => {
 		// Not a rule of the format — an event may be authored silent — but a shipped
-		// collection that had gone quiet about a whole beat of the fight is worth knowing.
+		// collection with an encounter it says nothing about is worth knowing: that row
+		// would play out under whatever the last one left on screen.
 		for (const event of NARRATION_EVENTS) {
 			expect(collection.lines[event.id]?.length ?? 0).toBeGreaterThan(0);
 		}

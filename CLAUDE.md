@@ -270,27 +270,35 @@ map is therefore not mounted behind a fight at all, which is why the town **spot
 (the one town lit on black while a fight was up) is gone from `+page.svelte`; `WorldMap`
 still knows how to draw one, nothing asks it to.
 
-**A turn being played out is narrated, and the fight does not word a syllable of it.** The
-board prints no word over any fighter — a callout at the reveal gives the turn away, one
-after the fact only letters a picture that has just been drawn — so the words stand on the
-player's own orders panel instead (`CombatNarration.svelte`, laid across the middle of it,
-over the card and outside the fade the card wears while a turn runs). What the controller
-emits is a **cue** and never a sentence: an event id out of the fixed catalogue in
-`@3xl/shared/types/combat-narration.type`, plus the fighters it happened to
-(`{attacker}`, `{winner}`, …), on `CombatState.cue`. The wording is authored data —
-`@3xl/data`'s `public/combat-narration.json`, written on the admin `/narration` screen,
-read once by `narration.service.ts` — so a line can be rewritten without touching a rule
-and no rule can be changed by rewriting a line. It is Catalan text like `shows.json`'s
-titles, not an i18n key; an event with nothing authored is simply silent, which is also
-what an unread collection is, since a placeholder sentence on screen mid-fight is worse
-than none. Several ways of saying one thing may be authored and the pick is **seeded** off
-the cue, so the words hold still while the blow they describe is thrown and two identical
-blows are not narrated identically. Every event in the catalogue is a beat with a moment of
-its own on the board; what is deliberately *not* in it is anything simultaneous — the
-charges all flare at the reveal, so a line per loader would be three sentences in one
-frame. The cue comes off with the turn (`finishTurn`), the last one of a fight being the
-result, which stands under the panel the fight is reported on. The controller's own
-`status`/`log` are untouched by any of this: they are its English record of the same turn,
+**A turn being played out is narrated one sentence per encounter, and the fight does not
+word a syllable of it.** An **encounter** is a row of the board — the duel between the two
+fighters standing in it — and it is one thing that happened however many frames it takes to
+show: the walk out, the blow, the guard it came off or the fall it caused, and the ground
+that changes hands are all the same event, so they get the one line. The board prints no
+word over any fighter (a callout at the reveal gives the turn away; one after the fact only
+letters a picture that has just been drawn), so the words stand on the player's own orders
+panel instead — `CombatNarration.svelte`, laid across the middle of it, over the card and
+outside the fade the card wears while a turn runs. The line goes up as the blow settles the
+row and stands until the next row has something of its own to say.
+
+What the controller emits is a **cue** and never a sentence: `CombatState.cue`, carrying one
+of the five ways an encounter can go (`exchange`, `blocked`, `freeGuard`, `hit`, `spent` —
+the fixed catalogue in `@3xl/shared/types/combat-narration.type`) and the two fighters it
+was between. There are exactly two places it is announced from — `playExchange`, and
+`playShot`'s four branches — and everything else a turn does is silent: the reveal and the
+charges happen at one instant for everybody at once, and how the fight *ended* is read off
+the panel in the middle of the board, not narrated. The cue comes off when the next turn is
+handed back (`finishTurn`); a fight that ends keeps the encounter that decided it.
+
+The wording is authored data — `@3xl/data`'s `public/combat-narration.json`, written on the
+admin `/narration` screen, read once by `narration.service.ts` — so a line can be rewritten
+without touching a rule and no rule can be changed by rewriting a line. It is Catalan text
+like `shows.json`'s titles, not an i18n key; an event with nothing authored is simply
+silent, which is also what an unread collection is, since a placeholder sentence on screen
+mid-fight is worse than none. Several ways of saying one thing may be authored and the pick
+is **seeded** off the cue, so the words hold still while the blow they describe is thrown
+and two identical blows are not narrated identically. The controller's own `status`/`log`
+are untouched by any of this: they are its English record of the same turn, beat by beat,
 and nothing draws them.
 
 **The roster is the second, and it is a page for the same reasons.** The player's cards
@@ -421,7 +429,7 @@ so a character is authored in one place and there are no per-topic screens over 
 whole roster —
 `/shows` (TMDB browser), `/music`
 (what each vendored song is called and which show it opens), `/narration` (what the game
-says over each move a fight plays out — one section per beat of a turn, each line
+says over each encounter a fight plays out — one section per way a row can go, each line
 previewed against a made-up lane) and `/posters` — the whole
 roster idling at once on one PixiJS canvas (`@3xl/shared`'s `mugen-poster-grid`), each
 character drawn at the size the **combat board** draws it. Not a resemblance: the wall
@@ -529,7 +537,7 @@ to `http://localhost:2002`; CORS allows only the admin origin (`http://localhost
   definition answers a file, so a save naming a file that is not there is refused, as is
   a link to a show `public/shows.json` does not hold.
 - `GET/POST /api/combat-narration` — read/upsert **one event's** lines in `@3xl/data`'s
-  `public/combat-narration.json`, the words said over a fight while it is played out (see
+  `public/combat-narration.json`, the sentence said over each encounter of a fight (see
   the combat section above). `GET /api/combat-narration/events` is the catalogue the admin
   `/narration` screen draws its sections from: the very `NARRATION_EVENTS` the fight
   announces from and the API validates against, so the screen can never offer an event —

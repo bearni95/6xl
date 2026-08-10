@@ -13,9 +13,9 @@
 		type NarrationPlaceholder
 	} from '$types/combat-narration.type';
 
-	// What the fight says over each move it plays out. One section per event the fight can
-	// announce, and the section is the definition: the lines are typed in it, previewed in
-	// it against a made-up lane, and saved from it.
+	// What the fight says over each encounter it plays out — one row of the board, one
+	// sentence. A section per way an encounter can go, and the section is the definition:
+	// the lines are typed in it, previewed in it against a made-up lane, and saved from it.
 	//
 	// The catalogue is the server's, not this screen's (`GET /api/combat-narration/events`):
 	// it is the same list the fight announces from and the same list the API validates
@@ -50,13 +50,8 @@
 	 * in the author's head.
 	 */
 	const SAMPLE: Record<NarrationPlaceholder, string> = {
-		turn: '3',
 		attacker: 'Son Goku',
-		target: 'Bulma',
-		winner: 'Son Goku',
-		loser: 'Bulma',
-		wins: '2',
-		losses: '1'
+		target: 'Bulma'
 	};
 
 	onMount(load);
@@ -211,14 +206,18 @@
 				What the game says over a fight while it is being played out. The board itself prints
 				no word over any fighter — a callout at the reveal gives the turn away, and one after
 				the fact only letters a picture that has just been drawn — so the words stand on the
-				player's own panel instead, one line at a time, replaced as the canvas moves on to
-				the next thing.
+				player's own panel instead: <strong>one sentence per encounter</strong>, an encounter
+				being a row of the board and the duel between the two fighters standing in it. The
+				walk out, the blow, the guard it came off and the ground that changes hands are all
+				the one event, so they get the one line, and it stands for as long as that row is
+				being played.
 			</p>
 			<p class="text-sm opacity-70">
-				One section per moment a turn reaches, in the order it reaches them. Write as many
-				ways of saying it as you like: the fight picks one per beat, seeded off the beat
-				itself, so two identical blows are not narrated in identical words. Save writes that
-				section into <code class="font-mono">@3xl/data</code>'s
+				A section per way an encounter can go — that is the whole of what the fight
+				announces. Write as many ways of saying each as you like: the fight picks one per
+				encounter, seeded off the encounter itself, so two identical blows are not narrated
+				in identical words. Save writes that section into
+				<code class="font-mono">@3xl/data</code>'s
 				<code class="font-mono">public/combat-narration.json</code>, which is what the arena
 				reads. The game is Catalan — these lines are the text a player sees, not a key.
 			</p>

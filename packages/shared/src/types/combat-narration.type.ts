@@ -4,8 +4,15 @@
  * A turn is carried out on the canvas — the loaders flare, a fighter walks out of its
  * cell, strikes, is answered, somebody falls and the lane is settled — and the board
  * deliberately prints no word over any of it (see the combat controller's `showOrders`).
- * The words go somewhere else: one line at a time, over the player's own panel, saying
- * what the animation on the board is of.
+ * The words go somewhere else: over the player's own panel, **one sentence per encounter**.
+ *
+ * An encounter is a row of the board — the duel between the two fighters standing in it —
+ * and a turn plays its encounters out one after another. One of them is one thing that
+ * happened, however many frames it takes to show: the walk out, the blow, the guard it came
+ * off or the fall it caused, and the ground that changed hands are all the same event, so
+ * they get the one line, which stands for as long as the row is being played. Narrating the
+ * beats *within* a row instead — setting off, landing, settling — was three sentences about
+ * one thing, each replacing the last before it had been read.
  *
  * The fight does **not** hold that wording. It emits a {@link CombatNarrationCue} — an
  * event id and the fighters it happened to — and the wording is looked up against the
@@ -20,37 +27,27 @@
  */
 
 /**
- * One thing the fight can announce while a turn is being carried out.
+ * How an encounter went — which is the whole of what the fight announces.
  *
- * Every one of these is a beat with a **moment of its own** on the board: the reveal, an
- * attacker's walk out, the blow's answer, the lane being walked out, the end of it. What
- * is deliberately not in here is anything that happens at the same instant as something
- * else — the charges are all banked and all flare together at the reveal, so a line per
- * loader would be three sentences shown in one frame, none of them read. The aura is what
- * says a fighter loaded, and it says it without words (see the controller's `showOrders`).
+ * Five ways a row can be played out, and every one of them is one attack answered: the two
+ * of them firing at once, a blow a guard turned (ordered or owed), a blow that got through,
+ * and a blow thrown at somebody already falling. A row where nobody attacked is a row where
+ * nothing happened, and it says nothing.
+ *
+ * Nothing else is in here on purpose. The reveal, the charges banking and the fight's own
+ * result are not encounters — the first two happen at one instant for everybody at once, and
+ * the last is read off the panel in the middle of the board, where the fight puts what it
+ * has to say about itself.
  */
-export type CombatNarrationEvent =
-	| 'orders'
-	| 'advance'
-	| 'exchange'
-	| 'blocked'
-	| 'freeGuard'
-	| 'hit'
-	| 'spent'
-	| 'ground'
-	| 'win'
-	| 'lose'
-	| 'draw';
+export type CombatNarrationEvent = 'exchange' | 'blocked' | 'freeGuard' | 'hit' | 'spent';
 
-/** A name a line may write into itself, spelled `{like}` `{this}`. */
-export type NarrationPlaceholder =
-	| 'turn'
-	| 'attacker'
-	| 'target'
-	| 'winner'
-	| 'loser'
-	| 'wins'
-	| 'losses';
+/**
+ * A name a line may write into itself, spelled `{like}` `{this}`.
+ *
+ * Two, because an encounter is two fighters: the one that threw the blow and the one it was
+ * thrown at. Which of them came out of it standing is what the event itself says.
+ */
+export type NarrationPlaceholder = 'attacker' | 'target';
 
 /** One event, what it is, and the names a line about it may use. */
 export interface NarrationEventSpec {
@@ -62,23 +59,13 @@ export interface NarrationEventSpec {
 }
 
 /**
- * Every moment of a turn that has words on it, in the order a turn reaches them.
+ * Every way an encounter can go, in the order the branches are read.
  *
  * This list is the catalogue: the fight announces one of these ids and nothing else, the
  * API takes lines for these ids and nothing else, and the admin screen draws a section
  * per entry — so a new thing to say is added here once and appears in all three.
  */
 export const NARRATION_EVENTS: readonly NarrationEventSpec[] = [
-	{
-		id: 'orders',
-		summary: 'The turn opens: both sides’ orders are revealed and the loaders flare.',
-		placeholders: ['turn']
-	},
-	{
-		id: 'advance',
-		summary: 'An attacker walks out of its cell at the fighter opposite.',
-		placeholders: ['attacker', 'target']
-	},
 	{
 		id: 'exchange',
 		summary: 'Both fighters of a lane attacked at once: they meet in the middle and cancel.',
@@ -96,33 +83,14 @@ export const NARRATION_EVENTS: readonly NarrationEventSpec[] = [
 	},
 	{
 		id: 'hit',
-		summary: 'The blow gets through: the target is down and its lane is decided.',
+		summary:
+			'The blow gets through: the target goes down, the attacker takes the ground between them.',
 		placeholders: ['attacker', 'target']
 	},
 	{
 		id: 'spent',
-		summary: 'The blow lands on somebody already falling from an earlier blow this turn.',
+		summary: 'The blow lands on somebody already falling from an earlier encounter this turn.',
 		placeholders: ['attacker', 'target']
-	},
-	{
-		id: 'ground',
-		summary: 'The lane is walked out: the winner takes the white cell, the loser falls back.',
-		placeholders: ['winner', 'loser']
-	},
-	{
-		id: 'win',
-		summary: 'The fight is over and the player has taken it.',
-		placeholders: ['wins', 'losses']
-	},
-	{
-		id: 'lose',
-		summary: 'The fight is over and the rivals have taken it.',
-		placeholders: ['wins', 'losses']
-	},
-	{
-		id: 'draw',
-		summary: 'The fight is over with honours even.',
-		placeholders: ['wins', 'losses']
 	}
 ];
 

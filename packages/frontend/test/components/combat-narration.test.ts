@@ -16,7 +16,7 @@ vi.mock('$services/narration.service', () => ({
 	narration: readable({
 		lines: {
 			hit: ['El cop de {attacker} entra: {target} cau.'],
-			ground: ['{winner} es queda el terreny; {loser} recula.']
+			blocked: ['{target} para el cop de {attacker}.']
 		}
 	}),
 	loadNarration: () => Promise.resolve()
@@ -35,9 +35,9 @@ describe('the narration over the panel', () => {
 		expect(container.textContent?.trim()).toBe('');
 	});
 
-	it('stays quiet about an event nobody has written a line for', () => {
-		// A collection is allowed to be silent about a beat — what must never happen is a
-		// plate coming up with a placeholder, or an empty box, in the middle of a fight.
+	it('stays quiet about an encounter nobody has written a line for', () => {
+		// A collection is allowed to be silent about one — what must never happen is a plate
+		// coming up with a placeholder, or an empty box, in the middle of a fight.
 		const { container } = render(CombatNarration, {
 			props: { cue: { event: 'exchange', values: { attacker: 'Goku', target: 'Bulma' }, seq: 2 } }
 		});
@@ -46,10 +46,10 @@ describe('the narration over the panel', () => {
 
 	it('is read out as it changes, so a fight can be followed by ear', () => {
 		const { container } = render(CombatNarration, {
-			props: { cue: { event: 'ground', values: { winner: 'Goku', loser: 'Bulma' }, seq: 3 } }
+			props: { cue: { event: 'blocked', values: { attacker: 'Goku', target: 'Bulma' }, seq: 3 } }
 		});
 		const live = container.querySelector('[aria-live="polite"]');
 		expect(live).toBeTruthy();
-		expect(live?.textContent).toContain('Goku es queda el terreny');
+		expect(live?.textContent).toContain('Bulma para el cop de Goku');
 	});
 });

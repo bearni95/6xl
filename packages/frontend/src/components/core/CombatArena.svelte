@@ -1770,11 +1770,12 @@
 						</div>
 					</div>
 				{/if}
-				<!-- What the fight is saying about the move being played out, laid across the middle
-				     of this panel while a turn is being carried out (see CombatNarration, which is
-				     the whole block). The board prints no word over any fighter, so this is where
-				     the fight is put into words: over the one plate the player is already reading,
-				     one line at a time, each replaced as the canvas moves on.
+				<!-- What the fight is saying about the encounter being played out, laid across the
+				     middle of this panel (see CombatNarration, which is the whole block). The board
+				     prints no word over any fighter, so this is where the fight is put into words:
+				     over the one plate the player is already reading, **one sentence per row of the
+				     board**, each standing for as long as that row is being played and replaced by
+				     the next row's.
 				     A sibling of the fighter's card rather than something inside it, for one
 				     reason: the card is faded out for as long as the turn is being played
 				     (`panelLocked`), and the narration is the thing to read at exactly that moment.
