@@ -47,6 +47,24 @@ class SpawnService {
 	/** Ids of characters that exist in the local registry, so spawns can render. */
 	private renderableIds = new Set(characters.map((character) => character.id));
 
+	/** Whose cards are in the store, or null while it holds nobody's. */
+	private loadedFor: string | null = null;
+
+	/**
+	 * Whether this player's cards are already in the store.
+	 *
+	 * A surface that needs them can then draw at once instead of standing behind a round
+	 * trip for a set it is already holding — the map loads them when the player signs in,
+	 * and the arena, the roster and the collection all used to re-read them from scratch
+	 * on the way up. The read still happens; it just stops being the thing on screen.
+	 *
+	 * Says nothing about the cards being *fresh*: it is an answer about what can be drawn
+	 * now, and the caller is expected to refresh behind whatever it draws.
+	 */
+	hasSpawns(userId: string | null): boolean {
+		return !!userId && this.loadedFor === userId;
+	}
+
 	/** The signed-in player's spawns, newest first. */
 	get spawns(): Readable<CharacterSpawn[]> {
 		return this.spawnsStore;
@@ -186,6 +204,7 @@ class SpawnService {
 
 		const spawns = (data as CharacterSpawnRow[]).map((row) => spawnAdapter.fromRow(row));
 		this.spawnsStore.set(spawns);
+		this.loadedFor = userId;
 		return spawns;
 	}
 

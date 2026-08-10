@@ -1,3 +1,26 @@
+<script context="module" lang="ts">
+	/**
+	 * The board engine as one lazily-loaded chunk, asked for by name.
+	 *
+	 * It is imported dynamically because it must not run during SSR/prerender, and it now
+	 * genuinely is one — nothing on the map imports a value out of it any more. Which means
+	 * pressing Challenge is the first moment the browser hears about it, and none of the
+	 * board's own artwork can start loading until it has arrived: one round trip at the
+	 * front of a blank sheet, over a chunk that has nothing to do with which fight this is.
+	 *
+	 * So the two doors into the arena ask for it as they open — `challenge()` while the
+	 * server is still opening the battle, the arena as it mounts — and whichever gets there
+	 * first is the one request. The board's own `onMount` then finds it in hand. Calling it
+	 * again costs nothing.
+	 */
+	let engine: Promise<typeof import('$utils/mugen/mugen-board')> | null = null;
+
+	export function loadBoardEngine(): Promise<typeof import('$utils/mugen/mugen-board')> {
+		engine ??= import('$utils/mugen/mugen-board');
+		return engine;
+	}
+</script>
+
 <script lang="ts">
 	import classNames from 'classnames';
 	import { onDestroy, onMount } from 'svelte';
@@ -25,8 +48,9 @@
 	$: wrapperClasses = classNames('flex overflow-hidden rounded-box leading-none', classes);
 
 	onMount(async () => {
-		// Import Pixi only in the browser so it never runs during SSR/prerender.
-		const { MugenBoard } = await import('$utils/mugen/mugen-board');
+		// Pixi only in the browser, so it never runs during SSR/prerender — and normally
+		// already on its way by the time this mounts (see loadBoardEngine).
+		const { MugenBoard } = await loadBoardEngine();
 		board = new MugenBoard({ grids, cellSize, padding });
 		try {
 			await board.start(host);

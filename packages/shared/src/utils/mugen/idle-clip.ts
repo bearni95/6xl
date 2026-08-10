@@ -15,7 +15,7 @@
  */
 
 import { characterFitScale } from '../card/character-fit';
-import type { Manifest } from './mugen-player';
+import { loadManifest } from './character-assets';
 
 /** One frame of an idle clip: where its image is, its native size, its body axis
  * (0..1 across the frame) and how long it shows for. */
@@ -48,51 +48,40 @@ export interface IdleClipPlacement {
 	frames: PlacedIdleFrame[];
 }
 
-// Only clips that actually loaded are kept: a fetch that failed is a bad moment on
-// the network, not a character without an idle, and must not blank it for the session.
+// The clip as this module hands it out, per folder. The manifest behind it is already
+// fetched once for the whole page ({@link loadManifest}); this only keeps the reading of
+// it, so every surface that stands the same character up gets the same array rather than
+// an equal one — the map rebuilds its pins several times over a single selection, and a
+// list that is new each time is a placement recomputed for nothing.
 const clips = new Map<string, IdleClipFrame[]>();
-const pending = new Map<string, Promise<IdleClipFrame[] | null>>();
 
 /**
- * The frames of a character's looping idle clip, from the manifest in its frames
- * folder — cached by folder for the session, and shared between every surface that
- * asks. Resolves to null (never throws) when the folder, the manifest or the `idle`
- * clip is missing, so a caller can fall back to a portrait without special-casing.
+ * The frames of a character's looping idle clip, read off the manifest in its frames
+ * folder — which is fetched once per page and shared with every other surface that wants
+ * any part of it, the board included. Resolves to null (never throws) when the folder,
+ * the manifest or the `idle` clip is missing, so a caller can fall back to a portrait
+ * without special-casing.
  */
 export function loadIdleClip(basePath: string | null): Promise<IdleClipFrame[] | null> {
 	if (!basePath) return Promise.resolve(null);
 	const cached = clips.get(basePath);
 	if (cached) return Promise.resolve(cached);
-	const inFlight = pending.get(basePath);
-	if (inFlight) return inFlight;
 
-	const promise = (async () => {
-		try {
-			const response = await fetch(`${basePath}/manifest.json`);
-			if (!response.ok) return null;
-			const manifest = (await response.json()) as Manifest;
-			const idle = manifest.animations?.idle;
-			if (!idle || idle.frames.length === 0) return null;
-			return idle.frames.map((frame) => ({
-				url: `${basePath}/${frame.file}`,
-				width: frame.width,
-				height: frame.height,
-				// The manifest gives the body axis in source pixels; every consumer wants
-				// it as a fraction of the frame, which survives scaling.
-				anchorX: frame.anchorX / frame.width,
-				duration: frame.duration
-			}));
-		} catch {
-			return null;
-		} finally {
-			pending.delete(basePath);
-		}
-	})().then((frames) => {
-		if (frames) clips.set(basePath, frames);
+	return loadManifest(basePath).then((manifest) => {
+		const idle = manifest?.animations?.idle;
+		if (!idle || idle.frames.length === 0) return null;
+		const frames = idle.frames.map((frame) => ({
+			url: `${basePath}/${frame.file}`,
+			width: frame.width,
+			height: frame.height,
+			// The manifest gives the body axis in source pixels; every consumer wants
+			// it as a fraction of the frame, which survives scaling.
+			anchorX: frame.anchorX / frame.width,
+			duration: frame.duration
+		}));
+		clips.set(basePath, frames);
 		return frames;
 	});
-	pending.set(basePath, promise);
-	return promise;
 }
 
 /** How a clip is to be placed. */

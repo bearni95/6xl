@@ -9,10 +9,12 @@ import {
 	Texture
 } from 'pixi.js';
 import { destroyPixiApp } from '../pixi/release-context';
+import { combatColorHex, GRID_LINE } from '../color/combat-color';
 import type { Manifest } from './mugen-player';
 import { CHAR_HEIGHT_RATIO, characterFitScale, REFERENCE_SOURCE_HEIGHT } from '../card/character-fit';
 import { characterIdFromFramesPath, readRenderScale } from './character-render-scale';
-import { crownCorrection, type CrownFrame, readCrownAlign } from './character-crown';
+import { loadDefinition, loadManifest } from './character-assets';
+import { crownDrift, crownOffset, type CrownFrame, readCrownAlign } from './character-crown';
 import type { CharacterDefinition, CharacterMove } from '../../types/character-definition.type';
 import {
 	BOARD_HEIGHT,
@@ -55,11 +57,17 @@ interface LoadedFrame {
  * ({@link MugenBoard.closeIn}). Without a definition the directional anims fall back
  * to run.
  *
- * Read twice per actor — once to warm the assets, once to place it — so it is a
- * function of the definition and nothing else.
+ * `names` is every one of them and `startName` is the only one the board needs **before
+ * it can be shown** — a fighter is stood up in the pose it stands in, and is measured,
+ * fitted and crowned off that cycle alone. The rest is the fight's, and the fight has not
+ * begun: it is warmed behind the finished board ({@link MugenBoard.whenReady}), which is
+ * the difference between waiting on six frames a fighter and waiting on thirty.
+ *
+ * A function of the definition and nothing else, so the warm-up and the placement read
+ * exactly the same list.
  */
 function boundAnimations(
-	definition: CharacterDefinition | null,
+	definition: Partial<CharacterDefinition> | null,
 	startName: string
 ): { moveRightAnim: string; moveLeftAnim: string; hurtAnim: string; names: string[] } {
 	let moveRightAnim = 'run';
@@ -67,11 +75,11 @@ function boundAnimations(
 	let hurtAnim = '';
 	const moveSources: string[] = [];
 	if (definition) {
-		moveRightAnim = definition.directions['move-right']?.source || moveRightAnim;
-		moveLeftAnim = definition.directions['move-left']?.source || moveLeftAnim;
+		moveRightAnim = definition.directions?.['move-right']?.source || moveRightAnim;
+		moveLeftAnim = definition.directions?.['move-left']?.source || moveLeftAnim;
 		// The hurt flinch is a movement animation every character defines, not a
 		// move — pull it from the animations record.
-		hurtAnim = definition.animations.hurt?.source || '';
+		hurtAnim = definition.animations?.hurt?.source || '';
 		for (const move of definition.moves ?? []) {
 			if (move.source) moveSources.push(move.source);
 		}
@@ -166,17 +174,10 @@ const DEFAULTS = {
 // the canvas ({@link MugenBoard.project}). Cells left of centre are the first
 // grid's colour, cells to the right the second's.
 
-/**
- * The colour every line of the grid is drawn in. The lattice is not a side's marking —
- * it is the board itself — so it is one colour all the way across, red end to end
- * rather than each half ruled in its own.
- *
- * The same red the canvas's callouts, guards and sparks are tinted with
- * ({@link COMBAT_COLOR_HEX}), written out here because that table is declared further
- * down the file; keep the two in step. Stated as a literal and not read from the table
- * for that reason alone.
- */
-const GRID_LINE = 0xef4444;
+// The colour every line of the grid is drawn in ({@link GRID_LINE}) is the same red the
+// canvas's callouts, guards and sparks are tinted with, and is read off the one table
+// rather than written out again beside it: the lattice is not a side's marking, it is the
+// board itself, so it is one colour all the way across and that colour is combat's own red.
 
 /**
  * The viewport the canvas is sized against, across and down.
@@ -236,14 +237,6 @@ const VIEWPORT_HEIGHT = '100dvh';
 // itself does not get. The names live on in `grid.ts`, where the combat log still
 // says which cell a fighter moved to.
 
-/**
- * Top→bottom screen position of the cell — rows run down the screen, so it is the
- * row itself. Callers outside the engine (the arena's line-up, the saved board's
- * lane numbering) sort by it to lay characters out top-of-board first, and go on
- * asking the renderer which way its rows run rather than assuming it.
- */
-export const cellScreenY = (cell: Cell): number => cell.r;
-
 /** Horizontal speed (canvas px/s) a character runs between cells during combat. */
 const MOVE_SPEED = 260;
 /** Frames of an aura animation (static/auras/<color>/1..N.png). */
@@ -292,19 +285,6 @@ const crownFrames = (frames: LoadedFrame[]): CrownFrame[] =>
 		height: frame.height,
 		anchorX: frame.anchorX
 	}));
-
-/** Canvas hex for each combat colour, for tinting callouts, guards and sparks. */
-const COMBAT_COLOR_HEX: Record<string, number> = {
-	red: 0xef4444,
-	blue: 0x3b82f6,
-	yellow: 0xfacc15,
-	purple: 0xa855f7,
-	orange: 0xf97316,
-	green: 0x22c55e
-};
-
-/** Hex for a combat colour name, defaulting to white for anything unknown. */
-export const combatColorHex = (color: string): number => COMBAT_COLOR_HEX[color] ?? 0xffffff;
 
 // --- Order buttons (drawn on the board, beside the fighter they command) -----
 /** Horizontal gap (px) from the actor's own side to the near edge of its column of
@@ -617,6 +597,13 @@ interface OrderStrip {
 interface Actor {
 	/** Stable id (character id or basePath's first segment), used to command it. */
 	id: string;
+	/** The frames folder this actor's artwork comes out of — the two sides can field the
+	 * same one, which is what makes it the actor's asset identity rather than its own. */
+	basePath: string;
+	/** The animations this actor was **not** placed with — everything a fight can ask of it
+	 * beyond standing there ({@link boundAnimations}) — so the warm running behind the
+	 * finished board knows what to hand it. */
+	pendingAnimations: string[];
 	sprite: Sprite;
 	/** Which half the actor belongs to — the grid it was placed from, not the cell it
 	 * is standing on: a fighter that has taken the white column still belongs to its
@@ -814,13 +801,22 @@ export class MugenBoard {
 	private auraTextures = new Map<string, Texture[]>();
 	private iconTextures = new Map<string, Texture>();
 	/**
-	 * In-flight (or settled) definition and manifest fetches, keyed by character id and
-	 * frames folder. The board asks for each twice — {@link preload} warms it, then the
-	 * placement reads it — and a mirror match fields the same character on both sides, so
-	 * memoising the *promise* is what makes those one request rather than four.
+	 * A cycle's crown offset in the artwork's own pixels ({@link crownOffset}), keyed by
+	 * frames folder and animation.
+	 *
+	 * Reading it is a canvas read per frame of the cycle, and a mirror match fields the
+	 * same character on both halves of the board — which is the same artwork asked the same
+	 * question twice, for an answer that is a fact about the character and not about where
+	 * it is standing. Kept per board rather than for the page: the textures it is read off
+	 * belong to this app, and a board built again is cheap to read again.
 	 */
-	private definitionRequests = new Map<string, Promise<CharacterDefinition | null>>();
-	private manifestRequests = new Map<string, Promise<Manifest>>();
+	private crownOffsets = new Map<string, number>();
+	/**
+	 * Everything a fight will call for that the opening board did not need — the walk
+	 * cycles, the flinch, every move — on its way in behind the finished picture. See
+	 * {@link whenReady}, which is what holds a turn until it has landed.
+	 */
+	private warming: Promise<void> = Promise.resolve();
 	/** What to call when an order button is tapped; set by {@link onOrder}. */
 	private orderHandler: ((actorId: string, orderId: string) => void) | null = null;
 
@@ -860,6 +856,22 @@ export class MugenBoard {
 	/** Boot Pixi inside `container`, draw the grids and start the game loop. */
 	async start(container: HTMLElement): Promise<void> {
 		const { width, height } = this.dimensions;
+
+		// The whole cast, fielded in the order the two lines are drawn in.
+		const cast = [
+			this.options.grids[0].character,
+			this.options.grids[1].character,
+			...(this.options.grids[0].extras ?? []),
+			...(this.options.grids[1].extras ?? [])
+		];
+
+		// Asked for **before** the renderer is booted, and awaited after it. Creating a
+		// WebGL context is a tenth of a second the machine spends on its own, and every
+		// file below has to come off the network — two waits that have nothing to say to
+		// each other, and were being taken one after the other for no reason beyond the
+		// order the lines were written in. Nothing here touches the app.
+		const standing = this.warmStanding(cast);
+
 		const app = new Application();
 		await app.init({
 			width,
@@ -913,16 +925,11 @@ export class MugenBoard {
 		const redLead = leadCell(this.options.grids[0], LEAD_CELLS[0]);
 		const blueLead = leadCell(this.options.grids[1], LEAD_CELLS[1]);
 
-		// Everything every actor needs, fetched at once, before anybody is placed. The
+		// The standing pose of everybody on the board, fetched at once and now in hand. The
 		// placements below stay in order — the two lines are drawn top to bottom and the
 		// actor list is read by position — and each of them still asks for its own
 		// definition, manifest and textures; this is only what makes those asks free.
-		await this.preload([
-			this.options.grids[0].character,
-			this.options.grids[1].character,
-			...(this.options.grids[0].extras ?? []),
-			...(this.options.grids[1].extras ?? [])
-		]);
+		await standing;
 		if (this.destroyed) return;
 
 		await this.addActor(this.options.grids[0].character, redLead.q, redLead.r, false);
@@ -965,6 +972,27 @@ export class MugenBoard {
 		app.canvas.style.visibility = 'visible';
 
 		app.ticker.add(this.tick);
+
+		// And now the rest of what a fight will ask these fighters for — the walk cycles,
+		// the flinch, every move — comes in behind the picture. It is four fifths of the
+		// artwork a board loads and not one frame of it is on screen when the arena opens:
+		// six fighters stand still until a player has given three orders, which is a good
+		// deal longer than this takes. Nothing waits on it except a turn ({@link whenReady}).
+		this.warming = this.warmRest(cast);
+	}
+
+	/**
+	 * Resolves once every animation a fight can call for is loaded.
+	 *
+	 * The board is shown as soon as it can be *stood up* — the standing pose and nothing
+	 * else — and warms the rest behind it. That is safe because a fight cannot ask for any
+	 * of it until a turn is committed, and it is only safe as long as something says so:
+	 * this is that something, and the controller waits on it before carrying a turn out. So
+	 * the ordinary case costs a resolved promise, and the case where a player somehow beats
+	 * the load waits for it instead of playing a turn with fighters that cannot move.
+	 */
+	whenReady(): Promise<void> {
+		return this.warming;
 	}
 
 	/**
@@ -1040,6 +1068,7 @@ export class MugenBoard {
 		this.sparkContext?.destroy();
 		this.sparkContext = null;
 		this.cellPaint.clear();
+		this.crownOffsets.clear();
 	}
 
 	/**
@@ -1188,15 +1217,17 @@ export class MugenBoard {
 		const id = character.id ?? characterId ?? character.basePath;
 
 		// What this actor plays and what has to be loaded for it: see
-		// {@link boundAnimations}. Both asks below are already warm — {@link start}
-		// preloads the whole board before placing anybody — so this reads as a fetch and
-		// costs a microtask.
-		const definition = await this.loadDefinition(characterId);
+		// {@link boundAnimations}. Both asks below are already warm — {@link start} warms
+		// the standing pose of the whole board before placing anybody — so this reads as a
+		// fetch and costs a microtask.
+		const definition = await loadDefinition(characterId);
 		const { moveRightAnim, moveLeftAnim, hurtAnim, names } = boundAnimations(
 			definition,
 			startName
 		);
-		const animations = await this.loadAnimations(character.basePath, names);
+		// The pose it is being stood up in, and only that: the rest of its animations
+		// arrive behind the finished board ({@link warmRest}).
+		const animations = await this.loadAnimations(character.basePath, [startName]);
 		const baseFrames = animations[startName];
 		if (!baseFrames || baseFrames.length === 0) return;
 
@@ -1235,8 +1266,11 @@ export class MugenBoard {
 		// correction that puts the head over the middle of the cell instead of the axis.
 		// Every character gets it but the ones whose own definition opts out, which are
 		// the sheets whose highest painted pixel is not a head at all.
+		// Read off the artwork once per cycle and kept: it is a fact about the character,
+		// where the screen offset below is a fact about this placement, so a mirror match
+		// reads the pixels for one of its two copies and multiplies for the other.
 		const crownShift = readCrownAlign(definition)
-			? crownCorrection(crownFrames(baseFrames), fitScale, flip)
+			? crownDrift(this.crownOf(character.basePath, startName, baseFrames), fitScale, flip)
 			: 0;
 		const stand = { x: mark.x + crownShift, y: mark.y };
 
@@ -1251,6 +1285,8 @@ export class MugenBoard {
 
 		const actor: Actor = {
 			id,
+			basePath: character.basePath,
+			pendingAnimations: names.filter((name) => name !== startName),
 			sprite,
 			// The grid it was placed from: `flip` is what tells the two halves apart.
 			side: flip ? 'blue' : 'red',
@@ -1293,55 +1329,15 @@ export class MugenBoard {
 		this.actors.push(actor);
 	}
 
-	/**
-	 * Fetch a character's JSON definition (served from @3xl/data at
-	 * `/data/characters/<id>/definition.json`). Returns null if it can't be loaded so movement
-	 * falls back to sensible defaults rather than failing the board.
-	 */
-	private loadDefinition(id: string): Promise<CharacterDefinition | null> {
-		let request = this.definitionRequests.get(id);
-		if (!request) {
-			request = (async () => {
-				try {
-					const response = await fetch(`/data/characters/${id}/definition.json`);
-					if (!response.ok) return null;
-					return (await response.json()) as CharacterDefinition;
-				} catch {
-					return null;
-				}
-			})();
-			this.definitionRequests.set(id, request);
-		}
-		return request;
-	}
-
-	/**
-	 * Fetch a frames folder's manifest. Memoised on the promise rather than on the
-	 * result, so the two sides fielding the same character ask for it once even when
-	 * both asks are in flight at the same time — which, since {@link preload} starts
-	 * every actor's at once, is the normal case rather than a race.
-	 */
-	private loadManifest(basePath: string): Promise<Manifest> {
-		let request = this.manifestRequests.get(basePath);
-		if (!request) {
-			request = (async () => {
-				const response = await fetch(`${basePath}/manifest.json`);
-				if (!response.ok) {
-					throw new Error(`Failed to load manifest: ${response.status}`);
-				}
-				return (await response.json()) as Manifest;
-			})();
-			this.manifestRequests.set(basePath, request);
-		}
-		return request;
-	}
-
-	/** Fetch a manifest and load the textures for the named animations. */
+	/** Fetch a manifest and load the textures for the named animations. Both documents are
+	 * shared with every other surface on the page and fetched once between them, so this is
+	 * a memo lookup and the frame PNGs (which Pixi caches in turn). */
 	private async loadAnimations(
 		basePath: string,
 		names: string[]
 	): Promise<Record<string, LoadedFrame[]>> {
-		const manifest = await this.loadManifest(basePath);
+		const manifest = await loadManifest(basePath);
+		if (!manifest) return {};
 		const textures = await this.loadFrames(basePath, frameFiles(manifest, names));
 
 		const result: Record<string, LoadedFrame[]> = {};
@@ -1385,45 +1381,108 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Warm everything the board is about to place: every actor's definition, its
-	 * manifest and every texture the two of them name, all in flight together.
+	 * The frame files one pass of the warm-up wants, gathered per frames folder so a
+	 * character fielded on both halves of the board is one list and one load.
 	 *
-	 * Placement itself stays ordered — {@link start} stands the fighters up one after
-	 * the next so the actor list reads top to bottom — and each `addActor` asks for its
-	 * own assets exactly as before. What it asks for is by then already loaded (the
-	 * fetches are memoised, the textures are in Pixi's own cache), so the ordering costs
-	 * a microtask instead of a network round trip per frame.
+	 * `wanted` picks the animations out of a character's own bindings, which is the whole
+	 * of what the two passes differ by: the standing pose, or everything else.
 	 *
-	 * Best-effort: a character that fails here fails again in `addActor`, which is where
-	 * it is handled. Nothing is reported from a warm-up.
+	 * Best-effort — a character that cannot be read here fails again in `addActor`, which
+	 * is where it is handled. Nothing is reported from a warm-up.
 	 */
-	private async preload(characters: BoardCharacter[]): Promise<void> {
+	private async warmFiles(
+		characters: BoardCharacter[],
+		wanted: (bound: ReturnType<typeof boundAnimations>, startName: string) => string[]
+	): Promise<void> {
 		const folders = new Map<string, Set<string>>();
 
 		await Promise.all(
 			characters.map(async (character) => {
-				try {
-					// Keyed exactly as the placement keys it, or the memo is missed and the
-					// warm-up bought nothing.
-					const [definition, manifest] = await Promise.all([
-						this.loadDefinition(characterIdFromFramesPath(character.basePath) ?? ''),
-						this.loadManifest(character.basePath)
-					]);
-					const { names } = boundAnimations(definition, character.animation ?? 'idle');
-					const files = folders.get(character.basePath) ?? new Set<string>();
-					for (const file of frameFiles(manifest, names)) files.add(file);
-					folders.set(character.basePath, files);
-				} catch {
-					// Left to addActor to run into and handle.
-				}
+				const startName = character.animation ?? 'idle';
+				const [definition, manifest] = await Promise.all([
+					loadDefinition(characterIdFromFramesPath(character.basePath)),
+					loadManifest(character.basePath)
+				]);
+				if (!manifest) return;
+				const bound = boundAnimations(definition, startName);
+				const files = folders.get(character.basePath) ?? new Set<string>();
+				for (const file of frameFiles(manifest, wanted(bound, startName))) files.add(file);
+				folders.set(character.basePath, files);
 			})
 		);
+		if (this.destroyed) return;
 
 		await Promise.all(
 			[...folders].map(([basePath, files]) =>
 				this.loadFrames(basePath, [...files]).catch(() => new Map<string, Texture>())
 			)
 		);
+	}
+
+	/**
+	 * Warm what it takes to *stand the board up*: every actor's definition, its manifest,
+	 * and the frames of the one cycle it will be standing in. Nothing else — the pose a
+	 * fighter holds is what it is measured, fitted, crowned and drawn from, and no other
+	 * animation is on screen when the arena opens.
+	 *
+	 * Placement itself stays ordered ({@link start} stands the fighters up one after the
+	 * next so the actor list reads top to bottom) and each `addActor` asks for its own
+	 * assets exactly as before. What it asks for is by then already loaded — the fetches
+	 * are memoised for the page, the textures are in Pixi's own cache — so the ordering
+	 * costs a microtask instead of a round trip per frame.
+	 */
+	private warmStanding(characters: BoardCharacter[]): Promise<void> {
+		return this.warmFiles(characters, (_bound, startName) => [startName]);
+	}
+
+	/**
+	 * Warm everything a fight can call for and the opening board could not show: the walk
+	 * cycles, the flinch and every move. Run behind the finished picture; see
+	 * {@link whenReady}, which is what a turn waits on.
+	 *
+	 * Never rejects. It is awaited by the turn that is about to be played out, and a
+	 * character whose moveset could not be read is a fighter that swings without a pose —
+	 * which is what a board missing an animation has always drawn — and not a reason to
+	 * strand the fight that was waiting on it.
+	 */
+	private async warmRest(characters: BoardCharacter[]): Promise<void> {
+		try {
+			await this.warmFiles(characters, (bound, startName) =>
+				bound.names.filter((name) => name !== startName)
+			);
+			if (this.destroyed) return;
+			// Onto the actors already standing on the board. Their `animations` record holds
+			// the one cycle they were placed with; this is the rest of it arriving, and it is
+			// the only thing that ever adds to that record after a placement.
+			await Promise.all(
+				this.actors.map(async (actor) => {
+					const animations = await this.loadAnimations(actor.basePath, actor.pendingAnimations);
+					if (this.destroyed) return;
+					Object.assign(actor.animations, animations);
+				})
+			);
+		} catch {
+			// Left as it stands: whatever did arrive is on the actors, and the rest simply
+			// has no pose to play.
+		}
+	}
+
+	/**
+	 * How far one cycle's crown sits from its axis, in the artwork's own pixels — read off
+	 * the pixels the first time a board is asked, and remembered after that.
+	 *
+	 * Keyed by the artwork and nothing else, which is what makes it shareable: the reading
+	 * is a canvas read per frame of the cycle and the answer does not depend on the scale
+	 * the character is drawn at, the half it stands on, or which of the two copies of a
+	 * mirror match is being placed.
+	 */
+	private crownOf(basePath: string, animation: string, frames: LoadedFrame[]): number {
+		const key = `${basePath}|${animation}`;
+		const known = this.crownOffsets.get(key);
+		if (known !== undefined) return known;
+		const offset = crownOffset(crownFrames(frames));
+		this.crownOffsets.set(key, offset);
+		return offset;
 	}
 
 	/** Push the actor's current frame texture and anchor to its sprite. */

@@ -650,6 +650,14 @@ export class CombatController {
 	 * see {@link bankCharges}.
 	 */
 	private async resolve(): Promise<void> {
+		// A turn is the first thing that asks the fighters to do anything but stand there.
+		// The board shows itself as soon as it can stand them up and loads the walk cycles,
+		// the flinch and every move behind the finished picture, so this is where that load
+		// has to have landed — normally long since, a player having had to give three
+		// orders to get here. Awaited rather than assumed: a turn played over half-loaded
+		// artwork is fighters teleporting between cells and throwing nothing.
+		await this.board?.whenReady();
+
 		const acting = this.fighters.filter((fighter) => !fighter.down && fighter.action);
 		this.log = [];
 

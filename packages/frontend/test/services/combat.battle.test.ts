@@ -11,8 +11,7 @@ import {
 	type FighterSeed,
 	type FighterView
 } from '$services/combat.controller';
-import { cellScreenY } from '$utils/mugen/mugen-board';
-import { FIRST_COLUMN, LAST_COLUMN } from '$utils/mugen/grid';
+import { cellScreenY, FIRST_COLUMN, LAST_COLUMN } from '$utils/mugen/grid';
 import type { CombatColor } from '$types/character-definition.type';
 import type { BattleBoardSnapshot } from '$types/battle.type';
 

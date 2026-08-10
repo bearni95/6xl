@@ -87,13 +87,36 @@ export function crownOfPixels(
 }
 
 /**
+ * The one canvas every frame is read through, kept for the page.
+ *
+ * A canvas is an allocation — a backing store the size of the picture, and a 2D context
+ * over it — and this reading is asked of *every frame of a cycle*, of every fighter a
+ * board stands up. One canvas per frame was allocating and throwing away a hundred of
+ * them in the moment the arena opens, which is precisely the moment there is nothing on
+ * screen yet. The same one is resized and drawn over instead, and `willReadFrequently`
+ * keeps it on the CPU side so the read back is a memory copy rather than a stall on the
+ * GPU.
+ */
+let scratch: { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | null = null;
+
+function readingCanvas(): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } | null {
+	if (scratch) return scratch;
+	if (typeof document === 'undefined') return null;
+	const canvas = document.createElement('canvas');
+	const context = canvas.getContext('2d', { willReadFrequently: true });
+	if (!context) return null;
+	scratch = { canvas, context };
+	return scratch;
+}
+
+/**
  * Read `source`'s highest painted pixels. Returns null when the frame is empty, when
  * there is no 2D canvas to read it through, or when the read is refused — every one of
  * which is a reason to leave the character on its axis rather than to fail placing it.
  *
- * The frame is drawn into a canvas of its own size and read back once. Sprite frames are
- * small and this is asked once per character as the board opens, so the cost lands in
- * the load and never in the render loop.
+ * The frame is drawn into the shared reading canvas at its own size and read back once.
+ * Sprite frames are small and this is asked as the board opens, so the cost lands in the
+ * load and never in the render loop.
  */
 export function paintedCrown(
 	source: CanvasImageSource,
@@ -102,14 +125,15 @@ export function paintedCrown(
 ): Crown | null {
 	const w = Math.max(1, Math.round(width));
 	const h = Math.max(1, Math.round(height));
-	if (typeof document === 'undefined') return null;
+	const reading = readingCanvas();
+	if (!reading) return null;
 
 	try {
-		const canvas = document.createElement('canvas');
+		const { canvas, context } = reading;
+		// Setting either dimension clears the surface, so a frame smaller than the last
+		// one read cannot inherit its paint. Both are set every time for that reason.
 		canvas.width = w;
 		canvas.height = h;
-		const context = canvas.getContext('2d', { willReadFrequently: true });
-		if (!context) return null;
 		context.drawImage(source, 0, 0, w, h);
 		return crownOfPixels(context.getImageData(0, 0, w, h).data, w, h);
 	} catch {
@@ -150,6 +174,23 @@ export interface CrownFrame {
  * failing to improve on it costs nothing.
  */
 export function crownCorrection(frames: CrownFrame[], scale: number, flip: boolean): number {
+	return crownDrift(crownOffset(frames), scale, flip);
+}
+
+/**
+ * How far a cycle's crown sits from the axis it is drawn around, in the artwork's **own
+ * pixels** — positive for a head to the right of the axis. The whole of what reading the
+ * pixels answers, and the one part of {@link crownCorrection} that is a fact about the
+ * character rather than about the surface drawing it.
+ *
+ * Split out because reading it is the expensive half — a canvas read per frame of the
+ * cycle — while turning it into a screen offset is a multiply and a sign. A surface that
+ * draws the same character more than once (the two halves of a mirror match) reads the
+ * artwork once and asks {@link crownDrift} for each placement.
+ *
+ * Read off the frame whose paint reaches **highest**, and 0 when nothing can be read.
+ */
+export function crownOffset(frames: CrownFrame[]): number {
 	let best: { frame: CrownFrame; crown: Crown; reach: number } | null = null;
 	for (const frame of frames) {
 		const crown = paintedCrown(frame.source, frame.width, frame.height);
@@ -160,6 +201,12 @@ export function crownCorrection(frames: CrownFrame[], scale: number, flip: boole
 	if (!best) return 0;
 	// Both in the frame's own pixels, off its left edge: where the crown is, and where the
 	// axis the sprite is anchored at is. The gap between them is what has to be undone.
-	const axis = best.frame.anchorX * best.frame.width;
-	return (flip ? 1 : -1) * (best.crown.x - axis) * scale;
+	return best.crown.x - best.frame.anchorX * best.frame.width;
+}
+
+/** A {@link crownOffset} as the screen px to move a sprite by: at the scale it is drawn,
+ * and turned round for a mirrored one, since a negative x-scale reflects the artwork about
+ * its anchor and takes the crown with it. */
+export function crownDrift(offset: number, scale: number, flip: boolean): number {
+	return (flip ? 1 : -1) * offset * scale;
 }

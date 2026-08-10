@@ -23,6 +23,7 @@
 	import CharacterClaimPanel from '$components/core/CharacterClaimPanel.svelte';
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import CombatArena from '$components/core/CombatArena.svelte';
+	import { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import RosterModal from '$components/core/RosterModal.svelte';
 	import CollectionModal from '$components/core/CollectionModal.svelte';
@@ -1722,6 +1723,11 @@
 	// reported — so nothing is claimed and the arena opens exactly as it used to,
 	// onto its own "no active team" gate.
 	async function challenge(): Promise<void> {
+		// The board engine, on its way before anything else happens. It is a lazily-loaded
+		// chunk that owes nothing to which town this is or who is fighting, and it was being
+		// asked for only once the sheet was already up and empty; here it comes down while
+		// the server opens the battle.
+		void loadBoardEngine();
 		// A player in a fight is offered the way back into it, never a second one.
 		if ($openBattle) {
 			resumeBattle();
@@ -1778,6 +1784,8 @@
 	function resumeBattle(): void {
 		const battle = $openBattle;
 		if (!battle) return;
+		// The other door into the arena, warmed for the same reason as the one above.
+		void loadBoardEngine();
 		fightSpawns = ogTeamSpawns(battle.rivals, battle.locationId);
 		fightLocationId = battle.locationId;
 		fightTurnover = battle.turnover;

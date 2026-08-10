@@ -114,6 +114,9 @@ const boardLog = (): AuraLog => ({ lit: [], doused: [], moved: [], braced: [] })
 function fakeBoard(log: AuraLog) {
 	const done = () => Promise.resolve();
 	return {
+		// The board loads a fight's animations behind the picture it opens with, so a turn
+		// waits on that before it plays. Nothing is loaded here, so it is always in.
+		whenReady: done,
 		showAura: (id: string, color: string) => {
 			log.lit.push({ id, color });
 			return done();

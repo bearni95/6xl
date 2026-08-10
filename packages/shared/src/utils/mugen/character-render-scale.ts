@@ -23,6 +23,7 @@ import {
 	RENDER_SCALE_MIN,
 	type CharacterDefinition
 } from '../../types/character-definition.type';
+import { loadDefinition } from './character-assets';
 
 /**
  * The character id inside a served frames folder — `/assets/inuyasha/frames` is
@@ -53,43 +54,16 @@ export function readRenderScale(definition: Partial<CharacterDefinition> | null)
 		: DEFAULT_RENDER_SCALE;
 }
 
-// One entry per frames folder, kept for the session: a character's scale is a fact
-// about its art, so the fetch happens once however many statues, cards and actors
-// ask for it. Failures are cached as the default too — a surface that resized while
-// the network was down must not re-ask on every measurement.
-const scales = new Map<string, number>();
-const pending = new Map<string, Promise<number>>();
-
 /**
  * The render scale for the character whose frames live at `basePath`, defaulting to
  * 1 for a character that authored none (and for any failure to read it — a missing
  * correction draws the character as it always was, which is never worse than
  * drawing nothing).
+ *
+ * The definition itself is fetched once per page for every surface that wants any part
+ * of it ({@link loadDefinition}), so a statue asking for a scale and a board asking for
+ * the same character's move bindings are one request between them.
  */
 export function loadRenderScale(basePath: string | null): Promise<number> {
-	if (!basePath) return Promise.resolve(DEFAULT_RENDER_SCALE);
-	const cached = scales.get(basePath);
-	if (cached !== undefined) return Promise.resolve(cached);
-	const inFlight = pending.get(basePath);
-	if (inFlight) return inFlight;
-
-	const id = characterIdFromFramesPath(basePath);
-	if (!id) return Promise.resolve(DEFAULT_RENDER_SCALE);
-
-	const promise = (async () => {
-		try {
-			const response = await fetch(`/data/characters/${id}/definition.json`);
-			if (!response.ok) return DEFAULT_RENDER_SCALE;
-			return readRenderScale((await response.json()) as Partial<CharacterDefinition>);
-		} catch {
-			return DEFAULT_RENDER_SCALE;
-		} finally {
-			pending.delete(basePath);
-		}
-	})().then((scale) => {
-		scales.set(basePath, scale);
-		return scale;
-	});
-	pending.set(basePath, promise);
-	return promise;
+	return loadDefinition(characterIdFromFramesPath(basePath)).then(readRenderScale);
 }

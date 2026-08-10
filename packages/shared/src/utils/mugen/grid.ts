@@ -108,6 +108,19 @@ export const BOARD_ROWS = LAST_ROW - FIRST_ROW + 1;
 export const MIDDLE_ROW = Math.floor((FIRST_LANE_ROW + LAST_ROW) / 2);
 
 /**
+ * Top→bottom screen position of a cell. Rows run down the screen, so it is the row
+ * itself — but callers outside the renderer (the arena's line-up, a saved board's lane
+ * numbering) sort by it rather than reading `.r`, so that which way this board's rows run
+ * stays one statement in one place.
+ *
+ * It is stated here, with the rest of the field's geometry, and not on the renderer: it is
+ * arithmetic over a coordinate and owes nothing to PixiJS, and importing it *from* the
+ * renderer was half of what kept that module in the map's initial bundle despite being
+ * loaded dynamically (see `combat-color.ts`, which is the other half).
+ */
+export const cellScreenY = (cell: Cell): number => cell.r;
+
+/**
  * What a column is called, the way a chess file is: a letter, counted from `a` at the
  * board's left edge. A column's own coordinate is signed and centred on the white one
  * (`q = 0`), which is the right way to write the board's rules and the wrong way to

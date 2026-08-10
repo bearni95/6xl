@@ -3,20 +3,25 @@
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import IdleSprite from '$components/core/IdleSprite.svelte';
-	import MugenBoard from '$components/core/MugenBoard.svelte';
+	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import TownPlate from '$components/core/TownPlate.svelte';
 	import { SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
-	import { cellScreenY, combatColorHex } from '$utils/mugen/mugen-board';
+	import { combatColorHex } from '$utils/color/combat-color';
 	import { ORDER_ICONS } from '$utils/color/traits';
+	// Types only, so nothing here reaches the renderer at load time: the arena letters a
+	// fight and the board draws one, and the board arrives when the fight does (see
+	// `loadBoardEngine`). The two value imports that used to be here — a colour table and a
+	// one-line reading of a cell's row, both since moved somewhere pixel-free — were enough
+	// on their own to put the whole engine in the map's initial bundle.
 	import type {
 		BoardCharacter,
 		BoardGrid,
 		BoardOrder,
 		MugenBoard as MugenBoardEngine
 	} from '$utils/mugen/mugen-board';
-	import type { Cell } from '$utils/mugen/grid';
+	import { cellScreenY, type Cell } from '$utils/mugen/grid';
 	import { standingLine, type StandingFighter } from '$utils/mugen/board-standing';
-	import type { Manifest } from '$utils/mugen/mugen-player';
+	import { loadDefinition, loadManifest } from '$utils/mugen/character-assets';
 	import {
 		boardFitsLineup,
 		CombatController,
@@ -41,7 +46,6 @@
 	import {
 		COMPOUND_COLORS,
 		DEFAULT_COLOR,
-		type CharacterDefinition,
 		type CharacterMove,
 		type CombatColor
 	} from '$types/character-definition.type';
@@ -211,11 +215,19 @@
 	// Nothing else is fetched: the board draws fighters and the orders they can be
 	// given, and a fighter's rarity, show and claim place belonged to the trading card
 	// that used to sit beside it.
+	//
+	// Cards already in the store count as loaded, and the read still runs behind them. The
+	// map loads this same set the moment the player signs in, so the arena was opening on a
+	// spinner while a round trip fetched a list it was already holding — and nothing about
+	// the fight could start until it landed: not the line-up, not the controller, and above
+	// all not the canvas, whose own boot is the long pole and was queued behind it. What
+	// re-reading them is actually for is a claim made in another tab, which is worth
+	// following and is not worth a blank screen.
 	let loadedForUser: string | null = null;
 	let spawnsLoaded = false;
 	$: if (currentUserId && currentUserId !== loadedForUser) {
 		loadedForUser = currentUserId;
-		spawnsLoaded = false;
+		spawnsLoaded = spawnService.hasSpawns(currentUserId);
 		void spawnService.loadSpawns(currentUserId).then(() => (spawnsLoaded = true));
 	}
 
@@ -630,25 +642,28 @@
 				// definition JSON) from it, falling back to the basePath-derived id.
 				const spawn = spawnById.get(spawnIdOf(entry.id));
 				const characterId = spawn?.characterId ?? characterIdOf(entry.basePath);
-				const [manifestRes, defRes] = await Promise.all([
-					fetch(`${entry.basePath}/manifest.json`),
-					fetch(`/data/characters/${characterId}/definition.json`)
+				// The same two documents the board is reading to draw these very fighters, and
+				// the same request: both are memoised for the page (`character-assets`), so a
+				// mirror match asks for one manifest and one definition per character rather
+				// than one per side per surface. This used to be a bare pair of fetches beside
+				// the board's own, racing them for the connections the frame PNGs needed.
+				const [manifest, definition] = await Promise.all([
+					loadManifest(entry.basePath),
+					loadDefinition(characterId)
 				]);
-				const manifest: Manifest = await manifestRes.json();
-				const definition: Partial<CharacterDefinition> = defRes.ok ? await defRes.json() : {};
 				// Combat colour comes from the spawn; only if a slot somehow has no spawn
 				// colour do we fall back to the definition's compound colour (or DEFAULT_COLOR).
 				const color: CombatColor =
 					(spawn?.color as CombatColor) ??
-					(COMPOUND_COLORS.includes(definition.color!) ? definition.color! : DEFAULT_COLOR);
+					(COMPOUND_COLORS.includes(definition?.color!) ? definition!.color! : DEFAULT_COLOR);
 				// Face: the portrait the definition picked in /admin/characters, else
 				// the manifest's default. Both resolve to a file under the char's frames.
-				const faceFile = definition.face || manifest.face?.file || null;
+				const faceFile = definition?.face || manifest?.face?.file || null;
 				return {
 					...entry,
-					name: manifest.name,
+					name: manifest?.name ?? '',
 					face: faceFile ? `${entry.basePath}/${faceFile}` : null,
-					moves: definition.moves ?? [],
+					moves: definition?.moves ?? [],
 					color
 				};
 			})
@@ -906,7 +921,15 @@
 		return message.trim() || fallback;
 	}
 
-	onMount(() => authService.init());
+	onMount(() => {
+		// The engine, as the sheet goes up, rather than once there is a board to mount on it.
+		// Everything above this — the session, the player's cards, the line-up — has to
+		// settle before the board's own component exists, and the chunk it would then ask
+		// for owes nothing to any of it, so it is asked for alongside them instead of behind
+		// them. Nothing here waits on it; the board itself does, and finds it in hand.
+		void loadBoardEngine();
+		authService.init();
+	});
 
 	onDestroy(() => unsubscribe?.());
 
