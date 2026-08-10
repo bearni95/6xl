@@ -1564,31 +1564,44 @@
 				class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
 			>
 				<div class="flex flex-col">
-					<!-- Whose town it is, above the town itself — and only where somebody holds it.
-					     A fight over a taken town is a fight with the player sitting on it: the line-up
-					     on the other side of the board is theirs, so who they are is read before what
-					     the place is called. A town still on its seeded house team belongs to nobody and
-					     gets no panel at all, which is what an absent holder means (see MapMarker's).
-					     The plate below already names them on a row of its own, as every pin does; this
-					     is the account — face, name and level — which is how this game says a player
-					     wherever it says one. -->
-					{#if location?.holder}
-						<CombatHost
-							name={location.holder.name}
-							characterId={location.holder.characterId}
-							color={location.holder.color}
-							level={location.holder.level}
-						/>
-					{/if}
-					<!-- The town, on the very plate its pin carries on the map: the same mark, drawn
-					     the same way, showing what was pressed to get here. Only the challenge button
-					     is missing, and the caller is what leaves it out — a fight already under way
-					     has nothing left to start.
-					     Flush: laid into this column it takes the column's width and squares its
-					     corners, where a pin's plate settles its own width and rounds them. -->
-					{#if location}
-						<TownPlate {...location} flush />
-					{/if}
+					<!-- The two things the fight is about, side by side: the place on the left and
+					     whoever is sitting on it on the right. They are of a kind — what is being
+					     fought for, and who it is being fought with — so they are read across rather
+					     than stacked, and the grid is what makes the two cells the same width whatever
+					     either of them holds: a name of any length and a town of any length are laid
+					     out by the head, not by each other.
+					     One column where nobody holds the town, which is a town still on its seeded
+					     house team: there is no player on the other side to name, and half a head of
+					     empty plate would be saying there is one and we have lost them. -->
+					<div class={classNames('grid items-stretch', location?.holder ? 'grid-cols-2' : 'grid-cols-1')}>
+						<!-- The town, on the very plate its pin carries on the map: the same mark, drawn
+						     the same way, showing what was pressed to get here. Only the challenge button
+						     is missing, and the caller is what leaves it out — a fight already under way
+						     has nothing left to start.
+						     Flush: laid into a cell it takes the cell's width and squares its corners,
+						     where a pin's plate settles its own width and rounds them.
+						     Without its holder row, which is the one thing a pin's plate says that this
+						     head now says better: the row is a face and a name squeezed under the place,
+						     which is all a pin has room for, and the cell beside this is the whole
+						     account. Said twice, side by side, the second saying reads as a second
+						     player. The plate keeps the row everywhere else — this is the caller
+						     leaving it out, exactly as it leaves out the challenge button. -->
+						{#if location}
+							<TownPlate {...location} holder={null} flush />
+						{/if}
+						<!-- Whose town it is — the account behind the line-up on the other side of the
+						     board, said the way this game says a player wherever it says one: the face
+						     they wear, the name they chose and the level they have reached. Written
+						     second, so it takes the right-hand cell. -->
+						{#if location?.holder}
+							<CombatHost
+								name={location.holder.name}
+								characterId={location.holder.characterId}
+								color={location.holder.color}
+								level={location.holder.level}
+							/>
+						{/if}
+					</div>
 					{#if state && !state.outcome}
 					<!-- The score, at the head of the fight it is a score of, under the town being
 					     fought over.
