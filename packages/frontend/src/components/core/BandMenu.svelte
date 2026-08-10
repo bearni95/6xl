@@ -51,18 +51,26 @@
 />
 
 {#if items.length}
-	<!-- `relative` because the column hangs off this, and `self-stretch` because the square is
-		drawn to the row's height the way the two it replaces were — the wrapper is the flex item
-		now, so it is the wrapper that takes the height and the button that reads its width off
-		it. -->
-	<div bind:this={wrapperEl} class={classNames('relative flex flex-none self-stretch', classes)}>
+	<!-- The wrapper is the square, not the button inside it: `aspect-square flex-none
+		self-stretch` is exactly the box the two marks this replaces were, taking the row's height
+		and reading its width off that. The box has to be settled HERE because it is the item the
+		band lays out — an `aspect-square` on the button instead leaves the wrapper's own width to
+		be guessed from a child whose height is not known until the row has already been laid out,
+		and what came of that guess was a square wide enough to push itself off the end of the
+		screen. The button simply fills whatever this is (`size-full`), which is a percentage and
+		asks nothing.
+		`relative` because the column hangs off it. -->
+	<div
+		bind:this={wrapperEl}
+		class={classNames('relative flex aspect-square flex-none self-stretch', classes)}
+	>
 		<!-- The same square as everything else the band presses: the name plate's own fill, drawn
 			to the row's height, with white artwork that needs no colour of its own on the primary.
 			The dots are the mark this game folds things into (see MapBreadcrumbs) — three of them
 			down the square, as they are at the head of the map's own row. -->
 		<button
 			type="button"
-			class="flex aspect-square cursor-pointer items-center justify-center rounded-lg bg-primary text-white shadow-xl"
+			class="flex size-full cursor-pointer items-center justify-center rounded-lg bg-primary text-white shadow-xl"
 			aria-expanded={open}
 			aria-haspopup="menu"
 			aria-label={open ? $_('menu.close') : $_('menu.open')}
