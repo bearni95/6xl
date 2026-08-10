@@ -484,10 +484,12 @@ const MOVE_SPEED = 260;
 // held strictly inside the square every one of those would stand perfectly still — so the
 // containment is a cap and never a floor ({@link MugenBoard.paceReach} has the figures).
 //
-// It is a *reading* and never a move: `actor.x` — where the fighter stands, and what its
-// aura and its own crown correction are hung off — is untouched, and the pace is carried by
-// the sprite alone. So the fighter is marked without the board believing it has gone
-// anywhere, and nothing that is hung off where it stands drifts with it.
+// It is a *reading* and never a move: `actor.x` — where the fighter stands, and what its own
+// crown correction and every walk it is later sent on are hung off — is untouched, and the
+// pace is carried by the sprite alone. So the fighter is marked without the board believing
+// it has gone anywhere, and nothing that is hung off where it stands drifts with it. What is
+// drawn *round* the fighter is hung off the sprite instead, since it belongs to the fighter
+// rather than to the ground it is standing on ({@link auraMark}).
 
 /** How far the paced fighter walks off its standing mark, to either side, as a share of a
  * cell, where its own artwork leaves it the room. The most any fighter ever paces. */
@@ -800,19 +802,26 @@ interface Aura {
 }
 
 /**
- * Where an actor's aura stands: the middle of the fighter as it is drawn this instant.
+ * Where an actor's aura stands: the point the fighter itself is stood on, this instant.
  *
- * Two corrections to the mark, and they answer different questions. **Which side of the
- * mark the fighter is on** is {@link Actor.reachLeft}/{@link Actor.reachRight} — the axis a
- * MUGEN sprite is anchored on sits between its feet, so a fighter leaning on one leg stands
- * mostly to one side of its own mark, and a flame centred on the mark burns off its
- * shoulder. **Where the fighter is standing this frame** is `sprite.x` rather than
- * {@link Actor.x}: a paced fighter shifts its weight across its cell without its mark moving
- * ({@link MugenBoard.updatePace}), and a flame is a thing the fighter is on fire with rather
- * than a thing burning on the ground it left.
+ * A fighter is not placed by its MUGEN axis. The axis sits between its feet, and a sheet
+ * drawn for a side-on brawler leans, so the board moves the whole fighter until its
+ * **crown** — the middle of its highest painted pixels, which on a standing sprite is its
+ * head — is over the middle of its cell ({@link Actor.crownShift}). That is where a viewer
+ * reads the fighter as standing, so it is where its fire stands too: taking the correction
+ * back off the sprite's x lands on the mark the fighter was placed by, and a flame centred
+ * there is centred on the same head the whole placement is about. Centred on the axis
+ * instead — which is what the frame's own middle very nearly comes to — it burns off the
+ * shoulder of every character whose head is not over its feet, by exactly however far the
+ * correction moved it. Keroro's head is ten of his fifty-nine pixels left of his axis, and
+ * that is what his aura sat to the right of.
+ *
+ * And read off `sprite.x` rather than {@link Actor.x}, since a paced fighter shifts its
+ * weight across its cell without its mark moving ({@link MugenBoard.updatePace}), and a
+ * flame is a thing the fighter is on fire with rather than one burning on the ground it
+ * left.
  */
-const auraMark = (actor: Actor): number =>
-	actor.sprite.x + (actor.reachLeft + actor.reachRight) / 2;
+const auraMark = (actor: Actor): number => actor.sprite.x - actor.crownShift;
 
 /**
  * The guard drawn round a fighter turning a blow aside: the arc itself, the way it is
@@ -1072,11 +1081,13 @@ interface Actor {
 	 * How far the character's paintwork reaches either side of {@link Actor.x}, in screen px
 	 * — `reachLeft` negative, `reachRight` positive ({@link figureReach} over the base cycle).
 	 *
-	 * Where {@link displayWidth} says how wide the character is, these say *where* it is: the
-	 * mark is the MUGEN axis between its feet, and a fighter leaning on one leg with a tail
-	 * out stands mostly to one side of it. Their middle is the middle of the fighter as a
-	 * viewer sees it, which is what the aura is centred on — measured against `x` rather than
-	 * against the cell, so the crown correction the sprite was placed with is already in them.
+	 * Where {@link displayWidth} says how wide the widest single frame is, these say how wide
+	 * the *cycle* stands and which side of the mark it stands on: a pose that leans one way
+	 * and a pose that leans the other are one envelope here, and neither answer is the other's
+	 * negative, since the mark is the MUGEN axis between the fighter's feet and not the middle
+	 * of it. That envelope is what the aura is sized by; where it is *centred* is a separate
+	 * question, and its answer is the crown ({@link auraMark}). Measured against `x`, so they
+	 * are in the same terms as the sprite's placement.
 	 *
 	 * Taken over the standing cycle and kept, like {@link displayWidth}: a flame that
 	 * re-measured itself pose by pose would jump about as the fighter moved.
@@ -3267,6 +3278,12 @@ export class MugenBoard {
 		// another is enveloped across both. The four frames of a flame are cropped to
 		// themselves and so differ in size, which is the fire moving — one scale off the first
 		// of them carries that through instead of ironing them all out to one rectangle.
+		//
+		// How wide the fighter is and where the flame is centred are asked separately, and the
+		// width is not stretched to cover what the centre leaves out: a character standing well
+		// to one side of its own crown — a staff raised, a tail sweeping — can put a limb
+		// outside its own fire, and widening the flame until it reached would give it a bonfire
+		// half as wide again as the ones beside it. Fire behind a fighter is not a container.
 		const scaleX = ((actor.reachRight - actor.reachLeft) * AURA_WIDTH_RATIO) / frames[0].width;
 		const scaleY = (actor.displayHeight * AURA_HEIGHT_RATIO) / frames[0].height;
 		// Flat on the ground to begin with: the first tick brings it up (see updateAura).
