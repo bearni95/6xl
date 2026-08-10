@@ -164,6 +164,13 @@ export interface BoosterBoxSpriteOptions {
 	showId: number | null;
 	/** Full name of the place the box belongs to, said at the head of the front. */
 	locationName: string | null;
+	/**
+	 * Said across the head of the front *instead of* the place and the year — one arbitrary
+	 * string, taken as given, for a box printed for something other than a town's festa (see
+	 * {@link BoosterBoxSprite.placeLabel}, and the identical prop on BoosterBox.svelte).
+	 * Null leaves the head as the town and the year.
+	 */
+	caption?: string | null;
 	/** Printed on white card instead of black — the stock turns over and the ink with it. */
 	light: boolean;
 	/** How wide the box is drawn. Its height follows (30:37). */
@@ -666,9 +673,14 @@ export class BoosterBoxSprite extends Container {
 	 * What the head says: the place with the year this copy would be minted in joined to it —
 	 * "Barcelona '26". The gazetteer parks the article after a comma to sort by, so it is put
 	 * back at the front before the name is said.
+	 *
+	 * A caption replaces the pair outright rather than joining them: a box that belongs to no
+	 * town has no year either, and "Benvinguda '26" would be dating a thing that is not an
+	 * edition.
 	 */
 	private placeLabel(): string {
-		const { locationName } = this.options;
+		const { locationName, caption } = this.options;
+		if (caption) return caption;
 		return [locationName ? restoreCatalanArticle(locationName) : '', spawnYearLabel(Date.now())]
 			.filter(Boolean)
 			.join(' ');

@@ -846,6 +846,208 @@ export function ensureTables(): Promise<void> {
 					end;
 					$claim_booster$;
 					grant execute on function claim_booster(bigint, text) to authenticated;
+					-- The welcome box: the one booster a player is given rather than has
+					-- to go and find. It deals exactly what a town's box deals -- five
+					-- rarity-weighted cards and one avatar out of one show's roster, each
+					-- in one of the three colours its stock holds -- and differs in three
+					-- ways only: there is no festa and so no window, no stock and no year
+					-- to read off one; the show is the caller's own pick, passed and not
+					-- derived, since the box stands on no polygon and nobody holds it; and
+					-- it is one per player full stop, which is why the year is 0 and not
+					-- the year it was opened in (a year that moved would deal a second
+					-- welcome every January).
+					-- It is NOT a rule of its own: "one and no more" is already the unique
+					-- index on (user_id, location_id, year, box), and all this box needs is
+					-- a town and a year no festa can ever produce. Keep the three constants
+					-- in step with welcome-box.ts in @3xl/shared.
+					create or replace function claim_welcome_booster(p_show_id bigint)
+					returns jsonb
+					language plpgsql security definer set search_path = public as $claim_welcome_booster$
+					declare
+							v_uid uuid := auth.uid();
+							v_location constant text := 'benvinguda';
+							v_year constant int := 0;
+							v_box constant text := 'white';
+							v_colors constant text[] := array['purple', 'green', 'orange'];
+							v_size constant int := 5;
+							v_ids text[];
+							v_rarities int[];
+							v_weights numeric[];
+							v_total numeric;
+							v_pick text;
+							v_color text;
+							v_row character_spawns%rowtype;
+							v_avatar player_avatars%rowtype;
+							v_spawns jsonb := '[]'::jsonb;
+							i int;
+					begin
+							if v_uid is null then
+									raise exception 'You must be signed in to open a booster.';
+							end if;
+							if p_show_id is null then
+									raise exception 'Choose a show to open your welcome box.';
+							end if;
+							-- The same per-user lock claim_booster takes, so a welcome and a
+							-- town's box cannot be opened at the same instant either.
+							perform pg_advisory_xact_lock(hashtextextended(v_uid::text, 0));
+							-- One to a player. Asked on the location alone: the year and the
+							-- stock are constants here, so a row under this town is the
+							-- welcome box whatever else is on it.
+							if exists (
+									select 1 from booster_claims c
+									where c.user_id = v_uid and c.location_id = v_location
+							) then
+									raise exception 'You have already opened your welcome box.';
+							end if;
+							-- Roll pool: the chosen show's cast that exists as templates.
+							-- There is no "any show" case -- a box with no show is a box with
+							-- no cover, and this one is chosen by its cover.
+							with pool as (
+									select distinct ct.id as id, coalesce(ct.rarity, 0) as rarity
+									from show_characters sc
+									join character_templates ct on ct.id = sc.character_id
+									where sc.show_id = p_show_id
+							)
+							select array_agg(id order by id), array_agg(rarity order by id)
+									into v_ids, v_rarities
+							from pool;
+							if v_ids is null or array_length(v_ids, 1) is null then
+									raise exception 'There are no claimable characters for this show.';
+							end if;
+							select array_agg(w order by ord), sum(w)
+									into v_weights, v_total
+							from (
+									select ord, 1.0 / (2 ^ r) as w
+									from unnest(v_rarities) with ordinality as t(r, ord)
+							) s;
+							-- Record the box as taken, then roll its cards.
+							insert into booster_claims (user_id, show_id, location_id, box, year)
+									values (v_uid, p_show_id, v_location, v_box, v_year);
+							for i in 1..v_size loop
+									v_pick := pick_weighted(v_ids, v_weights, v_total);
+									v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
+									insert into character_spawns (user_id, character_id, show_id, location_id, color, box)
+											values (v_uid, v_pick, p_show_id, v_location, v_color, v_box)
+											returning * into v_row;
+									v_spawns := v_spawns || to_jsonb(v_row);
+							end loop;
+							-- The box's avatar, drawn exactly as a card is. Very likely the
+							-- first portrait its player holds: the browser puts it on for
+							-- anybody still wearing the initial-letter avatar, through
+							-- set_player_avatar like any other choice.
+							v_pick := pick_weighted(v_ids, v_weights, v_total);
+							v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
+							insert into player_avatars (user_id, character_id, color, show_id, location_id)
+									values (v_uid, v_pick, v_color, p_show_id, v_location)
+									on conflict (user_id, character_id, color) do update
+											set granted_at = player_avatars.granted_at
+									returning * into v_avatar;
+							return jsonb_build_object('spawns', v_spawns, 'avatar', to_jsonb(v_avatar));
+					end;
+					$claim_welcome_booster$;
+					grant execute on function claim_welcome_booster(bigint) to authenticated;
+					-- The level boxes: one for every level a player has reached, from the
+					-- first, each opened on its own and each on a show of their choosing.
+					-- Not a rule of its own either -- the claim key is ('nivell', <level>,
+					-- 'black'), so "one box per level" is the same unique index, with the
+					-- level standing where a festa's year stands. Black stock (the
+					-- primaries) because white is the rare one, and a box that comes again
+					-- at every level is not that. Keep the three in step with level-box.ts
+					-- in @3xl/shared.
+					-- What the index cannot say, and this checks, is that the level has
+					-- actually been reached: read off player_profiles.exp here, never taken
+					-- from the caller, who names only WHICH of their levels they are
+					-- opening. No profile row is level 1 -- the box everybody starts with.
+					create or replace function claim_level_booster(p_show_id bigint, p_level int)
+					returns jsonb
+					language plpgsql security definer set search_path = public as $claim_level_booster$
+					declare
+							v_uid uuid := auth.uid();
+							v_location constant text := 'nivell';
+							v_box constant text := 'black';
+							v_colors constant text[] := array['red', 'blue', 'yellow'];
+							v_size constant int := 5;
+							v_reached int;
+							v_ids text[];
+							v_rarities int[];
+							v_weights numeric[];
+							v_total numeric;
+							v_pick text;
+							v_color text;
+							v_row character_spawns%rowtype;
+							v_avatar player_avatars%rowtype;
+							v_spawns jsonb := '[]'::jsonb;
+							i int;
+					begin
+							if v_uid is null then
+									raise exception 'You must be signed in to open a booster.';
+							end if;
+							if p_show_id is null then
+									raise exception 'Choose a show to open your level box.';
+							end if;
+							if p_level is null or p_level < 1 then
+									raise exception 'That is not a level.';
+							end if;
+							-- The same per-user lock the other two boxes take.
+							perform pg_advisory_xact_lock(hashtextextended(v_uid::text, 0));
+							select level_for_exp(coalesce(p.exp, 0)) into v_reached
+									from player_profiles p
+									where p.user_id = v_uid;
+							v_reached := coalesce(v_reached, level_for_exp(0));
+							if p_level > v_reached then
+									raise exception 'You have not reached level % yet.', p_level;
+							end if;
+							-- One box per level.
+							if exists (
+									select 1 from booster_claims c
+									where c.user_id = v_uid
+											and c.location_id = v_location
+											and c.year = p_level
+											and c.box = v_box
+							) then
+									raise exception 'You have already opened your level % box.', p_level;
+							end if;
+							-- Roll pool: the chosen show's cast that exists as templates.
+							with pool as (
+									select distinct ct.id as id, coalesce(ct.rarity, 0) as rarity
+									from show_characters sc
+									join character_templates ct on ct.id = sc.character_id
+									where sc.show_id = p_show_id
+							)
+							select array_agg(id order by id), array_agg(rarity order by id)
+									into v_ids, v_rarities
+							from pool;
+							if v_ids is null or array_length(v_ids, 1) is null then
+									raise exception 'There are no claimable characters for this show.';
+							end if;
+							select array_agg(w order by ord), sum(w)
+									into v_weights, v_total
+							from (
+									select ord, 1.0 / (2 ^ r) as w
+									from unnest(v_rarities) with ordinality as t(r, ord)
+							) s;
+							-- Record the box as taken, then roll its cards.
+							insert into booster_claims (user_id, show_id, location_id, box, year)
+									values (v_uid, p_show_id, v_location, v_box, p_level);
+							for i in 1..v_size loop
+									v_pick := pick_weighted(v_ids, v_weights, v_total);
+									v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
+									insert into character_spawns (user_id, character_id, show_id, location_id, color, box)
+											values (v_uid, v_pick, p_show_id, v_location, v_color, v_box)
+											returning * into v_row;
+									v_spawns := v_spawns || to_jsonb(v_row);
+							end loop;
+							v_pick := pick_weighted(v_ids, v_weights, v_total);
+							v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
+							insert into player_avatars (user_id, character_id, color, show_id, location_id)
+									values (v_uid, v_pick, v_color, p_show_id, v_location)
+									on conflict (user_id, character_id, color) do update
+											set granted_at = player_avatars.granted_at
+									returning * into v_avatar;
+							return jsonb_build_object('spawns', v_spawns, 'avatar', to_jsonb(v_avatar), 'level', p_level);
+					end;
+					$claim_level_booster$;
+					grant execute on function claim_level_booster(bigint, int) to authenticated;
 					-- Combat rewards: the ONLY way a player earns experience. Claiming cards
 					-- and opening boxes award nothing at all — fighting does, a win
 						-- for what it was worth and a loss for the rivals it took down with it.

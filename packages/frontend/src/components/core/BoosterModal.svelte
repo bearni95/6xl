@@ -5,7 +5,6 @@
 	import { _ } from 'svelte-i18n';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import BoosterBoxCanvas from '$components/core/pack/BoosterBoxCanvas.svelte';
-	import { boosterModalOpen } from '$services/boosterModal';
 	import type { OpenerPack } from '$components/core/pack/scene/opener-view.type';
 
 	// The booster window's packs, on the same sheet the roster and the badges are drawn on.
@@ -45,6 +44,15 @@
 	// out on the map, which is a player asking for that pack and not for the calendar it sits
 	// in. The host says so, since it is the host that raised it.
 	export let single: boolean = false;
+	// Hold the sheet shut until a box has actually come apart: no ✕, no Escape, no click
+	// anywhere. For a box the player is not being offered but given — the welcome one, which
+	// is the whole of what the game is doing until it is opened (see WelcomeBoosterModal) —
+	// where a way out would be a way to leave the gift unopened and the gate up for ever.
+	//
+	// It lifts itself the moment the box is open rather than staying on: what it is holding
+	// the player to is opening the box, and once that has happened the sheet is the same
+	// finished sheet as any other, which is a sheet the next click anywhere closes.
+	export let closeLocked: boolean = false;
 
 	// The sheet given over to the one box, which is what `single` asks for while that box is
 	// actually the thing on screen. A player who walks back out to the window from here is
@@ -57,6 +65,7 @@
 		select: void;
 		back: void;
 		openComplete: number;
+		close: void;
 	}>();
 
 	// True from the moment a box has finished coming apart. The window was raised to open a pack;
@@ -72,8 +81,12 @@
 	// down. So this one fades, and what fades up through it is that town.
 	let revealed = false;
 
+	// Which of the two sheets is up decides who put it there, so the way out is the host's to
+	// take: the map's window is raised off `boosterModalOpen` and the welcome box's off
+	// nothing this component can see. It says the sheet is done with and lets whoever raised
+	// it put it away.
 	function close(): void {
-		boosterModalOpen.set(false);
+		dispatch('close');
 	}
 </script>
 
@@ -89,6 +102,7 @@
 	closeLabel={$_('booster.close')}
 	bare={alone}
 	closeOnClick={revealed}
+	closeDisabled={closeLocked && !revealed}
 	on:close={close}
 >
 	<!-- The sheet is the window on a canvas, and nothing beside it. It was drawn twice — the

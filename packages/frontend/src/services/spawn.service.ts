@@ -4,6 +4,8 @@ import { getSupabaseClient } from '$services/supabase.client';
 import { spawnAdapter } from '$adapters/classes/spawn.adapter';
 import { playerAvatarAdapter } from '$adapters/classes/player-avatar.adapter';
 import { claimedBoxKey } from '$utils/spawn/claimed-box';
+import { WELCOME_BOX_ID } from '$utils/spawn/welcome-box';
+import { LEVEL_BOX_ID } from '$utils/spawn/level-box';
 import { DEFAULT_RARITY } from '$types/character-template.type';
 import type {
 	CharacterSpawn,
@@ -43,6 +45,13 @@ export interface BoosterOpening {
 class SpawnService {
 	private spawnsStore = writable<CharacterSpawn[]>([]);
 	private claimedBoxesStore = writable<ReadonlySet<string>>(new Set());
+	// Whether the welcome box has been taken, or null while nobody has asked. Three states
+	// and not two, because the gate that watches it must not come up at a player who has
+	// long since opened theirs merely because the read has not landed yet.
+	private welcomeClaimedStore = writable<boolean | null>(null);
+	// Which levels this player has taken their box for, or null while nobody has asked —
+	// the same three states, for the same reason (see `levelClaims`).
+	private levelClaimsStore = writable<ReadonlySet<number> | null>(null);
 
 	/** Ids of characters that exist in the local registry, so spawns can render. */
 	private renderableIds = new Set(characters.map((character) => character.id));
@@ -252,6 +261,74 @@ class SpawnService {
 		// different shapes, so the RPC answers in jsonb and this reads both halves out
 		// of it. An answer missing either half is an old deployment of the RPC, which
 		// reads as no cards / no avatar rather than as a crash.
+		return this.readOpening(data);
+	}
+
+	/**
+	 * Open the **welcome box**: the one box that belongs to no town and to no year, dealt
+	 * once to each player when they arrive (see `welcome-box` in @3xl/shared, and the
+	 * `claim_welcome_booster` RPC beside `claim_booster`).
+	 *
+	 * It gives exactly what a town's box gives — {@link BOOSTER_SIZE} rarity-weighted
+	 * cards and one avatar, all six out of `showId`'s roster, in the three colours the
+	 * white stock holds — and is refused for exactly one reason, which is having been
+	 * taken already. There is no window and no festa to be inside of: what makes it
+	 * once-only is the same unique index every other box is spent against, on a town and a
+	 * year no festa can ever produce.
+	 *
+	 * Which show it deals is the player's own pick, so unlike a town's box it is passed
+	 * and not derived: there is no polygon under it to seed one and nobody holding it.
+	 */
+	async claimWelcomeBooster(showId: number): Promise<BoosterOpening> {
+		const supabase = getSupabaseClient();
+		const { data, error } = await supabase.rpc('claim_welcome_booster', {
+			p_show_id: showId
+		});
+		if (error) throw error;
+		this.welcomeClaimedStore.set(true);
+		return this.readOpening(data);
+	}
+
+	/**
+	 * Open the **level box** for `level`: one box for every level this player has reached,
+	 * from the first (see `level-box` in @3xl/shared, and the `claim_level_booster` RPC
+	 * beside the other two).
+	 *
+	 * It gives what every box gives — {@link BOOSTER_SIZE} rarity-weighted cards and one
+	 * avatar, all six out of `showId`'s roster, in the three colours the black stock holds
+	 * — and, like the welcome box, takes its show from the player rather than from
+	 * anywhere it stands.
+	 *
+	 * The level is passed, and is the one thing here the server does not take on trust: it
+	 * reads the caller's own experience and refuses a level they have not reached, so what
+	 * this names is *which* of their boxes to open and never how many they are owed. A
+	 * level already opened is refused by the same unique index every other box is spent
+	 * against, the level standing where a festa's year stands.
+	 */
+	async claimLevelBooster(showId: number, level: number): Promise<BoosterOpening> {
+		const supabase = getSupabaseClient();
+		const { data, error } = await supabase.rpc('claim_level_booster', {
+			p_show_id: showId,
+			p_level: level
+		});
+		if (error) throw error;
+		// Spent, and known to be spent without a re-read: the server just said which level
+		// it filed the claim under, and it is the one asked for or the call threw.
+		this.levelClaimsStore.update((claimed) => new Set([...(claimed ?? []), level]));
+		return this.readOpening(data);
+	}
+
+	/**
+	 * Read what a box answered with, and fold its cards into the store.
+	 *
+	 * One box is one object, not a row set: the cards and the avatar are two different
+	 * shapes, so both RPCs answer in jsonb and this reads the two halves out of it. An
+	 * answer missing either half is an old deployment of the RPC, which reads as no cards
+	 * / no avatar rather than as a crash. The avatar is handed back rather than stored
+	 * here — {@link avatarService} owns that collection, and the caller that shows the
+	 * open is the one that tells it.
+	 */
+	private readOpening(data: unknown): BoosterOpening {
 		const payload = (data ?? {}) as { spawns?: CharacterSpawnRow[]; avatar?: PlayerAvatarRow };
 		const spawns = (payload.spawns ?? []).map((row) => spawnAdapter.fromRow(row));
 		this.spawnsStore.update((current) => [...spawns, ...current]);
@@ -259,6 +336,67 @@ class SpawnService {
 			spawns,
 			avatar: payload.avatar ? playerAvatarAdapter.fromRow(payload.avatar) : null
 		};
+	}
+
+	/**
+	 * Whether this player has taken their welcome box, re-read from the server — the
+	 * `booster_claims` row filed under the welcome sentinel, which RLS lets them read
+	 * exactly as it lets them read the towns'.
+	 *
+	 * Asked on its own rather than off {@link claimedBoxes} because the two are wanted in
+	 * different places: the set of spent town boxes is loaded by the map's claim panel and
+	 * greys out a window of boxes, and this is a gate at the root of the app that stands in
+	 * front of the map itself. A gate that waited on the map's own loads would be a gate
+	 * that never came up on any other route.
+	 */
+	async loadWelcomeClaimed(userId: string): Promise<boolean> {
+		const supabase = getSupabaseClient();
+		const { data, error } = await supabase
+			.from('booster_claims')
+			.select('id')
+			.eq('user_id', userId)
+			.eq('location_id', WELCOME_BOX_ID)
+			.limit(1);
+		if (error) throw error;
+		const claimed = (data ?? []).length > 0;
+		this.welcomeClaimedStore.set(claimed);
+		return claimed;
+	}
+
+	/**
+	 * Which levels this player has already taken the box for — their own `booster_claims`
+	 * rows under the level sentinel, whose `year` is the level (see `level-box` in
+	 * @3xl/shared). What is left to open is this set against the level they have reached,
+	 * which is {@link pendingLevelBoxes}.
+	 *
+	 * Asked on its own rather than off {@link claimedBoxes}, for the same reason
+	 * {@link loadWelcomeClaimed} is: the two are wanted in different places. That set is
+	 * the map's claim panel greying out a window of town boxes, and this is a button
+	 * standing over the terrain saying how many boxes a player is holding — a button that
+	 * waited on the panel's load would say nothing until a sheet nobody has opened had
+	 * loaded itself.
+	 */
+	async loadLevelClaims(userId: string): Promise<ReadonlySet<number>> {
+		const supabase = getSupabaseClient();
+		const { data, error } = await supabase
+			.from('booster_claims')
+			.select('year')
+			.eq('user_id', userId)
+			.eq('location_id', LEVEL_BOX_ID);
+		if (error) throw error;
+		const claimed = new Set((data ?? []).map((row) => Number(row.year)));
+		this.levelClaimsStore.set(claimed);
+		return claimed;
+	}
+
+	/**
+	 * The levels whose box this player has taken, or **null** while nobody has asked. The
+	 * third state again, and for the welcome gate's reason turned round: a button that read
+	 * "not yet known" as "none taken" would offer every level's box back for as long as one
+	 * query takes, and a press landing in that moment is a refusal the player did not earn.
+	 */
+	get levelClaims(): Readable<ReadonlySet<number> | null> {
+		return this.levelClaimsStore;
 	}
 
 	/**
@@ -289,9 +427,21 @@ class SpawnService {
 		return claimed;
 	}
 
+	/**
+	 * Whether this player has taken their welcome box: true, false, or **null** while it
+	 * has not been read yet. The third state is the point of it — a gate that treated "not
+	 * yet known" as "not taken" would flash a welcome at every returning player on every
+	 * visit, for as long as one query takes.
+	 */
+	get welcomeClaimed(): Readable<boolean | null> {
+		return this.welcomeClaimedStore;
+	}
+
 	/** Drop the remembered claims — a player signing out takes their boxes with them. */
 	forgetClaimedBoxes(): void {
 		this.claimedBoxesStore.set(new Set());
+		this.welcomeClaimedStore.set(null);
+		this.levelClaimsStore.set(null);
 	}
 
 	/**

@@ -6,6 +6,8 @@ import {
 	teamLineupMembers,
 	type TeamLineupContext
 } from '$utils/spawn/team-lineup';
+import { WELCOME_BOX_CAPTION, WELCOME_BOX_ID } from '$utils/spawn/welcome-box';
+import { LEVEL_BOX_CAPTION, LEVEL_BOX_ID } from '$utils/spawn/level-box';
 
 const characters = new Map([
 	['luffy', { label: 'Monkey D. Luffy', basePath: '/assets/luffy' }],
@@ -26,6 +28,13 @@ describe('claimPlaceName', () => {
 	it('names a town the layer knows, article restored to the front', () => {
 		const names = new Map([['ES_25120', 'Pobla de Segur, la']]);
 		expect(claimPlaceName('ES_25120', names)).toBe('La Pobla de Segur');
+	});
+
+	it('names the two boxes that belong to no town by their own caption', () => {
+		const names = new Map([['ES_08028', 'Barcelona']]);
+		expect(claimPlaceName(WELCOME_BOX_ID, names)).toBe(WELCOME_BOX_CAPTION);
+		// Every level's cards say the same word: the level is on the box, not on the card.
+		expect(claimPlaceName(LEVEL_BOX_ID, names)).toBe(LEVEL_BOX_CAPTION);
 	});
 
 	it('reads the Ultramar sentinel, an unknown id and no layer at all as Ultramar', () => {

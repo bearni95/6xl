@@ -11,9 +11,8 @@
 	import { showLogos, loadShowLogos } from '$services/shows.service';
 	import { locationAdapter } from '$adapters/classes/location.adapter';
 	import { AuthStatus } from '$types/profile.type';
-	import { ULTRAMAR, ULTRAMAR_ID } from '$types/location.type';
 	import { SpawnColor, type CharacterSpawn } from '$types/character-spawn.type';
-	import restoreCatalanArticle from '$utils/string/restore-catalan-article';
+	import { claimPlaceName } from '$utils/spawn/team-lineup';
 	import CharacterStatue from '$components/core/CharacterStatue.svelte';
 	import TeamLineup from '$components/core/TeamLineup.svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
@@ -220,16 +219,13 @@
 	function showIdFor(characterId: string): number | null {
 		return characterShows.get(characterId)?.[0]?.id ?? null;
 	}
+	// The layer parks the article after a comma to sort by; it goes back to the front
+	// wherever the modal says a town — the team's region, a circle's tooltip and (again,
+	// harmlessly) the statue's own panel. The Ultramar sentinel, the welcome box's and any
+	// missing/unresolved location are the shared helper's to answer, since the row of
+	// statues on the map already asks it the same question of the same ids.
 	function locationNameFor(id: string): string {
-		if (id && id !== ULTRAMAR_ID) {
-			// The layer parks the article after a comma to sort by; it goes back to the
-			// front wherever the modal says a town — the team's region, a circle's tooltip
-			// and (again, harmlessly) the statue's own panel.
-			const name = municipalityNames?.get(id);
-			if (name) return restoreCatalanArticle(name);
-		}
-		// The Ultramar sentinel and any missing/unresolved location read as Ultramar.
-		return ULTRAMAR.municipality;
+		return claimPlaceName(id, municipalityNames ?? null);
 	}
 
 	// The distinct show names present across the roster, sorted — the options for the

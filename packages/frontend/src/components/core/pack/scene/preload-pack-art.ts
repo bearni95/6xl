@@ -32,7 +32,7 @@ import type { OpenerPack } from './opener-view.type';
 export async function preloadPackArt(packs: OpenerPack[]): Promise<void> {
 	await Promise.all(
 		packs.map((pack) => {
-			const stock = PACK_STOCK_TONES[pack.today ? SpawnBox.White : SpawnBox.Black];
+			const stock = PACK_STOCK_TONES[pack.light ? SpawnBox.White : SpawnBox.Black];
 			return Promise.all([
 				textureCache.poster(pack.coverUrl),
 				textureCache.icon(pack.logoUrl),

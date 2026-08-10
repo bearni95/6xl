@@ -48,10 +48,24 @@ export interface OpenerPack {
 	/**
 	 * True when this town is celebrating today. The booster window runs three days back
 	 * through four ahead, so most packs on offer belong to a festa that is not on — this
-	 * marks the ones that are, and the grid stands them apart from the rest. It is also
-	 * which of the town's two boxes this is: white on the day, black around it.
+	 * marks the ones that are, and the grid stands them apart from the rest.
 	 */
 	today: boolean;
+	/**
+	 * Printed on white card rather than black — the stock, which is the whole of what
+	 * decides the three colours inside. For a town's box it is exactly {@link today}
+	 * (white on the day of its festa, black around it) and was read off it for a while;
+	 * it is said in its own right because a box that belongs to no festa still has a
+	 * stock, and "is this town celebrating today" is not a question such a box answers.
+	 */
+	light: boolean;
+	/**
+	 * Said across the head of the box *instead of* the place and the year, for a box
+	 * printed for something other than a town's festa — the welcome box says
+	 * `Benvinguda` there (see `welcome-box` in @3xl/shared). Null on every town's box,
+	 * which says the town and the celebration's year as it always has.
+	 */
+	caption?: string | null;
 	/**
 	 * True when this player has already opened this town's box for this festa's year
 	 * and stock — a town deals two a year and no more, and `claim_booster` refuses the

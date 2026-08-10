@@ -276,7 +276,21 @@
 		"close": "Tanca els sobres",
 		"open": "Obre el sobre",
 		"openPack": "Obre el sobre de {town}",
-		"window": "Festes majors del {from} al {to}"
+		"window": "Festes majors del {from} al {to}",
+		"choose": {
+			"close": "Tanca el sobre",
+			"open": "Obre el sobre de {show}",
+			"noShows": "Encara no hi ha cap sèrie amb personatges. Torna-ho a provar d’aquí una estona."
+		},
+		"welcome": {
+			"title": "Benvinguda",
+			"intro": "Tens un sobre de benvinguda. Tria de quina sèrie el vols."
+		},
+		"level": {
+			"title": "Sobre de nivell {level}",
+			"intro": "Tria de quina sèrie el vols. {count, plural, one {És l’últim sobre de nivell que tens per obrir.} other {En tens # per obrir.}}",
+			"button": "{count, plural, =0 {No tens cap sobre de nivell per obrir} one {Tens un sobre de nivell per obrir} other {Tens # sobres de nivell per obrir}}"
+		}
 	},
 	"combat": {
 		"notConfigured": "L'inici de sessió no està disponible — Supabase no està configurat, així que no es pot jugar cap equip.",

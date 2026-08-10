@@ -12,6 +12,8 @@
 	import { AuthStatus } from '$types/profile.type';
 	import { SpawnColor } from '$types/character-spawn.type';
 	import { ULTRAMAR, ULTRAMAR_ID } from '$types/location.type';
+	import { WELCOME_BOX_CAPTION, isWelcomeLocation } from '$utils/spawn/welcome-box';
+	import { LEVEL_BOX_CAPTION, isLevelLocation } from '$utils/spawn/level-box';
 
 	const status = authService.status;
 	const profile = authService.profile;
@@ -107,6 +109,10 @@
 		return characterFaces.get(id) ?? null;
 	}
 	function locationNameFor(id: string): string {
+		// The two boxes that belong to no town: each says its own caption, the word its box
+		// carries where a place would be.
+		if (isWelcomeLocation(id)) return WELCOME_BOX_CAPTION;
+		if (isLevelLocation(id)) return LEVEL_BOX_CAPTION;
 		if (id && id !== ULTRAMAR_ID) {
 			const name = municipalityNames?.get(id);
 			if (name) return name;

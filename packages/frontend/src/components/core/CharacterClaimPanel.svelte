@@ -1,17 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { characters } from '@3xl/data';
 	import { authService } from '$services/auth.service';
 	import { avatarService } from '$services/avatar.service';
 	import { openSignIn } from '$services/signInModal';
 	import { spawnService } from '$services/spawn.service';
 	import { territoryService } from '$services/territory.service';
 	import { errorMessage } from '$utils/error/error-message';
-	import { resolveCharacterFaceUrl } from '$utils/mugen/character-face';
 	import { avatarKey } from '$utils/spawn/avatar';
-	import { ownedAvatarKeys, ownedSpawnKeys, spawnKey } from '$utils/spawn/owned';
+	import { ownedAvatarKeys, ownedSpawnKeys } from '$utils/spawn/owned';
 	import { AuthStatus } from '$types/profile.type';
-	import type { CharacterSpawn, ClaimableShow } from '$types/character-spawn.type';
+	import { SpawnBox, type ClaimableShow } from '$types/character-spawn.type';
 	import type { GeoRegion } from '$types/location.type';
 	import type { ShowEntry, ShowsCollection } from '$types/show.type';
 	import { showPosterUrl, showPosterUrlForSeed } from '$utils/geo/municipality-show';
@@ -19,7 +17,7 @@
 	import { showLogoUrl } from '$utils/show/show-logo';
 	import { catalanTodayIso, festesService } from '$services/festes.service';
 	import type { RegionShow } from '$utils/geo/region-tree';
-	import type { ClaimPull } from '$components/core/pack/scene/pull.type';
+	import { buildClaimPull } from '$components/core/pack/claim-pull';
 	import type { ClaimResult, OpenerPack } from '$components/core/pack/scene/opener-view.type';
 	import type { FestaShowPair, FestaWindowRow } from '$types/festivity.type';
 	import { boxForFesta, claimedBoxKey, festaYear } from '$utils/spawn/claimed-box';
@@ -86,12 +84,10 @@
 	// Guards the one-time load so the reactive block doesn't refire on every store tick.
 	let loadedForUser: string | null = null;
 
-	// Registry + Supabase lookups used to assemble each revealed card (a ClaimPull):
-	// the character's label + face resolve from the local @3xl/data registry, its
-	// rarity tier from Supabase `character_templates`.
-	const charactersById = new Map(characters.map((character) => [character.id, character]));
 	// Per-character rarity tier from Supabase `character_templates`, so the revealed
-	// card can show the claimed character's rarity. Empty until the shows load.
+	// card can show the claimed character's rarity. Empty until the shows load. It is the
+	// one lookup a pull needs that is not the local registry's (see buildClaimPull, which
+	// takes it and reads the rest out of @3xl/data for itself).
 	let rarityByCharacter = new Map<string, number>();
 
 	// The place the open pack is tied to, captured at claim time and shown on each
@@ -260,7 +256,14 @@
 				lastLocationName = claimRegion.municipality ?? '';
 				return {
 					pulls: await Promise.all(
-						opening.spawns.map((spawn) => buildPull(spawn, show.name, heldCards))
+						opening.spawns.map((spawn) =>
+							buildClaimPull(spawn, {
+								rarityByCharacter,
+								showName: show.name,
+								locationName: lastLocationName,
+								held: heldCards
+							})
+						)
 					),
 					avatar: opening.avatar,
 					avatarIsNew: opening.avatar
@@ -357,6 +360,7 @@
 				label: claimable.name,
 				showId: claimable.id,
 				today: festa.date === today,
+				light: box === SpawnBox.White,
 				claimed: spent.has(claimedBoxKey(festa.id, festaYear(festa.date), box)),
 				claim: makeClaim(claimable, claimRegion)
 			});
@@ -364,42 +368,11 @@
 		return out;
 	}
 
-	// Assemble the display card for one claimed spawn: label + face from the local
-	// registry, colour off the spawn, and whether it is one the player did not already
-	// hold — `heldCards` being their collection as it stood before this pack (see
-	// makeClaim), so the answer is about the pack and not about itself.
-	async function buildPull(
-		spawn: CharacterSpawn,
-		showName: string | null,
-		heldCards: ReadonlySet<string>
-	): Promise<ClaimPull> {
-		const basePath = charactersById.get(spawn.characterId)?.basePath ?? null;
-		const faceUrl = basePath
-			? await resolveCharacterFaceUrl(spawn.characterId, basePath)
-			: null;
-		return {
-			spawn,
-			label: labelFor(spawn.characterId),
-			basePath,
-			faceUrl,
-			color: spawn.color,
-			rarity: rarityByCharacter.get(spawn.characterId) ?? null,
-			showName,
-			locationName: lastLocationName || null,
-			spawnedAt: spawn.createdAt,
-			isNew: !heldCards.has(spawnKey(spawn.characterId, spawn.color, spawn.locationId))
-		};
-	}
-
 	// The window's grid packs, recomputed whenever the window's festes, the claimable
 	// show pool, the enabled posters, the day, the boxes already taken or the signed-in
 	// user change. (All six are named here so the reactive statement actually re-runs when
 	// any of them updates.)
 	$: packs = computePacks(festaPairs, shows, showEntryById, todayIso, $claimedBoxes, currentUserId);
-
-	function labelFor(id: string): string {
-		return charactersById.get(id)?.label ?? id;
-	}
 </script>
 
 <div class="card w-full bg-base-100 shadow-xl">

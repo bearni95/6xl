@@ -322,7 +322,8 @@ export class BoosterBoxGridScene {
 					logoUrl: pack.logoUrl,
 					showId: pack.showId,
 					locationName: pack.locationName,
-					light: pack.today,
+					caption: pack.caption ?? null,
+					light: pack.light,
 					width,
 					app: this.app
 				});

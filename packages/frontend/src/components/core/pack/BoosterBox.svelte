@@ -45,6 +45,13 @@
 	export let logoUrl: string | null = null;
 	// Full name of the place the box belongs to, said at the foot of the front.
 	export let locationName: string | null = null;
+	// Said across the head of the front *instead of* the town and the year — one arbitrary
+	// string, taken as given. A box printed for a town says which copy it is by naming the
+	// town and the celebration's year, and there is nothing else two boxes of the same show
+	// are told apart by; a box printed for something else has neither, so it is given the
+	// line whole rather than having a place and a date invented for it. Null leaves the head
+	// as it is, which is the town and the year (see `place`).
+	export let caption: string | null = null;
 	// TMDB id of the show inside, which the lid's glyph is looked up by. A show with no
 	// glyph drawn for it yet leaves the lid bare rather than taking a stand-in mark, the
 	// same rule every other surface that badges a show goes by.
@@ -328,10 +335,14 @@
 	// What the head says, exactly as the baked pack says it: the place with the year this
 	// copy would be minted in joined to it — "Barcelona '26". The gazetteer parks the
 	// article after a comma to sort by, so it is put back at the front before the name
-	// is said.
-	$: place = [locationName ? restoreCatalanArticle(locationName) : '', spawnYearLabel(Date.now())]
-		.filter(Boolean)
-		.join(' ');
+	// is said. A caption replaces the pair outright rather than joining them: a box that
+	// belongs to no town has no year either, and "Benvinguda '26" would be dating a thing
+	// that is not an edition.
+	$: place =
+		caption ??
+		[locationName ? restoreCatalanArticle(locationName) : '', spawnYearLabel(Date.now())]
+			.filter(Boolean)
+			.join(' ');
 </script>
 
 <!-- The lid over the face: 30:37 all told, the face's own 3:4 at four fifths of the width

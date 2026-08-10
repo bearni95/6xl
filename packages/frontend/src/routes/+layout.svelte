@@ -5,6 +5,7 @@
 	import SignInModal from '$components/core/SignInModal.svelte';
 	import LegalModal from '$components/core/LegalModal.svelte';
 	import LegalGate from '$components/core/LegalGate.svelte';
+	import WelcomeBoosterModal from '$components/core/WelcomeBoosterModal.svelte';
 	import RosterModal from '$components/core/RosterModal.svelte';
 	import { rosterModalOpen } from '$services/rosterModal';
 
@@ -36,3 +37,11 @@
 	asking about must not mean dismissing the gate. -->
 <LegalGate />
 <LegalModal />
+<!-- The one box a player is given rather than has to go and find, and the gate that stands
+	in front of the game until it has been opened. Out here for the same reason as the legal
+	gate: it is about the account and not about the map, and it has to stand over whatever
+	route the player happens to have landed on. It stands down while the legal gate is up —
+	nobody is given anything before they have agreed to the terms it is given under — which
+	is settled inside it rather than by the order these are mounted in, its sheet being the
+	full-view one and the gate's daisyUI's. -->
+<WelcomeBoosterModal />

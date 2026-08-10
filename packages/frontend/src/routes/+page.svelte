@@ -30,6 +30,7 @@
 	import FaqModal from '$components/core/FaqModal.svelte';
 	import CreditsModal from '$components/core/CreditsModal.svelte';
 	import BoosterModal from '$components/core/BoosterModal.svelte';
+	import LevelBoosterModal from '$components/core/LevelBoosterModal.svelte';
 	import { rosterModalOpen } from '$services/rosterModal';
 	import { collectionModalOpen } from '$services/collectionModal';
 	import { settingsModalOpen } from '$services/settingsModal';
@@ -51,6 +52,12 @@
 	import { territoryAdapter } from '$adapters/classes/territory.adapter';
 	import { locationAdapter } from '$adapters/classes/location.adapter';
 	import { ULTRAMAR, ULTRAMAR_ID } from '$types/location.type';
+	import { WELCOME_BOX_CAPTION, isWelcomeLocation } from '$utils/spawn/welcome-box';
+	import {
+		LEVEL_BOX_CAPTION,
+		isLevelLocation,
+		pendingLevelBoxes
+	} from '$utils/spawn/level-box';
 	import {
 		challengeAvailableAt,
 		challengeCoolingDown,
@@ -1651,6 +1658,38 @@
 			.finally(() => (spawnsSettled = true));
 	}
 
+	// The level boxes: one booster for every level this player has reached, each opened on a
+	// show of their own choosing (see `level-box` in @3xl/shared, and LevelBoosterModal).
+	//
+	// Which of them are spent is read here, beside the cards, and not by the sheet that opens
+	// them: the button over the terrain has to say how many are waiting before anybody has
+	// raised anything, and a count that only arrived once a sheet was open would be a button
+	// that could not say what pressing it was for. One read per signed-in player, and the
+	// service keeps it in step from there — a box opened marks its own level spent.
+	const levelClaims = spawnService.levelClaims;
+	let levelClaimsLoadedFor: string | null = null;
+	$: if (currentUserId && currentUserId !== levelClaimsLoadedFor) {
+		levelClaimsLoadedFor = currentUserId;
+		void spawnService.loadLevelClaims(currentUserId).catch(() => {});
+	} else if (!currentUserId && levelClaimsLoadedFor) {
+		levelClaimsLoadedFor = null;
+	}
+
+	// The boxes still owed, oldest first — every level from the first through the one they
+	// have reached with no claim against it. Nobody signed in is owed nothing: a box belongs
+	// to an account, and there is no account.
+	$: owedLevelBoxes = $profile ? pendingLevelBoxes($profile.level, $levelClaims) : [];
+	// And how many, which is the number on the button. Zero is what greys it out — and a set
+	// that has not landed yet reads as every level owed rather than as none, since the sheet
+	// behind the press is refused by the server with a sentence either way, where a button
+	// greyed on an unread claim is a box the player cannot see at all.
+	$: levelBoxesOwed = owedLevelBoxes.length;
+
+	// Whether the sheet is up. Raised by the button below and put down by the sheet itself —
+	// on the ✕, and on the reveal being done with. One press is one box (see the modal), so
+	// this is not a sheet that stays open through a run of them.
+	let levelBoosterOpen = false;
+
 	// The cards the player fields come in slot order — the leader first, as on the
 	// board. They ARE the team: a card holds a team slot or it doesn't, so this is the
 	// same line-up on every device the account is signed in on.
@@ -2688,6 +2727,10 @@
 		names: Map<string, string> | null
 	): string {
 		if (!member.locationId) return standingIn;
+		// The two boxes that belong to no town and never will: their cards say the caption
+		// the box carried where a place would be.
+		if (isWelcomeLocation(member.locationId)) return WELCOME_BOX_CAPTION;
+		if (isLevelLocation(member.locationId)) return LEVEL_BOX_CAPTION;
 		if (member.locationId === ULTRAMAR_ID) return ULTRAMAR.municipality;
 		const name = names?.get(member.locationId);
 		return name ? restoreCatalanArticle(name) : standingIn;
@@ -3473,6 +3516,49 @@
 						<div
 							class="pointer-events-none absolute inset-x-3 top-3 z-[900] flex items-start gap-2"
 						>
+							<!-- The level boxes: one booster for every level this player has reached, waiting
+								here to be opened. The near corner, where the radar holds the far one — the two
+								presses on this strip are both ways to a box, and they are the two ends of the
+								same offer: the radar goes and finds one out on the map, and this one is already
+								the player's and is opened on the spot.
+								It is drawn exactly as the radar is — the same square, the same plate, the same
+								count laid over the mark — because they are the same kind of thing and a strip
+								where each press is its own shape is a strip that has to be read rather than
+								recognised. What it says is how many boxes are standing there, which is the one
+								thing a player wants to know before pressing it, and it greys when there are
+								none: a box that comes with a level is a box that is not there most of the time,
+								and a live button over an empty offer is a press that answers with a refusal.
+								Nothing at all when signed out — a box belongs to an account, and the corner is
+								simply empty until there is one, exactly as the plate at the foot of the map is.
+								The number goes ON the square and not beside it, for the radar's reason: what is
+								greyed and what is counted are one thing in one place. It is a sibling of the
+								button rather than a child, so the dimming that says the press is off does not
+								take the count down with it, and `pointer-events-none` so the square underneath
+								is the whole of the press. -->
+							{#if $profile}
+								<div class="relative flex-none">
+									<button
+										type="button"
+										class="pointer-events-auto flex size-10 cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
+										aria-label={$_('booster.level.button', {
+											values: { count: levelBoxesOwed }
+										})}
+										title={$_('booster.level.button', { values: { count: levelBoxesOwed } })}
+										disabled={levelBoxesOwed === 0}
+										on:click={() => (levelBoosterOpen = true)}
+									>
+										<img src="/assets/icons/delapouite/box-unpacking.svg" class="size-6" alt="" />
+									</button>
+									{#if levelBoxesOwed > 0}
+										<span
+											class="pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-bold text-primary-content drop-shadow"
+										>
+											{levelBoxesOwed}
+										</span>
+									{/if}
+								</div>
+							{/if}
+
 							<!-- The radar. The map carries days of festes at once and no marks to find them
 								by, so the boxes waiting out there are found by panning across the country
 								looking for one — which is a search, and this is the button that does it: press
@@ -4368,7 +4454,18 @@
 		on:select={clearPackFeedback}
 		on:back={clearPackFeedback}
 		on:openComplete={(event) => onPackOpened(event.detail)}
+		on:close={() => boosterModalOpen.set(false)}
 	/>
+{/if}
+
+<!-- A level box, on the same sheet as the window's — a column of shows, and picking one opens
+	the box printed with that level (see LevelBoosterModal, which shares the whole of the sheet
+	with the welcome box). It is here rather than out in the layout because the press that
+	raises it is here: the square in the near corner of the strip over the terrain, which is the
+	only way in. Mounted only while it is open, like every other sheet on this page, so the
+	pool, the wordmarks and the opener's canvas are built on opening and go with the close. -->
+{#if levelBoosterOpen}
+	<LevelBoosterModal on:close={() => (levelBoosterOpen = false)} />
 {/if}
 
 <!-- Draws nothing: it clears the splash the shell put up, 500ms after this page mounts.

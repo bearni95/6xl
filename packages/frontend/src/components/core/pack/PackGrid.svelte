@@ -422,7 +422,8 @@
 							logoUrl={selectedPack.logoUrl}
 							showId={selectedPack.showId}
 							locationName={selectedPack.locationName}
-							light={selectedPack.today}
+							caption={selectedPack.caption ?? null}
+							light={selectedPack.light}
 							opening={unsealing}
 							ready={cardsUp}
 							classes="h-[min(100%,100cqw*1.37948)]"
@@ -464,7 +465,8 @@
 									logoUrl={pack.logoUrl}
 									showId={pack.showId}
 									locationName={pack.locationName}
-									light={pack.today}
+									caption={pack.caption ?? null}
+									light={pack.light}
 								/>
 							</button>
 						{/each}
