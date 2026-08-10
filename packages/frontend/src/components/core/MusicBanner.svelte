@@ -4,18 +4,17 @@
 	import MusicGlyph, { musicPressLabel } from '$components/core/MusicGlyph.svelte';
 	import { musicService } from '$services/music.service';
 
-	// The radio: the play/pause and the song running past beside it, in the middle of the band
-	// across the top of the page — between the game's own name at the near end and the two marks
-	// that answer for the game at the far one.
+	// The radio: the play/pause and the song running past beside it, on a row of its own along the
+	// map's bottom edge — half the map's width, directly over the band that names the open place.
 	//
-	// It was the last cell of the band along the map's bottom edge, beside the badge naming the
-	// open place, and before that the last line of the pin the map stands on that place. Both put
-	// it inside a reading about a town, and what is playing is not one: the map turns the dial as
-	// the reader walks (see musicService.follow), so the song follows the map, but it goes on
-	// playing across a walk from one town to the next and across every view opened over the map.
-	// The band at the top is what the page is otherwise made of — fixed things about the game —
-	// and a radio that is always on the same row, at the same size, in the middle of the page, is
-	// read without being found first.
+	// It has been the middle of the band across the top of the page, a third cell on that band
+	// below it, and before either the last line of the pin the map stands on the open place. The
+	// last two put it inside a reading about a town, and what is playing is not one: the map turns
+	// the dial as the reader walks (see musicService.follow), so the song follows the map, but it
+	// goes on playing across a walk from one town to the next and across every view opened over
+	// the map. A row of its own says both of those at once — along the same edge as the place,
+	// because the dial follows it, and not on the same row, because it is not a reading about it.
+	// Always the same row at the same size, so it is read without being found first.
 	//
 	// The whole slot is the press. It was the 24px mark alone for a long time, under a rule
 	// inherited from the pin — a title is a thing to read and a play/pause a thing to press, and a
@@ -33,8 +32,8 @@
 	//
 	// Nothing at all until there is a song — a press lettered with nothing is worse than no press,
 	// and an empty slot says a radio is there and broken. The slot itself holds its room either
-	// way: it is the one item on the band that gives, so it is also what keeps the far marks
-	// against the far edge, and the two ends must not move when the music stops.
+	// way, so the row it stands in keeps its height and the band under it never moves when the
+	// music stops.
 
 	export let classes: string = '';
 
@@ -44,8 +43,7 @@
 </script>
 
 <!-- The slot the radio stands in, held whether or not there is a radio to draw: `min-w-0 flex-1`
-	is what takes the room between the two ends of the band and pushes them apart, and
-	`justify-center` is what centres what is in it on what is left between them. -->
+	takes whatever the row it is given comes to, and `justify-center` centres the banner in it. -->
 <div class={classNames('flex min-w-0 flex-1 items-stretch justify-center', classes)}>
 	{#if state.track}
 		<!-- No fill of its own, which is what makes it the one thing on this band that is not a
