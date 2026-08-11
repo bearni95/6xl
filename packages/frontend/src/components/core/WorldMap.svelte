@@ -557,9 +557,7 @@
 		// place, read at the region's own fit rather than at its marks'.
 		void ready;
 		if (!zoomBounds || !mapInstance) return;
-		mapInstance.setZoom(mapInstance.getBoundsZoom(zoomBounds, false, focusPadding()), {
-			animate: true
-		});
+		mapInstance.setZoom(zoomToFit(zoomBounds), { animate: true });
 	});
 
 	// How wide a glyph disc is (`size-10`), which is the one place that class's size has to be
@@ -793,6 +791,45 @@
 		return focusMargin().multiplyBy(2);
 	}
 
+	/**
+	 * The zoom a box stands whole at, margin and all — and the map's own floor let down to it
+	 * where the box needs more room than the floor allows.
+	 *
+	 * Written out rather than asked of `getBoundsZoom`, which is the same arithmetic with one
+	 * addition that cannot be lived with here: it CLAMPS its answer to `minZoom`. A box too big
+	 * to fit at the floor is therefore answered with the floor — a zoom at which the box does
+	 * not fit — and the caller is told a fit it did not get. That is a wrong answer rather than
+	 * a refusal, and what it cost was the coarsest level of this map: the Països Catalans reach
+	 * from l'Alguer to the far side of the País Valencià, about ten degrees of longitude, which
+	 * on most canvases wants a hair under zoom 7. At a floor of 7 the six territories were a
+	 * level nothing could reach — asking for them left the map a fraction too close, so the
+	 * whole-map box failed the fit test and the level-of-detail rule walked one tier further in
+	 * and drew the provinces of whichever territory the view was over (see levelIndexForView).
+	 * The strip's first rung showed the Catalan provinces and the crumb for the whole map did
+	 * the same.
+	 *
+	 * So the floor gives way, only ever downward and only as far as the box in hand needs.
+	 * Nothing is lost by that: no gesture zooms this map any more (see the mount), so the only
+	 * zooms it ever takes are the fits asked for here, and a floor is there to stop a reader
+	 * falling off the world rather than to keep a country off the screen.
+	 */
+	function zoomToFit(bounds: [[number, number], [number, number]]): number {
+		const map = mapInstance!;
+		const from = map.getZoom();
+		const [[south, west], [north, east]] = bounds;
+		const topLeft = map.project([north, west], from);
+		const bottomRight = map.project([south, east], from);
+		const size = map.getSize().subtract(focusPadding());
+		const scale = Math.min(
+			Math.max(size.x, 1) / Math.max(Math.abs(bottomRight.x - topLeft.x), 1),
+			Math.max(size.y, 1) / Math.max(Math.abs(bottomRight.y - topLeft.y), 1)
+		);
+		const wanted = Math.min(map.getScaleZoom(scale, from), map.getMaxZoom());
+		if (!Number.isFinite(wanted)) return from;
+		if (wanted < map.getMinZoom()) map.setMinZoom(wanted);
+		return wanted;
+	}
+
 	// The geographic centre of a `[[south, west], [north, east]]` box.
 	function focusBoundsCentre(
 		bounds: [[number, number], [number, number]]
@@ -855,7 +892,7 @@
 		centre: [number, number];
 		zoom: number;
 	} {
-		const fitZoom = mapInstance!.getBoundsZoom(bounds, false, focusPadding());
+		const fitZoom = zoomToFit(bounds);
 		const centre = focusBoundsCentre(bounds);
 		const levels = markerLevelStack();
 		// The tier this framing is about to draw, asked exactly as the map will ask it on
