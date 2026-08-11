@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/svelte';
+import { fireEvent, render, waitFor } from '@testing-library/svelte';
 import { addMessages, init, waitLocale } from 'svelte-i18n';
 import CombatFeedModal from '$components/core/CombatFeedModal.svelte';
 import { combatFeedService } from '$services/combatFeed.service';
@@ -46,6 +46,24 @@ const fight = (id: string, town: string, extra: Record<string, unknown> = {}) =>
 	rival: null,
 	...extra
 });
+
+/**
+ * What each line actually says, whole.
+ *
+ * The sentence is broken across elements — its three names are links — so it cannot be
+ * matched as one run of text by a query. It is read back off the element the line's own
+ * press is named by, which is the whole sentence and nothing else.
+ */
+const sentences = (container: HTMLElement): string[] =>
+	[...container.querySelectorAll('[id^="feed-said-"]')].map(said);
+
+/** One fight's sentence, by the id of the fight — every test below leaves its fights in the
+ * feed for the next one, so a line is picked out rather than searched for. */
+const lineOf = (container: HTMLElement, id: string): HTMLElement =>
+	container.querySelector(`#feed-said-${id}`) as HTMLElement;
+
+const said = (element: Element | null): string =>
+	(element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
 describe('the sheet of other fights', () => {
 	let release: (() => void) | null = null;
@@ -112,19 +130,68 @@ describe('the sheet of other fights', () => {
 				rival: RIVAL
 			})
 		);
-		const { findByText } = render(CombatFeedModal);
-		expect(
-			await findByText("Ermessenda ha guanyat Berenguer a L'Hospitalet de Llobregat.")
-		).toBeTruthy();
+		const { container } = render(CombatFeedModal);
+		// Awaited, because the town's own name is fetched: until the layer lands the line is
+		// lettered with the id, which is a different sentence.
+		await waitFor(() =>
+			expect(sentences(container)).toContain(
+				"Ermessenda ha guanyat Berenguer a L'Hospitalet de Llobregat."
+			)
+		);
+	});
+
+	/**
+	 * Each of the three names in the sentence is a way to go and look at what it names.
+	 *
+	 * An account opens its own public page; a town opens on the map, by the **id** it
+	 * travelled with and never by the name being printed — a municipality's key in the map's
+	 * region tree is that very id, so the link is right even on a line the layer never landed
+	 * for, which is printing the id as its own label.
+	 */
+	it('makes each name in the sentence a way to what it names', async () => {
+		combatFeedService.receive(
+			fight('linked', 'ES_08101', {
+				player: { id: 'p9', name: 'Ermengol', character_id: null, color: 'red', level: 3 },
+				rival: RIVAL
+			})
+		);
+		const { container } = render(CombatFeedModal);
+		await waitFor(() => expect(lineOf(container, 'linked')).toBeTruthy());
+
+		// The three of them, in the order the sentence puts them: winner, loser, town.
+		const links = [...lineOf(container, 'linked').querySelectorAll('a')];
+		expect(links.map((link) => [said(link), link.getAttribute('href')])).toEqual([
+			['Ermengol', '/profile/p9'],
+			['Ermessenda', `/profile/${RIVAL.id}`],
+			["L'Hospitalet de Llobregat", '/?region=ES_08101']
+		]);
+		expect(links[0].className).toContain('text-primary');
+		expect(links[2].className).toContain('text-secondary');
+	});
+
+	/** The house team is nobody's, so it is named and left at that: there is no page for a
+	 * team that does not belong to an account. */
+	it('does not send the house team anywhere', async () => {
+		combatFeedService.receive(fight('nobody', 'ES_08101'));
+		const { container } = render(CombatFeedModal);
+		await waitFor(() => expect(lineOf(container, 'nobody')).toBeTruthy());
+
+		const line = lineOf(container, 'nobody');
+		expect(said(line)).toContain(ca.combat.feed.house);
+		// Two links and not three: the winner and the town. Nothing points at the house.
+		const links = [...line.querySelectorAll('a')].map(said);
+		expect(links).toEqual(['Guifré', "L'Hospitalet de Llobregat"]);
 	});
 
 	/** Taking the town is a clause of the same sentence, not a badge beside it. */
 	it('says the town changing hands in the sentence itself', async () => {
 		combatFeedService.receive(fight('taken', 'ES_08101', { captured: true, rival: RIVAL }));
-		const { findByText } = render(CombatFeedModal);
-		expect(
-			await findByText("Guifré ha guanyat Ermessenda i ha pres L'Hospitalet de Llobregat.")
-		).toBeTruthy();
+		const { container } = render(CombatFeedModal);
+		await waitFor(() =>
+			expect(sentences(container)).toContain(
+				"Guifré ha guanyat Ermessenda i ha pres L'Hospitalet de Llobregat."
+			)
+		);
 	});
 
 	/**
@@ -134,7 +201,7 @@ describe('the sheet of other fights', () => {
 	 * a hole in the middle of the sentence either: a fight did happen against somebody's
 	 * three, they simply were not an account's.
 	 */
-	it('names the seeded side as the house team rather than as a player', async () => {
+	it('names the seeded side as the house team rather than a player', async () => {
 		combatFeedService.receive(fight('house', 'ES_08101'));
 		const { findAllByText } = render(CombatFeedModal);
 		// All of them, because every fight the tests above left in the feed was over a town
@@ -168,7 +235,11 @@ describe('the sheet of other fights', () => {
 		// wall of JSON where a feed was wanted.
 		expect(container.querySelector('pre')).toBeNull();
 
-		const line = (await findByText(/Ramon/)).closest('button');
+		// The line's own press stands behind the reading rather than round it — a link cannot
+		// live inside a button — so it is reached by the sentence it is named by, not by
+		// walking up from a name.
+		await findByText(/Ramon/);
+		const line = container.querySelector('button[aria-labelledby="feed-said-opened"]');
 		expect(line).toBeTruthy();
 		await fireEvent.click(line!);
 

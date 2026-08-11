@@ -1,4 +1,5 @@
 <script lang="ts">
+	import classNames from 'classnames';
 	import { _ } from 'svelte-i18n';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import PlayerAvatar from '$components/core/PlayerAvatar.svelte';
@@ -18,10 +19,17 @@
 	 * which is how the announcement is worded — `outcome` is stated from the account that
 	 * reported it — and it is not how a fight reads to anybody else: a win is somebody
 	 * beating somebody, and the feed was printing half of that. Both are in it now, and they
-	 * are in a **sentence** ({@link sentence}): the whole wording lives in the catalogue and
-	 * the three names are handed to it, rather than the row being a face and a name and a
-	 * level at either end of a verb. A fight assembled out of boxes leaves the grammar to
-	 * the layout, and grammar is not a thing a flex row can be right about.
+	 * are in a **sentence** ({@link said}): the whole wording lives in the catalogue and the
+	 * three names are handed to it, rather than the row being a face and a name and a level
+	 * at either end of a verb. A fight assembled out of boxes leaves the grammar to the
+	 * layout, and grammar is not a thing a flex row can be right about.
+	 *
+	 * The three names in it are the three things a fight is about, so each of them is a way
+	 * to go and look: an account opens its public page, a town opens on the map. They are
+	 * coloured for it — the accounts in `primary`, the town in `secondary` — which is the
+	 * only marking on the line, since a sentence with three underlines in it is a sentence
+	 * nobody reads. The rest of the line is still the press that opens the record (see the
+	 * markup for how one press stands behind the other three).
 	 *
 	 * The list is the service's and arrives by socket, so nothing is fetched here and there
 	 * is nothing to refresh: a fight that finishes while this sheet is up is drawn onto it
@@ -68,12 +76,15 @@
 	// would be the same date on all of them.
 	const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
 
-	// Both stores are named in the statement itself, so the lines are rebuilt when either the
-	// feed or the layer moves — a name that arrived into something only a helper could see
-	// would have left every line standing at the id it was first drawn with.
+	// Every name is spelled out in the statement itself — the two stores and the catalogue's
+	// own formatter — so the lines are rebuilt when any of the three moves. A name that
+	// arrived into something only a helper could see would have left every line standing at
+	// the id it was first drawn with, and `$_` is the same trap one step further along: it is
+	// a store too, changing when the dictionary lands, and it is only ever reached inside the
+	// helpers below, where Svelte's legacy reactive tracking cannot see it.
 	$: lines = $entries.map((entry) => ({
 		entry,
-		said: sentence(entry, townName(entry, $townNames)),
+		said: said(entry, townName(entry, $townNames), $_),
 		face: winner(entry)
 	}));
 
@@ -82,8 +93,20 @@
 		return name ? restoreCatalanArticle(name) : entry.locationId;
 	}
 
+	/** Whatever the catalogue's formatter is at the moment the lines are built. Handed in
+	 * rather than reached for, so the statement above names it as a dependency. */
+	type Translate = (id: string, options?: { values?: Record<string, string> }) => string;
+
+	/** One piece of the sentence: a run of plain words, or one of the three names in it —
+	 * which carries where that name goes and the colour it is said in. */
+	interface Said {
+		text: string;
+		href?: string;
+		classes?: string;
+	}
+
 	/**
-	 * The fight, in one sentence.
+	 * The fight, as one sentence broken at its three names.
 	 *
 	 * Both the players, which of them won and the town it was over, said the way the game
 	 * would say it out loud — the whole wording in the catalogue and the three names handed
@@ -99,27 +122,59 @@
 	 * The announcement is worded from the account that reported it, so `win` is the reporter
 	 * beating whoever held the town and `lose` is that side beating the reporter. Turning
 	 * that round is the whole of what this has to know beyond the words.
+	 *
+	 * It comes back in **pieces** rather than as a string because each of those three names
+	 * is somewhere to go, and a link is an element. The catalogue is still handed the whole
+	 * sentence and still decides where each name falls in it: the three are formatted in as
+	 * markers no wording could contain, and the line is then cut back apart on them — so the
+	 * pieces are in the order the language put them, and a message that moved the town to the
+	 * front would move the link with it.
 	 */
-	function sentence(entry: CombatFeedEntry, town: string): string {
+	function said(entry: CombatFeedEntry, town: string, t: Translate): Said[] {
 		const beaten = entry.outcome === 'lose' ? entry.player : entry.rival;
 		const won = entry.outcome === 'lose' ? entry.rival : entry.player;
-		const values = { winner: named(won), loser: named(beaten), town };
-		if (entry.outcome === 'draw') return $_('combat.feed.said.drew', { values });
-		if (entry.captured) return $_('combat.feed.said.captured', { values });
-		return $_('combat.feed.said.beat', { values });
+		const names: Said[] = [player(won, t), player(beaten, t), place(entry, town)];
+		const values = { winner: MARKS[0], loser: MARKS[1], town: MARKS[2] };
+		const key =
+			entry.outcome === 'draw' ? 'drew' : entry.captured ? 'captured' : 'beat';
+		return t(`combat.feed.said.${key}`, { values })
+			.split(MARK_PATTERN)
+			.map((piece, index) => (index % 2 === 0 ? { text: piece } : names[Number(piece)]))
+			.filter((piece) => piece.text !== '');
+	}
+
+	// The three slots, as characters no sentence can hold: a NUL round the slot's own number.
+	// A marker made of ordinary letters would be a marker a town could be called.
+	const MARKS = [0, 1, 2].map((index) => `\u0000${index}\u0000`);
+	const MARK_PATTERN = /\u0000(\d)\u0000/;
+
+	/**
+	 * One of the two accounts, and the way to their page.
+	 *
+	 * A null side is a town still on its seeded house team, which belongs to nobody — so it
+	 * is called the house rather than left as a hole in the middle of a sentence, and it is
+	 * neither coloured nor pressable, there being no page for a team that is not anybody's.
+	 * An account that has never named itself is worded, as it is everywhere else in this
+	 * game, never stored — and still goes somewhere, since the page is the account's and not
+	 * the name's.
+	 */
+	function player(who: CombatFeedPlayer | null, t: Translate): Said {
+		if (!who) return { text: t('combat.feed.house') };
+		const text = who.name ?? t('combat.feed.anonymous');
+		if (!who.id) return { text };
+		return { text, href: `/profile/${who.id}`, classes: 'text-primary' };
 	}
 
 	/**
-	 * What to call one of the two in that sentence.
+	 * The town, and the way to it on the map.
 	 *
-	 * A null side is a town still on its seeded house team, which belongs to nobody — so it
-	 * is called the house rather than left as a hole in the middle of a sentence; and an
-	 * account that has never named itself is worded, as it is everywhere else in this game,
-	 * never stored.
+	 * The map opens on whatever its `region` param names, and a municipality's key in that
+	 * tree is its own geojson feature id — the very id the announcement travels with. So the
+	 * link is the id and never the name, which means it still goes to the right place on a
+	 * line the layer never landed for and which is printing that id as its own label.
 	 */
-	function named(player: CombatFeedPlayer | null): string {
-		if (!player) return $_('combat.feed.house');
-		return player.name ?? $_('combat.feed.anonymous');
+	function place(entry: CombatFeedEntry, town: string): Said {
+		return { text: town, href: `/?region=${entry.locationId}`, classes: 'text-secondary' };
 	}
 
 	/** The face the line is marked with: the winner's, or the reporter's where nobody won.
@@ -148,40 +203,62 @@
 			     division as the line it belongs to. -->
 			<div class="flex flex-col border-b border-base-300/50 last:border-0">
 				<!-- One fight, said in one sentence: both the players in it, which of them won and
-				     the town it was over, written out (see `sentence`) rather than laid out. It was
-				     a row of boxes for a while — a face and a name and a level at either end of a
+				     the town it was over, written out (see `said`) rather than laid out. It was a
+				     row of boxes for a while — a face and a name and a level at either end of a
 				     word — which is a fight the reader has to assemble out of its parts, and which
 				     leaves the grammar to the layout: where a verb sits and what a preposition is
 				     are the catalogue's to decide, not a flex row's.
 				     One face beside it, the winner's, which is a mark on the line and not a fourth
 				     thing to read: the sentence has already named them.
-				     The whole line is the press, as the map's own rows are: there is one thing to do
-				     with a fight here and the line is the thing to press. It names itself in its own
-				     words — the sentence and the hour are what a screen reader reads out — so it
-				     carries no label of its own, only `aria-expanded`, which is the one thing about
-				     it the words do not say. -->
-				<button
-					type="button"
-					class="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-base-300/40"
-					aria-expanded={opened.has(entry.id)}
-					on:click={() => toggle(entry.id)}
-				>
-					<PlayerAvatar
-						characterId={face.characterId}
-						color={face.color}
-						initial={(face.name ?? '?').slice(0, 1).toUpperCase()}
-						size="w-10"
-						textClasses="text-base"
-						ownColors={false}
-					/>
-					<!-- The sentence wraps rather than truncating: it is a sentence, and half of one
-					     says something other than what happened. `min-w-0` so it may, a flex item
-					     being floored at its own content otherwise. -->
-					<span class="min-w-0 flex-1 text-sm">{said}</span>
-					<span class="flex-none self-start text-xs opacity-60"
-						>{timeFormat.format(new Date(entry.at))}</span
-					>
-				</button>
+
+				     **Four presses on one line, and none of them inside another.** The three names
+				     go somewhere — a page each — and the line itself opens the record; a link
+				     cannot stand inside a button (no interactive element may), so the line's press
+				     is laid *behind* the row rather than round it. The reading on top takes no
+				     pointer at all, so anywhere the eye lands falls through to the press
+				     underneath, and the three links turn the pointer back on for themselves —
+				     which is the same layering the arena's arrows use over its orders. Nothing is
+				     drawn twice and nothing overlaps: the layer is exactly the row.
+				     The press is named by the sentence rather than by a label of its own
+				     (`aria-labelledby`), so it still says what it is in the words already on the
+				     screen, and `aria-expanded` says the one thing those words do not. -->
+				<div class="relative transition-colors hover:bg-base-300/40">
+					<button
+						type="button"
+						class="absolute inset-0 cursor-pointer"
+						aria-labelledby="feed-said-{entry.id}"
+						aria-expanded={opened.has(entry.id)}
+						on:click={() => toggle(entry.id)}
+					></button>
+					<div class="pointer-events-none relative flex w-full items-center gap-3 px-4 py-3">
+						<PlayerAvatar
+							characterId={face.characterId}
+							color={face.color}
+							initial={(face.name ?? '?').slice(0, 1).toUpperCase()}
+							size="w-10"
+							textClasses="text-base"
+							ownColors={false}
+						/>
+						<!-- The sentence wraps rather than truncating: it is a sentence, and half of one
+						     says something other than what happened. `min-w-0` so it may, a flex item
+						     being floored at its own content otherwise.
+						     Its three names are the only things in here that take a pointer. They carry
+						     no underline of their own — a sentence ruled in three places is a sentence
+						     nobody reads — and are told apart by colour alone until one is pointed at. -->
+						<span id="feed-said-{entry.id}" class="min-w-0 flex-1 text-sm">
+							{#each said as piece}{#if piece.href}<a
+										href={piece.href}
+										class={classNames(
+											'pointer-events-auto font-semibold hover:underline',
+											piece.classes
+										)}>{piece.text}</a
+									>{:else}{piece.text}{/if}{/each}
+						</span>
+						<span class="flex-none self-start text-xs opacity-60"
+							>{timeFormat.format(new Date(entry.at))}</span
+						>
+					</div>
+				</div>
 				{#if opened.has(entry.id)}
 					<!-- The announcement itself, as the app holds it: the entry the adapter read off
 					     the channel, every field of it, in the order the type declares them. Not the
