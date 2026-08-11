@@ -4,6 +4,7 @@
 	import { _, locale } from 'svelte-i18n';
 	import { authService, UsernameRejected } from '$services/auth.service';
 	import { profileModalOpen } from '$services/profileModal';
+	import { settingsModalOpen } from '$services/settingsModal';
 	import { avatarPickerOpen } from '$services/avatarPicker';
 	import { AuthStatus, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from '$types/profile.type';
 	import { isValidUsername } from '$utils/profile/username';
@@ -114,6 +115,13 @@
 		avatarPickerOpen.set(true);
 	}
 
+	// Same hand-over for the settings: two full-view sheets standing on each other would
+	// leave a player with two ✕s and no way of telling which one they were closing.
+	function openSettings(): void {
+		close();
+		settingsModalOpen.set(true);
+	}
+
 	function close(): void {
 		errorMessage = null;
 		nameError = null;
@@ -183,7 +191,7 @@
 					</form>
 				</ProfileCard>
 
-				<!-- The account as everybody else reads it, and the last thing on this sheet.
+				<!-- The account as everybody else reads it.
 					This sheet is where a player changes who they are; the page behind this link is
 					what that comes out as — the plate and the side they field, at an address anyone
 					can open (see routes/profile/[id]). A link and not a button, because it goes
@@ -200,6 +208,19 @@
 				>
 					{$_('profile.public.openMine')}
 				</a>
+
+				<!-- And the other sheet about this account, under the two rows that are about who
+					the player is: what the game does *about* them. The cog beside the plate is the
+					way to it from the map, which is the way in for somebody who came for the
+					settings; this is the way across for somebody who came for the account and
+					found themselves wanting them, and a player who has just read the address they
+					signed in with is exactly who goes looking for the copy of everything held.
+					It hands the screen over rather than stacking one full-view sheet on another,
+					the way the avatar does — so leaving the settings leaves for the map, not back
+					to this. -->
+				<button type="button" class="btn btn-outline mt-2 w-full" on:click={openSettings}>
+					{$_('settings.open')}
+				</button>
 
 				{#if errorMessage}
 					<div class="alert alert-error mt-4">

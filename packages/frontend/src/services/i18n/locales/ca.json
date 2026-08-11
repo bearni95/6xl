@@ -133,6 +133,7 @@
 	},
 	"settings": {
 		"title": "Configuració",
+		"open": "Obre la configuració",
 		"close": "Tanca la configuració"
 	},
 	"collection": {
