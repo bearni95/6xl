@@ -45,6 +45,11 @@
 
 	/** What the sheet is called — its heading, and its name to a screen reader. */
 	export let title: string;
+	/** What the title bar says, where that is not the heading under it. The bar and the
+	 * heading are inches apart, so a caller with something else to say up there — how many
+	 * boxes are still owed, say — says it here rather than printing one sentence twice.
+	 * Unset, the bar is the heading, which is what a box that has nothing else to say wants. */
+	export let barTitle: string = '';
 	/** The line under that heading: what this box is and what picking a show will do. */
 	export let intro: string;
 	/** The box's id on the opener's sheet. One box is stood up there, so this only has to be
@@ -268,9 +273,10 @@
 		✕ is the sheet's one way out and there is no way out of that one, so a bar drawn on it
 		would be a bar whose only control is greyed. A box the player summoned keeps its bar and
 		its ✕ — it was asked for, so it can be walked away from. The title is given either way,
-		and is what the sheet is called to a screen reader. -->
+		and is what the sheet is called to a screen reader — `barTitle` where the caller has
+		something of its own for the bar, the heading otherwise. -->
 	<FullScreenModal
-		{title}
+		title={barTitle || title}
 		closeLabel={$_('booster.choose.close')}
 		bare={locked}
 		closeDisabled={locked}

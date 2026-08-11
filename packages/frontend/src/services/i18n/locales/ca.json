@@ -286,6 +286,7 @@
 			"intro": "Tens un sobre de benvinguda. Tria de quina sèrie el vols."
 		},
 		"level": {
+			"header": "{count, plural, one {Un sobre per obrir} other {# sobres per obrir}}",
 			"title": "Sobre de nivell {level}",
 			"intro": "Tria de quina sèrie el vols. {count, plural, one {És l’últim sobre de nivell que tens per obrir.} other {En tens # per obrir.}}",
 			"button": "{count, plural, =0 {No tens cap sobre de nivell per obrir} one {Tens un sobre de nivell per obrir} other {Tens # sobres de nivell per obrir}}"

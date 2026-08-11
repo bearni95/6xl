@@ -27,7 +27,13 @@
 	// it — because the boxes are alike in everything but the number across the head, and asking
 	// a player to choose between five identical boxes is asking them a question with no answer.
 	// One press is one box: the sheet closes on the reveal, and the button says how many are
-	// left. The server is not told how many anybody is owed, only which level is being opened,
+	// left. The sheet's own bar says it too, in place of the box's name: the bar and the
+	// heading under it stand inches apart, and the bar printing `Sobre de nivell 7` directly
+	// over a heading reading `Sobre de nivell 7` said one thing twice and left the pile the box
+	// came off unnamed anywhere on the sheet. So the bar counts what is owed and the heading
+	// names the box being dealt.
+	//
+	// The server is not told how many anybody is owed, only which level is being opened,
 	// and it reads the caller's own experience to decide whether they have got there.
 
 	const dispatch = createEventDispatcher<{ close: void }>();
@@ -63,6 +69,7 @@
 	{@const dealing = boxLevel}
 	<ChooseShowBooster
 		title={$_('booster.level.title', { values: { level: dealing } })}
+		barTitle={$_('booster.level.header', { values: { count: pending.length } })}
 		intro={$_('booster.level.intro', { values: { count: pending.length } })}
 		boxId={LEVEL_BOX_ID}
 		caption={levelBoxCaption(dealing)}
