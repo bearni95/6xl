@@ -12,9 +12,12 @@
 	// the towns underneath, which is the same show that tier's polygon is filled from, and
 	// at the head of the path it is the plurality of every town on the map.
 	//
-	// Split out of MapBreadcrumbs because a crumb has two states and one body: the step the
-	// map is on is inert text and every step above it is a button back to its tier, and
-	// neither wants its own copy of a tile, a glyph and two lines.
+	// Split out of the breadcrumb bar because a crumb had two states and one body: the step the
+	// map was on was inert text and every step above it a button back to its tier, and neither
+	// wanted its own copy of a tile, a glyph and two lines. The bar is gone — nothing letters a
+	// path on this page any more (see +page.svelte's band) — and this outlived it, because what
+	// it is is how a PLACE is lettered on this map, path or no path: the badge naming where the
+	// map is standing and every row of the list under it are drawn from here.
 	//
 	// The radio on the far end of that bar was drawn as one of these for a while: a song over
 	// the station it plays on is the same object as a place over the show it flies. The second
@@ -48,11 +51,10 @@
 	export let truncated: boolean = false;
 </script>
 
-<!-- Spans throughout, not divs: a crumb above the current one is wrapped in a `<button>`,
-	whose content model is phrasing only. `whitespace-nowrap` rather than the panel's
-	`truncate` — a crumb is never given less room than its name asks for: a path too long for
-	the bar is collapsed to this one step (see MapBreadcrumbs) rather than being made to fit
-	by cutting its names short. -->
+<!-- Spans throughout, not divs: one of these is wrapped in a `<button>` wherever it is pressed,
+	and a button's content model is phrasing only. `whitespace-nowrap` rather than the panel's
+	`truncate` — a crumb is never given less room than its name asks for, and the callers that
+	cannot promise that ask for `truncated` in so many words. -->
 <span class="flex items-center gap-2">
 	<!-- The tile the town panel and the pins draw, at 32px with a 20px glyph: the same plate,
 		sized for a line of them (see ShowTile). Decorative — the show is named in the line

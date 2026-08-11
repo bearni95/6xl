@@ -14,9 +14,9 @@
 	// artwork and gain the words — and the band gets its far end back as one square, which is
 	// what lets more be asked of the game later without the row growing a mark each time.
 	//
-	// The same dots, the same slide, the same column the map's own path drops (see
-	// MapBreadcrumbs): a folded thing on this page is a dots button with a column under it, and
-	// there is one answer to that rather than one per corner. It comes down over the map instead
+	// A folded thing on this page is a dots button with a column under it — the map's own path
+	// was drawn the same way, on the band along the bottom edge, until the path itself went — and
+	// this is the one left, which is what a menu is. It comes down over the map instead
 	// of pushing anything aside — `z-[1000]` clears the plates laid over the terrain, which sit
 	// at 900 — and is closed by a press anywhere else, by Escape, and by picking a line.
 	//
@@ -72,8 +72,8 @@
 	>
 		<!-- The same square as everything else the band presses: the name plate's own fill, drawn
 			to the row's height, with white artwork that needs no colour of its own on the primary.
-			The dots are the mark this game folds things into (see MapBreadcrumbs) — three of them
-			down the square, as they are at the head of the map's own row. -->
+			The dots are the mark this game folds things into — three of them down the square, as
+			they were at the head of the map's own row while it had a path to fold. -->
 		<button
 			type="button"
 			class="flex size-full cursor-pointer items-center justify-center rounded-lg bg-primary text-white shadow-xl"

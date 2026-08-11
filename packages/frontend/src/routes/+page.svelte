@@ -10,7 +10,6 @@
 	import SignInButton from '$components/core/SignInButton.svelte';
 	import PlayerPanel from '$components/core/PlayerPanel.svelte';
 	import WorldMap from '$components/core/WorldMap.svelte';
-	import MapBreadcrumbs from '$components/core/MapBreadcrumbs.svelte';
 	import RegionCurrentBadge from '$components/core/RegionCurrentBadge.svelte';
 	import MapZoomSlider from '$components/core/MapZoomSlider.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
@@ -957,9 +956,10 @@
 
 	// The drill path down to (and including) the open region was worked out here — the URL
 	// path when a region is clicked, else the zoom focus path minus its frontier pin — for the
-	// bar of crumbs that stood over the map. There is no such bar: the one path this page
-	// letters is the cut ABOVE the open region, folded to its dots on the row across the foot of
-	// the terrain (see `abovePath`), and that one is walked off the node rather than off the view.
+	// bar of crumbs that stood over the map. Nothing on this page letters a path any more: the
+	// bar became the cut above the open place folded into a dots button on the band along the
+	// map's bottom edge, and that went too (see the band). Where you are is the badge on it,
+	// how deep you are is the strip over it, and everywhere else is the list under the map.
 
 	// The map column had two tabs and has none: the terrain, and the shows that level divides
 	// between. It was three before that, the middle of them being the list of the places the open
@@ -1056,50 +1056,16 @@
 		open(node.key);
 	}
 
-	// The crumbs: a root crumb back to the top view, then one per ancestor down to the region
-	// the bar is about. The last crumb is that region and renders as plain text; the rest link
-	// back up to their tier.
+	// The crumbs are gone, and with them the four-tier ladder they were laid on: a root step for
+	// the whole map, a position per tier whether or not the place had one, an outlined square in
+	// the empty positions pressed to take the map to that tier's zoom, and the whole of it folded
+	// into the dots button that stood at the head of the band along the map's bottom edge. What
+	// replaces it is two things it was doing at once, each said by the thing that says it best:
+	// the levels of the map are the strip over that band (see zoomLadder and MapZoomSlider), and
+	// the places are the list under the map and the search over it. `MapBreadcrumb` itself lives
+	// on — it is how a place is lettered anywhere on this page — but nothing assembles a path out
+	// of them any more.
 	//
-	// Every crumb carries what the town panel is given for the town it is open on, because
-	// the bar letters a step the same way that panel letters its town: the show the place
-	// flies, and the tile colour it is drawn in. Both are read off the node, so both are
-	// whatever the map itself says — the ruling team's show on a held town, the seeded
-	// plurality otherwise (see the ruling-show map), and above the municipality the
-	// plurality of the towns underneath. A place cannot fly one show on the map and another
-	// in the bar naming it.
-	//
-	// The root crumb is the whole of the Països Catalans, which is the one step of the path
-	// with no region of its own: nothing in the tree stands for the lot of them, so its show
-	// and colour are tallied here (see everyTownPlurality) rather than read off a node. It is
-	// the same tally every tier under it gets, one tier further up, so the top view names
-	// what most of the map is flying — and the step a player walks back to is lettered like
-	// every other step rather than dropping to a bare word at the head of the row.
-	//
-	// It carries a key like every other step too (see TOP_VIEW_KEY), so clicking it opens the
-	// top view instead of merely forgetting whatever was open.
-	// Below the root the bar is a ladder of the four tiers and not just the steps walked into:
-	// every tier has a position in the row whether or not the view has reached it, and whether
-	// or not the place being looked at has that tier at all — the drill path skips a tier where
-	// there is none (Andorra and l'Alguer have no comarca; a territory with one province lists
-	// its comarques directly), and it stops wherever the map has got to. A position with no
-	// step in it is drawn as an outlined square and pressed to take the map to the zoom that
-	// tier is read at (see zoomToTier). So the row keeps its length and its rhythm as the map
-	// drills — a place's name is always in the same position, whichever place it is — and every
-	// tier is a press away rather than only the ones already opened.
-	//
-	// The word beside each tier is what the square is labelled by, and what comes back when one
-	// is pressed: the bar names the tiers of this map in the map's own language, and one word
-	// serves as both the label and the key it is worked back out of.
-	const TIER_LADDER: [RegionType, string][] = [
-		['Territory', 'territori'],
-		['Province', 'província'],
-		['Comarca', 'comarca'],
-		['Municipality', 'municipi']
-	];
-	const tierByWord = new Map<string, RegionType>(
-		TIER_LADDER.map(([tier, word]) => [word, tier])
-	);
-
 	// The same four tiers said as what a map drawn in them is covered with, which is a
 	// different statement from the one above and is why it is a list of its own: the ladder
 	// names the tier a POSITION stands for, and this names the divisions a LEVEL draws. The
@@ -1113,51 +1079,6 @@
 	};
 
 	$: mapPlurality = everyTownPlurality(regionNodes);
-
-	/**
-	 * A path of nodes as the bar reads it: the root step, then the ladder of the four tiers
-	 * with each position filled by whatever step of the path stands at it.
-	 *
-	 * Written as a function because there were two paths lettered this way — the one the map was
-	 * looking down, on the bar over the terrain, and the cut above it that heads the column
-	 * beside it (see `aboveCrumbs`) — and two bars built from two copies of this would be two
-	 * bars that could come to letter the same place differently. Only the second is left, and it
-	 * is still written as a function: what the ladder is is a way of lettering a path, and that
-	 * is worth saying once whether one path or two go through it. The plurality is passed in
-	 * rather than read off the closure so that a statement calling this names it and re-runs
-	 * when it changes.
-	 *
-	 * No step of it is marked `current` (see MapBreadcrumbs), because none of them is: the one
-	 * path left is the cut ABOVE the open region, so its every step — the root view included, and
-	 * the parent it ends on most of all — is a place the map can be taken to. Each is pressed for
-	 * what any pin, row or crumb on this map is pressed for: `open` its key, which frames that
-	 * place and redraws the polygons at its own tier, whichever tier that is.
-	 */
-	function crumbLadder(path: RegionNode[], plurality: ReturnType<typeof everyTownPlurality>) {
-		return [
-			{
-				label: TOP_VIEW_LABEL,
-				key: TOP_VIEW_KEY as string | null,
-				showName: plurality.show?.name ?? null,
-				showId: plurality.show?.id ?? null,
-				tileClasses: plurality.color ? pinColorClasses[plurality.color] : null
-			},
-			...TIER_LADDER.map(([tier, word]) => {
-				const node = path.find((step) => step.type === tier);
-				if (!node) {
-					return { label: '', key: null as string | null, empty: true, tier: word };
-				}
-				return {
-					label: restoreCatalanArticle(node.name),
-					key: node.key as string | null,
-					showName: node.show?.name ?? null,
-					showId: node.show?.id ?? null,
-					tileClasses: node.color ? pinColorClasses[node.color] : null
-				};
-			})
-		];
-	}
-
 
 	// The open location's own node and its plurality ("most seen") show. Surfaced on the
 	// corner's Location plate when the open region is a leaf municipality (the table there
@@ -1287,24 +1208,6 @@
 	// and two places deciding what "listed" means is how those two come to disagree — which is
 	// why the open town, now that it is listed, is counted in them too.
 	$: subdivisionNodes = regionLevelNodes(regionNodes, openRegion);
-
-	// The path standing beside the badge on the row across the foot of the terrain: the way down
-	// to the place the open region sits *inside*, which is the cut above it and never the open
-	// region itself. The badge it stands next to has already named where the map is — a path
-	// repeating it is the row saying Catalunya twice — so what the path is for is the one thing
-	// the badge cannot say, which is where that place is. Its last step is therefore the parent: the
-	// comarca over a town, the province over a comarca, and the Països Catalans over a territory,
-	// there being nothing above a territory but the whole of them.
-	//
-	// Empty at the top view, which is the one place with nothing above it at all: the badge is
-	// the Països Catalans and there is no superior cut to name. The path is left off rather than
-	// drawn saying the same thing twice, and the row closes up around the badge and the tabs.
-	$: abovePath = openNode ? nodePath(regionNodes, openNode.key).slice(0, -1) : null;
-
-	// And that path lettered the way every path on this map is lettered (see crumbLadder), so a
-	// place is the same tile, name and show wherever it is named. A path of no regions is the
-	// root crumb by itself, which is exactly what a territory's superior cut is.
-	$: aboveCrumbs = abovePath ? crumbLadder(abovePath, mapPlurality) : null;
 
 	// Lettered exactly as a crumb is, off the same node fields and into the same shape,
 	// because it is drawn by the same component: a place on this map is its tile, its name
@@ -3019,16 +2922,17 @@
 
 	$: focusBounds = boundsToFrame(picks, municipalities, topPicked, selected, fillIndex);
 
-	// The box the map is zoomed to fit without being moved to — what an empty position on the
-	// breadcrumb ladder asks for. Set on the press and never cleared: a fresh array is what the
-	// map re-zooms on, so the same tier pressed twice is two arrays and two zooms.
+	// The box the map is zoomed to fit without being moved to — what a rung of the strip asks
+	// for (see zoomToLadderStep; it was the empty positions of the breadcrumb ladder before
+	// that). Set on the press and never cleared: a fresh array is what the map re-zooms on, so
+	// the same rung asked for twice is two arrays and two zooms.
 	let zoomBounds: LatLngBounds | null = null;
 
 	// The whole ladder of regions the map centre stands in, root down to the town — the finest
 	// pins are the ones that reach every branch, so the path to the one nearest the centre is
-	// the path this view is inside. A bar's own crumbs stop where its path stops; this goes all
-	// the way down, because a tier the bar has not reached is exactly the one an empty position
-	// asks to be taken to.
+	// the path this view is inside. It goes all the way down whatever the map is showing,
+	// because the strip's rungs are the levels this VIEW has and not the ones walked into: a
+	// tier nobody has opened is exactly the one a reader drags to (see zoomLadder).
 	$: centrePath = focusedPath(maxLevel, markerLevels, currentCenter, regionNodes);
 
 	// The whole map as one box: the coarsest rung of that ladder, and what a tier asked for
@@ -3036,43 +2940,6 @@
 	$: wholeMapBounds = municipalities
 		? boundsForFeatures(municipalities, new Set(fillIndex.keys()))
 		: null;
-
-	// Take the map to the zoom a tier is read at, leaving the centre where it is: press the
-	// comarca position and the bar's comarca position is the one that fills.
-	//
-	// So the box to fit is that tier's OWN region under the centre, not the region above it.
-	// The two are a tier apart and it is the same tier twice over, which is why: what the bar
-	// names is the region the view is INSIDE, and what the map pins is that region's parts (see
-	// levelIndexForView) — so the view that fills the comarca position is the one framed on a
-	// comarca, which is pinning its towns. Fitting the province instead is the view that *pins*
-	// comarques, and its deepest crumb is the province — a position short of the one pressed,
-	// which is a bar asking to be pressed twice.
-	//
-	// It is a test of a region's size and not of where it sits, which is why nothing here has
-	// to move the view: the same centre at that zoom is inside the same region.
-	//
-	// A tier the place under the centre does not have resolves to the box of the nearest tier
-	// above it, which is the truth about it: at Andorra there is no comarca between the
-	// territory and the towns, so its comarca position is the territory's own zoom.
-	function zoomToTier(word: string) {
-		const tier = tierByWord.get(word);
-		if (!tier) return;
-		const down = centrePath.filter((node) => tierRank[node.type] <= tierRank[tier]);
-		const container = down[down.length - 1] ?? null;
-		// Nothing under the centre at that tier or above it means there is no path under the
-		// centre at all — the polygons are still loading, or the view is out at sea. The whole
-		// map is the box then, which is where a bar with nothing in it belongs.
-		const bounds = container ? (regionGeometry.boxes.get(container.key) ?? null) : wholeMapBounds;
-		if (!bounds) return;
-		// The bar only follows the zoom while nothing is picked (see openRegion), so a tier
-		// asked for while a region is open hands the view back to the zoom first — otherwise
-		// the map would move under a bar frozen on the click that is being left behind.
-		if (regionParam) open(null);
-		zoomBounds = [
-			[bounds[0][0], bounds[0][1]],
-			[bounds[1][0], bounds[1][1]]
-		];
-	}
 
 	// The levels of the map as a stepped control, on the row over the band (see MapZoomSlider):
 	// one rung per tier of divisions the terrain can be drawn in, coarsest first.
@@ -3131,14 +2998,14 @@
 	$: zoomLadderIndex = Math.min(effectiveDepth, Math.max(zoomLadder.length - 1, 0));
 
 	// A rung let go on: take the map to the zoom that rung's container stands whole at, leaving
-	// the centre where it is — the very movement an empty position of the path is pressed for
-	// (see zoomToTier), asked for a level rather than for a tier under the centre. The tier the
-	// map then draws is the one that container holds, which is what the number on the slider
-	// names.
+	// the centre where it is. Only the scale moves — a level is a question about how finely the
+	// country is cut and not about which part of it you are over — and the tier the map then
+	// draws is the one that container holds, which is what the rung stands for.
 	//
-	// The pick is dropped first for the same reason a tier press drops it: the ladder follows
-	// the zoom only while nothing is clicked (see openRegion), and a map moving under a ladder
-	// frozen on the click being left behind is a strip whose numbers stop meaning anything.
+	// The pick is dropped first: the ladder follows the zoom only while nothing is clicked (see
+	// openRegion), so a level asked for while a region is open hands the view back to the zoom
+	// before it moves. A map moving under a ladder frozen on the click being left behind is a
+	// strip standing at a rung the terrain is not drawn at.
 	function zoomToLadderStep(index: number) {
 		const bounds = zoomLadder[index]?.bounds;
 		if (!bounds) return;
@@ -3787,54 +3654,20 @@
 							<div
 								class="pointer-events-auto flex w-full min-w-0 items-center gap-2 bg-base-100/80 p-2 shadow-xl"
 							>
-										<!-- The way up out of where the map is standing: the dots and the column of place
-										names they drop (see MapBreadcrumbs' `dotsOnly`). First on the row, and against
-										the badge, because what it letters is the cut ABOVE the place that badge names
-										(see `aboveCrumbs`) — a cut belongs beside its place, and a path reads from its
-										root leftward into the name it arrives at.
-										It has been a bar across the map's top edge, a mark in the head of the block
-										under the map, a square in the corner of the strip over the terrain, and the
-										second plate on the band at the top of the page, beside the game's own name.
-										What kept sending it away was that the readings kept arriving beside it — the
-										badge, the tally of the level — each saying where you are while this says how
-										to leave; what brings it back is that the badge came down here too, and the
-										two of them ARE the one statement it was being kept apart from. Nothing else
-										on this row is a fixed thing about the game, which is what the band it has
-										left is now made of.
-										No plate of its own: the row it stands in already carries one, and a frame
-										round a single button inside a frame is a second frame (see the prop). The
-										square is DaisyUI's outlined 32px, the same square an empty rung of the path
-										is drawn in, and it needs no height from this row — so no `self-stretch`, the
-										row being as tall as the tabs beside it rather than a line of equal squares.
-										`dropUp`, because down from here is off the bottom of the map and then off the
-										page: the column of names comes out of the top of the row instead.
-										Nothing at all at the top view, which is the one place with nothing above it,
-										and the row simply closes up — the badge and the tabs are its whole width then.
-										`z-[1000]` is the column it drops rather than the square, so the names come
-										down over the plate and the terrain either side of it rather than into them.
-										Pressed for what the path was always pressed for: a step opens its region, an
-										empty rung takes the map to that tier's zoom. Through `openFromColumn` like
-										every press in the block below, so picking a place puts the search field away
-										with it. -->
-									{#if aboveCrumbs}
-										<MapBreadcrumbs
-											classes="z-[1000] flex flex-none items-center"
-											crumbs={aboveCrumbs}
-											onSelect={(key) => (key ? openFromColumn(key) : open(null))}
-											onZoom={zoomToTier}
-											dotsOnly
-											dropUp
-										/>
-									{/if}
-
 									<!-- Where the map is standing, said once and by one thing: the badge that names
-										the place, taking whatever the dots leave. Lettered exactly as a crumb and as a
-										row of the list under it are, and pressed for what every row that names a place
-										is pressed for (see RegionCurrentBadge). `min-w-0 flex-1` so a long name
-										truncates against the row's own edge rather than widening the plate.
-										It is the one place on the page where a second way of naming the open place
-										could only ever be the same tile and name twice, which is why the dots
-										beside it keep no crumb of their own (see `dotsOnly`).
+										the place, and the band is that and the play/pause now. Lettered exactly as a
+										crumb and as a row of the list under it are, and pressed for what every row
+										that names a place is pressed for (see RegionCurrentBadge). `min-w-0 flex-1`
+										so a long name truncates against the row's own edge rather than widening the
+										plate.
+										The way UP stood at the head of this row until now — a dots button dropping the
+										path above the open place as a column of names, the last of several places it
+										had been kept. It is gone, path and column together: the strip over this row
+										walks the levels of the map (see MapZoomSlider), which is the coarser half of
+										what that column was for, and every place at every tier is in the list under
+										the map and in the search over it, which is the other half. A second way of
+										leaving a place, drawn as a mark that has to be pressed before it says what it
+										holds, is a mark a reader has to be taught rather than one they can read.
 										It shared this row with the three tabs for a while — a grid of two halves, so a
 										long town name could not walk them off the edge — and has it to itself now that
 										there are none. The three things those tabs picked between are all still in the
@@ -3848,12 +3681,12 @@
 										on:select={(event) => openFromColumn(event.detail.key)}
 									/>
 
-									<!-- The radio's play/pause, last on the row and a square like the dots at the head of
-										it: same 32px outlined tile, same white over terrain, so everything on this band
-										that is pressed rather than read is the same shape (see MapBreadcrumbs'
-										`squareClasses`, which this matches by hand rather than by sharing — the two
-										buttons are the same size and colour because the band asks that of anything
-										standing on it, not because one of them is the other).
+									<!-- The radio's play/pause, last on the row and the one thing on this band that is
+										pressed rather than read: a 32px outlined tile in white over terrain. It was
+										the second such square while the dots stood at the head of the row, and the
+										shape is the band's rather than either button's — anything standing on it is
+										asked for the same square, which is why the two matched by hand rather than by
+										sharing a class.
 										It is a button and nothing else, which is what a play/pause is. The whole slot
 										above was the press for a while, the mark inside it drawn as a picture rather
 										than as a control; what that gave a reader was a thing to press with no edge to
