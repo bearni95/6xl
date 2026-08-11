@@ -3356,26 +3356,33 @@
 			Both are the same kind of question — where all this came from — which is what makes them
 			one menu rather than two things that happen to share a corner, and they are on the
 			game's own top row rather than three screens in for the same reason they always were. -->
-		<!-- What is happening everywhere else, at the far end of the band and immediately before
-			the dots: how many fights have finished anywhere in the game since this tab was opened,
-			and the sheet that reads them out (see CombatFeedButton). It is on this row because
-			this row is the fixed things about the game and the feed is one of them — it is not
-			about the place the map is open on, which is what the band along the foot of the
-			terrain says — and it is beside the dots because both are the same kind of press: a
-			way to look at something other than the map.
-			Not folded into that menu, and this is the difference between them: a line in a column
-			nobody has dropped cannot carry a count, and a count is the whole of what this mark is
-			for. So it keeps a square of its own on the row.
-			It draws nothing at all until a fight has landed, which is why the `ml-auto` is here
-			rather than only on the dots: the first auto margin takes the row's slack, so the pair
-			sits at the far edge together — and with this one absent the dots keep their own, which
-			is exactly where they stood before. Sized and surfaced as the band's own presses are:
+		<!-- The far end of the band, and it is now two marks rather than one, so they are held
+			there as a pair: what is happening everywhere else, and then the dots the rest of the
+			questions fold into.
+			One `ml-auto` and it is on the pair, not on each of them. Two flex items both asking
+			for the free space **share** it — that is what an auto margin does — so a second one
+			put the feed's square in the middle of the row with the dots still at the end, which
+			is the two of them each holding a corner of nothing. Held together in one box, the
+			slack is taken once and they stand side by side at the edge. The box carries the
+			band's own `gap-2`, so the space between them is the space between everything else on
+			the row, and it stretches with the band, so the squares inside still read their width
+			off the row's height.
+			The feed is on this row because this row is the fixed things about the game and it is
+			one of them — it is not about the place the map is open on, which is what the band
+			along the foot of the terrain says — and it is beside the dots because both are the
+			same kind of press: a way to look at something other than the map. It is not folded
+			*into* that menu because a line in a column nobody has dropped cannot say that
+			something has happened, which is the whole of what this mark is for. It draws nothing
+			at all until a fight has landed, and the dots then sit at the edge alone, exactly where
+			they stood before there was a feed. Sized and surfaced as the band's own presses are:
 			a square as tall as the row, the name plate's fill, white artwork on it. -->
-		<CombatFeedButton
-			classes="ml-auto aspect-square flex-none self-stretch"
-			buttonClasses="size-full rounded-lg bg-primary text-white shadow-xl"
-		/>
-		<BandMenu items={bandMenuItems} classes="ml-auto" />
+		<div class="ml-auto flex flex-none items-stretch gap-2">
+			<CombatFeedButton
+				classes="aspect-square flex-none self-stretch"
+				buttonClasses="size-full rounded-lg bg-primary text-white shadow-xl"
+			/>
+			<BandMenu items={bandMenuItems} />
+		</div>
 	</div>
 
 	<!-- The three columns, and the three are the three things this game is made of:

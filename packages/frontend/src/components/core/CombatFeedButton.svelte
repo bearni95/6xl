@@ -26,9 +26,16 @@
 	 * in here rather than round the outside: a wrapper left standing would be a square of
 	 * nothing on the band, and an empty cell in the panel's corner. The feed has no history
 	 * beyond the tail it opens on (see `combat-feed.type`), so a session that has heard nothing
-	 * says nothing rather than standing a zero on the row. The count itself comes off once it
-	 * has been read, leaving the mark alone: the fights are still there to be looked at, they
-	 * are simply no longer news.
+	 * says nothing at all rather than standing a mark on the row over nothing.
+	 *
+	 * What says there is something unread is a **dot**, and it is the very dot the level boxes
+	 * wear in the corner of the map: the theme's secondary on the square's far top corner, a
+	 * sibling of the button so the press's own states never take it down with it, and taking no
+	 * pointer so the square underneath is the whole of the press. The question this mark
+	 * answers is whether anything has happened, and how much is what the sheet says in full —
+	 * a figure here was a quantity nobody acts on differently, since one fight and nine are the
+	 * same errand. It comes off once the sheet has been opened, leaving the mark alone: the
+	 * fights are still there to be looked at, they are simply no longer news.
 	 */
 	const entries = combatFeedService.entries;
 	const unread = combatFeedService.unread;
@@ -40,33 +47,29 @@
 </script>
 
 {#if $entries.length > 0}
-	<div class={classNames('flex', classes)}>
-		<!-- Two marks and no words, like every other press on both rows it stands in: the
+	<!-- `relative` because the dot hangs off the corner of the square, and it hangs off *this*
+	     rather than off the button — see below. -->
+	<div class={classNames('relative flex', classes)}>
+		<!-- A mark and no words, like every other press on both rows it stands in: the
 		     catalogue's wording is the label, said to a screen reader and to a pointer resting on
-		     it. `relative` because the count rides the corner, and neither daisyUI's button nor a
-		     bare one is positioned. -->
+		     it. -->
 		<button
 			type="button"
-			class={classNames(
-				'relative flex cursor-pointer items-center justify-center',
-				buttonClasses
-			)}
+			class={classNames('flex cursor-pointer items-center justify-center', buttonClasses)}
 			aria-label={$_('combat.feed.open', { values: { count: $unread } })}
 			title={$_('combat.feed.title')}
 			on:click={() => combatFeedService.openFeed()}
 		>
 			<GameGlyph name="lorc/crossed-swords" classes="[&>svg]:size-5" />
-			{#if $unread > 0}
-				<!-- The number is a badge on the mark rather than a figure beside it: what it counts
-				     is how much of the feed is new, which is a thing that happens *to* the mark and
-				     goes away when the sheet is opened. Hung off the corner rather than inside it, the
-				     square being exactly the glyph's own room. -->
-				<span
-					class="badge badge-xs badge-error absolute -top-1 -right-1 px-1 font-semibold text-white"
-				>
-					{$unread}
-				</span>
-			{/if}
 		</button>
+		{#if $unread > 0}
+			<!-- Something has happened since anybody looked. The same dot the level boxes wear in
+			     the corner of the map, drawn the same way and for the same reason: a sibling of the
+			     button rather than a child, so nothing the press does to itself takes the dot with
+			     it, and `pointer-events-none` so the square underneath is the whole of the press. -->
+			<span
+				class="pointer-events-none absolute -top-1 -right-1 size-3 rounded-full bg-secondary shadow"
+			></span>
+		{/if}
 	</div>
 {/if}
