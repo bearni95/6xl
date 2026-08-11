@@ -3220,9 +3220,16 @@
 			the middle of the row with the dots still at the end — and there is now exactly one on
 			the row. Surfaced as the band's own presses are: the name plate's fill, white artwork
 			on it. -->
+		<!-- The press itself carries the ratio too, and takes its height from the box rather than
+			its width: `aspect-square h-full`, where it filled the box in both directions
+			(`size-full`). A box whose width is transferred from a stretched height is one
+			calculation deep in flex layout; a press that is 1:1 off its own definite height is
+			nought deep, and the square is the same square whichever of the two settles first.
+			Every mark on this page that is meant to be square says so this way — see BandMenu, the
+			two over the terrain, and the radio's play/pause on the band below. -->
 		<CombatFeedButton
 			classes="aspect-square flex-none self-stretch"
-			buttonClasses="size-full rounded-lg bg-primary text-white shadow-xl"
+			buttonClasses="aspect-square h-full rounded-lg bg-primary text-white shadow-xl"
 		/>
 		<BandMenu items={bandMenuItems}>
 			<!-- Where the author is, closing the column the same way it closed the panel it came
@@ -3436,7 +3443,7 @@
 								<div class="relative flex-none">
 									<button
 										type="button"
-										class="pointer-events-auto flex size-10 cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
+										class="pointer-events-auto flex aspect-square size-10 cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
 										aria-label={$_('booster.level.button', {
 											values: { count: levelBoxesOwed }
 										})}
@@ -3489,7 +3496,7 @@
 							<div class="relative ml-auto flex-none">
 								<button
 									type="button"
-									class="pointer-events-auto flex size-10 cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
+									class="pointer-events-auto flex aspect-square size-10 cursor-pointer items-center justify-center rounded-lg bg-primary shadow-xl disabled:cursor-default disabled:opacity-40"
 									aria-label={$_('map.radar.nearest')}
 									disabled={!radarTarget || radarResting}
 									on:click={findNearestBox}
@@ -3702,7 +3709,7 @@
 										simply closes up, as it does where there is nothing above the open place either. -->
 
 									<MusicToggle
-										classes="btn btn-square btn-outline btn-sm flex-none border-white/60 text-white hover:border-white hover:bg-white/10 hover:text-white"
+										classes="btn btn-square btn-outline btn-sm aspect-square flex-none border-white/60 text-white hover:border-white hover:bg-white/10 hover:text-white"
 										iconClasses="size-4"
 									/>
 							</div>

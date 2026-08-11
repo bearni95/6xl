@@ -63,8 +63,10 @@
 		band lays out — an `aspect-square` on the button instead leaves the wrapper's own width to
 		be guessed from a child whose height is not known until the row has already been laid out,
 		and what came of that guess was a square wide enough to push itself off the end of the
-		screen. The button simply fills whatever this is (`size-full`), which is a percentage and
-		asks nothing.
+		screen. The button takes its height off this (`h-full`, a percentage, which asks
+		nothing) and is 1:1 of that on its own account (`aspect-square`) rather than filling the
+		box in both directions: whichever of the two boxes a browser settles first, the mark
+		comes out square.
 		`relative` because the column hangs off it. -->
 	<div
 		bind:this={wrapperEl}
@@ -76,7 +78,7 @@
 			they were at the head of the map's own row while it had a path to fold. -->
 		<button
 			type="button"
-			class="flex size-full cursor-pointer items-center justify-center rounded-lg bg-primary text-white shadow-xl"
+			class="flex aspect-square h-full cursor-pointer items-center justify-center rounded-lg bg-primary text-white shadow-xl"
 			aria-expanded={open}
 			aria-haspopup="menu"
 			aria-label={open ? $_('menu.close') : $_('menu.open')}
