@@ -31,7 +31,9 @@
 	// heading under it stand inches apart, and the bar printing `Sobre de nivell 7` directly
 	// over a heading reading `Sobre de nivell 7` said one thing twice and left the pile the box
 	// came off unnamed anywhere on the sheet. So the bar counts what is owed and the heading
-	// names the box being dealt.
+	// names the box being dealt — and the line under the heading, which counted them too while
+	// nothing else did, is back to the one thing this sheet is asking for. A count said twice
+	// on one sheet is a count a reader checks against itself.
 	//
 	// The server is not told how many anybody is owed, only which level is being opened,
 	// and it reads the caller's own experience to decide whether they have got there.
@@ -70,7 +72,7 @@
 	<ChooseShowBooster
 		title={$_('booster.level.title', { values: { level: dealing } })}
 		barTitle={$_('booster.level.header', { values: { count: pending.length } })}
-		intro={$_('booster.level.intro', { values: { count: pending.length } })}
+		intro={$_('booster.level.intro')}
 		boxId={LEVEL_BOX_ID}
 		caption={levelBoxCaption(dealing)}
 		light={LEVEL_BOX_STOCK === SpawnBox.White}
