@@ -351,9 +351,17 @@
 									fixed height would have been a row where the width was decided by the
 									height, and the marks came out at wildly different widths as a result.
 									The width is what is said here and the height is what follows. -->
+								<!-- Pointed at, the plate itself answers: the dark ground fades to the theme's
+									primary and the two glyphs bracketing the lettering fade to its secondary, both
+									on the plate's own `transition`. It was a ring drawn round the row instead — a
+									line arriving outside the plate, which is a second shape appearing beside the
+									one being pointed at rather than the thing being pointed at answering. A plate
+									that changes colour is that answer, and the pair of marks changing with it is
+									what says the whole row is the press and not the lettering in the middle of it.
+									`group` so the marks hear about a hover on the plate they stand on. -->
 								<button
 									type="button"
-									class="flex w-full cursor-pointer items-center justify-between overflow-hidden rounded-box bg-black/40 px-3 py-3 text-white/80 transition hover:ring-2 hover:ring-primary"
+									class="group flex w-full cursor-pointer items-center justify-between overflow-hidden rounded-box bg-black/40 px-3 py-3 text-white/80 transition hover:bg-primary"
 									title={offer.show.name}
 									aria-label={$_('booster.choose.open', {
 										values: { show: offer.show.name }
@@ -378,7 +386,7 @@
 										with no glyph picked goes unbadged (which is the rule everywhere a show
 										is badged — there is no stand-in mark) but its lettering still stands
 										where every other show's does. -->
-									<span class="aspect-square w-[10%] flex-none">
+									<span class="aspect-square w-[10%] flex-none transition group-hover:text-secondary">
 										<ShowIcon
 											markup={glyph}
 											classes="h-full w-full justify-center [&>svg]:h-full [&>svg]:w-full"
@@ -405,7 +413,7 @@
 									<!-- The mark again, closing the row. Sized exactly as its twin above and
 										for the reasons given there — the pair is one bracket, so the two are
 										the same square or they are not a pair. -->
-									<span class="aspect-square w-[10%] flex-none">
+									<span class="aspect-square w-[10%] flex-none transition group-hover:text-secondary">
 										<ShowIcon
 											markup={glyph}
 											classes="h-full w-full justify-center [&>svg]:h-full [&>svg]:w-full"
