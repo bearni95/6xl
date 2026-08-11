@@ -72,9 +72,24 @@
 		opened = next;
 	}
 
-	// The clock only: a feed is about what is happening now, and a date over every line of it
-	// would be the same date on all of them.
-	const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' });
+	/**
+	 * When the server filed the fight, as `DD/MM/YY HH:mm` — the day of it as well as the
+	 * hour, since the feed opens on a tail that may reach back past midnight and a clock alone
+	 * would put yesterday's fights among today's.
+	 *
+	 * Written out rather than formatted by `Intl`, which is the one place in this app that is
+	 * true: a date left to the platform is a date the reader's own locale settles, and this is
+	 * a fixed shape asked for by name. The moment itself is still the reader's — the parts are
+	 * local ones, so a fight is stamped with the hour it happened at where it is being read.
+	 */
+	function stamp(at: string): string {
+		const when = new Date(at);
+		const pad = (value: number): string => String(value).padStart(2, '0');
+		return (
+			`${pad(when.getDate())}/${pad(when.getMonth() + 1)}/${pad(when.getFullYear() % 100)}` +
+			` ${pad(when.getHours())}:${pad(when.getMinutes())}`
+		);
+	}
 
 	// Every name is spelled out in the statement itself — the two stores and the catalogue's
 	// own formatter — so the lines are rebuilt when any of the three moves. A name that
@@ -257,24 +272,29 @@
 							textClasses="text-base"
 							ownColors={false}
 						/>
-						<!-- The sentence wraps rather than truncating: it is a sentence, and half of one
-						     says something other than what happened. `min-w-0` so it may, a flex item
-						     being floored at its own content otherwise.
-						     Its three names are the only things in here that take a pointer. They carry
-						     no underline of their own — a sentence ruled in three places is a sentence
-						     nobody reads — and are told apart by colour alone until one is pointed at. -->
-						<span id="feed-said-{entry.id}" class="min-w-0 flex-1 text-sm">
-							{#each said as piece}{#if piece.href}<a
-										href={piece.href}
-										class={classNames(
-											'pointer-events-auto font-semibold hover:underline',
-											piece.classes
-										)}>{piece.text}</a
-									>{:else}{piece.text}{/if}{/each}
-						</span>
-						<span class="flex-none self-start text-xs opacity-60"
-							>{timeFormat.format(new Date(entry.at))}</span
-						>
+						<!-- What is between the two faces: when the fight was filed, and then what
+						     happened in it. The stamp is a line of its own above the sentence rather than
+						     a figure at the far end of the row — it was in the corner past the words, which
+						     is where the second face stands now, and a date is a heading over a line
+						     anyway rather than an afterthought behind it. -->
+						<div class="flex min-w-0 flex-1 flex-col">
+							<span class="text-xs opacity-60">{stamp(entry.at)}</span>
+							<!-- The sentence wraps rather than truncating: it is a sentence, and half of one
+							     says something other than what happened. `min-w-0` on the column so it may, a
+							     flex item being floored at its own content otherwise.
+							     Its three names are the only things in here that take a pointer. They carry
+							     no underline of their own — a sentence ruled in three places is a sentence
+							     nobody reads — and are told apart by colour alone until one is pointed at. -->
+							<span id="feed-said-{entry.id}" class="text-sm">
+								{#each said as piece}{#if piece.href}<a
+											href={piece.href}
+											class={classNames(
+												'pointer-events-auto font-semibold hover:underline',
+												piece.classes
+											)}>{piece.text}</a
+										>{:else}{piece.text}{/if}{/each}
+							</span>
+						</div>
 						{#if beatenFace}
 							<!-- The other side of the same fight, at the other end of the line: two accounts
 							     fought and the row is bracketed by the two of them. Nothing stands here for a

@@ -65,11 +65,16 @@ const lineOf = (container: HTMLElement, id: string): HTMLElement =>
 const said = (element: Element | null): string =>
 	(element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
+/** One whole fight in the list: the line, the stamp over it and the two faces bracketing
+ * them, whatever they are nested in. */
+const blockOf = (container: HTMLElement, id: string): HTMLElement =>
+	lineOf(container, id).closest('.border-b') as HTMLElement;
+
 /** The faces on one fight's line, in the order they stand, read as the letters they fall
  * back to — an account with no portrait picked wears the first letter of its name, which is
  * what says whose face it is without a manifest having to load. */
 const initials = (container: HTMLElement, id: string): string[] =>
-	[...(lineOf(container, id).parentElement?.querySelectorAll('.avatar span') ?? [])].map(said);
+	[...blockOf(container, id).querySelectorAll('.avatar span')].map(said);
 
 describe('the sheet of other fights', () => {
 	let release: (() => void) | null = null;
@@ -231,6 +236,33 @@ describe('the sheet of other fights', () => {
 		await waitFor(() => expect(lineOf(container, 'facesHouse')).toBeTruthy());
 
 		expect(initials(container, 'facesHouse')).toEqual(['G']);
+	});
+
+	/**
+	 * When it happened stands over what happened, between the two faces.
+	 *
+	 * The day as well as the hour, since the tail a page opens on can reach back past
+	 * midnight, and in a shape this app states rather than one the platform settles — the
+	 * reader's locale would otherwise decide whether that is `10/08/26` or `8/10/26`, which
+	 * are the same string read two ways. The moment is still local: the hour is the one the
+	 * fight happened at where it is being read.
+	 */
+	it('heads the line with the day and hour the fight was filed', async () => {
+		combatFeedService.receive(fight('stamped', 'ES_08101', { rival: RIVAL }));
+		const { container } = render(CombatFeedModal);
+		await waitFor(() => expect(lineOf(container, 'stamped')).toBeTruthy());
+
+		const when = new Date('2026-08-10T17:04:00.000Z');
+		const day = String(when.getDate()).padStart(2, '0');
+		const month = String(when.getMonth() + 1).padStart(2, '0');
+		// Everything the row is made of, in the order it stands: the winner's letter, the stamp,
+		// the sentence, and the letter of the side they beat. The stamp being *before* the words
+		// is the whole of why it moved off the end of the row.
+		const line = [...blockOf(container, 'stamped').querySelectorAll('span')].map(said);
+		expect(line[0]).toBe('G');
+		expect(line[1]).toBe(`${day}/${month}/26 ${String(when.getHours()).padStart(2, '0')}:04`);
+		expect(line[2]).toContain('Ermessenda');
+		expect(line[3]).toBe('E');
 	});
 
 	/** Taking the town is a clause of the same sentence, not a badge beside it. */
