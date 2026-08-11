@@ -3,7 +3,7 @@
 	import { authService } from '$services/auth.service';
 	import { avatarService } from '$services/avatar.service';
 	import { openSignIn } from '$services/signInModal';
-	import { spawnService } from '$services/spawn.service';
+	import { spawnService, type BoosterOpening } from '$services/spawn.service';
 	import { territoryService } from '$services/territory.service';
 	import { errorMessage } from '$utils/error/error-message';
 	import { avatarKey } from '$utils/spawn/avatar';
@@ -239,8 +239,38 @@
 			const heldCards = ownedSpawnKeys($spawns);
 			const heldAvatars = ownedAvatarKeys($avatars);
 
+			// The claim is the one thing here whose failure the player has to read: the box is
+			// refused for reasons they can act on and is still standing there afterwards.
+			let opening: BoosterOpening;
 			try {
-				const opening = await spawnService.claimBooster(show.id, claimRegion.id);
+				opening = await spawnService.claimBooster(show.id, claimRegion.id);
+			} catch (error) {
+				claimError = errorMessage(error);
+				claimingId = null;
+				return nothing;
+			}
+
+			// From here the box is spent and its cards are the player's, so nothing below may
+			// turn the reveal into nothing (the same rule as the welcome and level boxes — see
+			// ChooseShowBooster). The cards are assembled first, by a builder that cannot
+			// throw, and everything else is guarded around them.
+			claimingId = null;
+			lastLocationName = claimRegion.municipality ?? '';
+			const pulls = await Promise.all(
+				opening.spawns.map((spawn) =>
+					buildClaimPull(spawn, {
+						rarityByCharacter,
+						showName: show.name,
+						locationName: lastLocationName,
+						held: heldCards
+					})
+				)
+			);
+			const avatarIsNew = opening.avatar
+				? !heldAvatars.has(avatarKey(opening.avatar.characterId, opening.avatar.color))
+				: false;
+
+			try {
 				// This box is spent now: re-read the claims so it stands down, here and
 				// wherever else it is drawn.
 				void refreshClaimedBoxes();
@@ -250,32 +280,11 @@
 				// one arrives outside a fresh load. A repeat replaces the row it already
 				// held, so the collection does not grow on a colour already owned.
 				if (opening.avatar) avatarService.remember(opening.avatar);
-
-				// Capture the place and resolve each portrait so the revealed cards carry
-				// the character's face and the town it was claimed in.
-				lastLocationName = claimRegion.municipality ?? '';
-				return {
-					pulls: await Promise.all(
-						opening.spawns.map((spawn) =>
-							buildClaimPull(spawn, {
-								rarityByCharacter,
-								showName: show.name,
-								locationName: lastLocationName,
-								held: heldCards
-							})
-						)
-					),
-					avatar: opening.avatar,
-					avatarIsNew: opening.avatar
-						? !heldAvatars.has(avatarKey(opening.avatar.characterId, opening.avatar.color))
-						: false
-				};
 			} catch (error) {
-				claimError = errorMessage(error);
-				return nothing;
-			} finally {
-				claimingId = null;
+				console.error('booster: the box was dealt but its avatar could not be kept', error);
 			}
+
+			return { pulls, avatar: opening.avatar, avatarIsNew };
 		};
 	}
 

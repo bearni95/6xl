@@ -223,8 +223,44 @@
 		// is about to be one they hold.
 		const wearsNothing = !$profile?.avatarCharacterId;
 
+		// The claim is the one thing here that may refuse this box, and the only thing whose
+		// failure is the player's to read: a box refused is a box still standing there, and
+		// the sentence saying why comes from the server.
+		let opening: BoosterOpening;
 		try {
-			const opening = await claim(show.id);
+			opening = await claim(show.id);
+		} catch (error) {
+			claimError = errorMessage(error);
+			return nothing;
+		}
+
+		// From here the box is spent. Its cards are in the player's account and it will never
+		// be dealt again, so nothing below is allowed to turn the reveal into nothing — which
+		// is what a single throw between the claim landing and this returning used to do,
+		// leaving a box that had visibly been opened showing an empty canvas and an error
+		// about whatever had gone wrong downstream of the cards.
+		//
+		// So the reveal is assembled first, out of what the server actually said, by a
+		// builder that cannot throw (see buildClaimPull).
+		const pulls = await Promise.all(
+			opening.spawns.map((spawn) =>
+				buildClaimPull(spawn, {
+					rarityByCharacter,
+					showName: show.name,
+					locationName: caption,
+					held: heldCards
+				})
+			)
+		);
+		const avatarIsNew = opening.avatar
+			? !heldAvatars.has(avatarKey(opening.avatar.characterId, opening.avatar.color))
+			: false;
+
+		// And the portrait is folded in after them, guarded: an avatar that cannot be
+		// remembered or worn costs the player a picture they still hold in the picker, where
+		// a throw would cost them the cards. It is written to the console because an error
+		// swallowed on the one screen it happened on is an error nobody can report.
+		try {
 			if (opening.avatar) {
 				avatarService.remember(opening.avatar);
 				if (wearsNothing) {
@@ -236,26 +272,11 @@
 						.catch(() => {});
 				}
 			}
-			return {
-				pulls: await Promise.all(
-					opening.spawns.map((spawn) =>
-						buildClaimPull(spawn, {
-							rarityByCharacter,
-							showName: show.name,
-							locationName: caption,
-							held: heldCards
-						})
-					)
-				),
-				avatar: opening.avatar,
-				avatarIsNew: opening.avatar
-					? !heldAvatars.has(avatarKey(opening.avatar.characterId, opening.avatar.color))
-					: false
-			};
 		} catch (error) {
-			claimError = errorMessage(error);
-			return nothing;
+			console.error('booster: the box was dealt but its avatar could not be kept', error);
 		}
+
+		return { pulls, avatar: opening.avatar, avatarIsNew };
 	}
 
 	/** Picking a show IS opening the box: the sheet the map's boxes are opened on comes up with

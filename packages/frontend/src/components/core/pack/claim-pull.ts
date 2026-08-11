@@ -55,7 +55,15 @@ export async function buildClaimPull(
 	context: ClaimPullContext
 ): Promise<ClaimPull> {
 	const basePath = charactersById.get(spawn.characterId)?.basePath ?? null;
-	const faceUrl = basePath ? await resolveCharacterFaceUrl(spawn.characterId, basePath) : null;
+	// A portrait is what a card wears and not what it is, so nothing about resolving one is
+	// allowed to fail the card: a manifest that answers with something other than JSON, a
+	// definition that has gone missing from the deployed bundle, a network that drops in the
+	// middle of a reveal — each leaves this card faceless and leaves the rest of the box
+	// alone. By the time this runs the box is already spent (see the callers), and a throw
+	// from here would have cost the player the one showing of cards they now hold.
+	const faceUrl = basePath
+		? await resolveCharacterFaceUrl(spawn.characterId, basePath).catch(() => null)
+		: null;
 	return {
 		spawn,
 		label: characterLabel(spawn.characterId),
