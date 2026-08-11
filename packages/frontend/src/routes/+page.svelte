@@ -4113,25 +4113,44 @@
 							Drawn in the document rather than on a canvas: the very component the Booster tab
 							lays its grid out with, off the very `MapBoosterBox` the pin was handed (see
 							`townBox`), so the two are one object and not two pictures of one.
-							At the 200px a pin draws it at, which is the size a box is read at wherever it is
-							stood in a column — the component takes its height off whatever width it is given
-							(30:37 of it), so the width is the whole of what has to be said.
+							As tall as the block leaves it, rather than at the 200px a pin draws it at: the
+							box is the only thing standing here and a picture that is the whole of what a
+							panel has to say should be read at the size of the panel, not at the size it is
+							drawn on a marker. It is the height that is given and the width that follows,
+							which is the other way round the component is usually asked (it holds 30:37
+							either way — hand it one and it gives the other back).
+							The cap is what keeps that from overflowing sideways: the block is a 1:1 of the
+							page's width on a phone and half a column from `md` up, and half a column can
+							easily be taller than it is wide — a box 37/30 of the width would then hang out
+							of both sides of it. So the height is `min` of what the box has and what its own
+							width allows (100cqw at 30:37 is 123.333cqw of height), which lands the box
+							against whichever of the two edges it meets first and leaves the other with room
+							to spare. Container units and not percentages because the second of the two is a
+							height read off a width, which is the one thing percentages cannot do; the wrapper
+							declares itself the container so nothing outside this branch is contained.
+							`items-center` for the width-bound case, where the box is shorter than the panel:
+							the party in the branch below is centred in the same box for the same reason.
 							A button and not a div with a handler, for the reason it is one inside the pin: the
 							press is the box's own and it is the pack it opens (see openPack, which answers the
 							door first for a reader with no account). -->
-						<button
-							type="button"
-							class="w-[200px] flex-none"
-							on:click={() => townBox?.onClick?.()}
+						<div
+							class="flex min-h-0 w-full flex-1 items-center justify-center [container-type:size]"
 						>
-							<BoosterBox
-								coverUrl={townBox.coverUrl ?? null}
-								logoUrl={townBox.logoUrl ?? null}
-								showId={townBox.showId ?? null}
-								locationName={townBox.locationName ?? null}
-								light={townBox.light ?? false}
-							/>
-						</button>
+							<button
+								type="button"
+								class="aspect-[30/37] h-[min(100cqh,123.333cqw)] flex-none"
+								on:click={() => townBox?.onClick?.()}
+							>
+								<BoosterBox
+									coverUrl={townBox.coverUrl ?? null}
+									logoUrl={townBox.logoUrl ?? null}
+									showId={townBox.showId ?? null}
+									locationName={townBox.locationName ?? null}
+									light={townBox.light ?? false}
+									classes="h-full w-full"
+								/>
+							</button>
+						</div>
 					{:else if townPin}
 						<!-- The party on the town: the side standing on it, the plate naming it and the fight
 							to be had for it. What the block holds once there is no box to be taken — either
