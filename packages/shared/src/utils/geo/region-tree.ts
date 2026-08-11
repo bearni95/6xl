@@ -15,7 +15,7 @@
  */
 
 import type { RegionSiege } from './region-siege';
-import type { RegionColor } from '../../types/region-color.type';
+import { ArtificialColor, type RegionColor } from '../../types/region-color.type';
 
 /** The trimmed show shape shown against a region: what a pin is lettered with. */
 export interface RegionShow {
@@ -439,9 +439,26 @@ function majorityShow(municipis: { show?: RegionShow }[]): RegionShow | undefine
 
 /**
  * The plurality colour among a set of municipalities — the colour flown by the
- * most of them, counted and tie-broken exactly as {@link majorityShow} counts
- * shows, so a region's colour and its show are read off the same towns the same
- * way. Municipalities with no colour (nothing rolled for them yet) are ignored.
+ * most of them, counted and tie-broken as {@link majorityShow} counts shows, with
+ * one difference: the unheld grey is counted only where there is nothing else to
+ * count. Municipalities with no colour at all (nothing rolled for them yet) are
+ * ignored, as they are there.
+ *
+ * Grey is not a colour a region flies — it is the map saying nobody has taken this
+ * (see `types/region-color.type`) — so it is not a candidate in a tally that has a
+ * claim in it. A single town won inside a comarca of a hundred colours the whole
+ * comarca, and its province and its territory above that, however heavily it is
+ * outnumbered: what the coarse tiers are then saying is that somebody has been here,
+ * and whose the most of what has been taken is. Counting grey like a team said the
+ * opposite — a map that stayed grey entire until half a region had changed hands,
+ * which is a conquest nobody can see from the zoom they conquered at.
+ *
+ * So grey survives exactly one case, and it is the honest one: every town under the
+ * region is unheld, and the region is drawn as untouched country.
+ *
+ * The show tally is untouched by any of this — a show is what a place flies whether
+ * or not anybody holds it, so every town of a region counts towards its show at
+ * every tier (see {@link majorityShow}).
  */
 function majorityColor(municipis: { color?: RegionColor }[]): RegionColor | undefined {
 	const tally = new Map<RegionColor, number>();
@@ -450,8 +467,13 @@ function majorityColor(municipis: { color?: RegionColor }[]): RegionColor | unde
 		tally.set(municipality.color, (tally.get(municipality.color) ?? 0) + 1);
 	}
 
+	// Whether anything here is somebody's. Grey is one key like any other, so a tally
+	// holding more than it — or holding something that is not it — has a claim in it.
+	const claimed = tally.size > 1 || !tally.has(ArtificialColor.Gray);
+
 	let best: { color: RegionColor; count: number } | undefined;
 	for (const [color, count] of tally) {
+		if (claimed && color === ArtificialColor.Gray) continue;
 		if (!best || count > best.count || (count === best.count && color < best.color)) {
 			best = { color, count };
 		}

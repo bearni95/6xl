@@ -884,9 +884,14 @@
 	// is somebody's doing.
 	//
 	// Fed into the region tree beside the shows, so a comarca, a province and a
-	// territory each take the plurality colour of the towns beneath them just as they
-	// take their plurality show — which now reads as how much of a region has been
-	// taken, and by whom — and a conquest re-colours every tier above it.
+	// territory each take the plurality colour of the towns beneath them — and a
+	// conquest re-colours every tier above it. Not quite the plurality the show is,
+	// mind: grey is counted only where every town under the region is grey, so ONE
+	// town won inside a comarca of a hundred colours the comarca, the province and the
+	// territory over it (see majorityColor). A coarse tier therefore says that
+	// somebody has been here and whose the most of what has been taken is, rather than
+	// how much of the region has changed hands — a map that stayed grey until half a
+	// province had fallen never showed a player the conquest they had just made.
 
 	// Municipality id → the colour it flies. Grey for every town on the map, and the
 	// lead colour of whoever holds it wherever one does — which is why this asks the

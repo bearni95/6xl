@@ -71,9 +71,9 @@ describe('buildRegionTree colours', () => {
 		expect(catalunya.color).toBe(SpawnColor.Green);
 	});
 
-	it('counts the unheld grey like any other colour, so a region reads as taken or not', () => {
+	it('lets one claimed town outvote the grey it is outnumbered by', () => {
 		const [catalunya] = tree(
-			new Map([
+			new Map<string, RegionColor>([
 				['ES_08019', ArtificialColor.Gray],
 				['ES_08073', ArtificialColor.Gray],
 				['ES_08187', SpawnColor.Red],
@@ -81,8 +81,24 @@ describe('buildRegionTree colours', () => {
 			])
 		);
 		const barcelones = catalunya.comarques.find((comarca) => comarca.name === 'Barcelonès')!;
-		// Two of the three towns are nobody's, so the comarca is still nobody's — one
-		// conquest inside it does not colour the whole of it.
+		// Two of the three towns are nobody's, and the third's red is what the comarca
+		// flies anyway: grey is not a team, so it is no candidate beside one.
+		expect(barcelones.color).toBe(SpawnColor.Red);
+		// And above it, where the reds and the blues are one each — the tie broken by the
+		// colour itself, with the two greys under them counting for nothing.
+		expect(catalunya.color).toBe(SpawnColor.Blue);
+	});
+
+	it('keeps the grey where every town under the region is unheld', () => {
+		const [catalunya] = tree(
+			new Map<string, RegionColor>([
+				['ES_08019', ArtificialColor.Gray],
+				['ES_08073', ArtificialColor.Gray],
+				['ES_08187', ArtificialColor.Gray],
+				['ES_17079', ArtificialColor.Gray]
+			])
+		);
+		const barcelones = catalunya.comarques.find((comarca) => comarca.name === 'Barcelonès')!;
 		expect(barcelones.color).toBe(ArtificialColor.Gray);
 		expect(catalunya.color).toBe(ArtificialColor.Gray);
 	});
