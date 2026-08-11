@@ -85,7 +85,8 @@
 	$: lines = $entries.map((entry) => ({
 		entry,
 		said: said(entry, townName(entry, $townNames), $_),
-		face: winner(entry)
+		face: winner(entry),
+		beatenFace: beaten(entry)
 	}));
 
 	function townName(entry: CombatFeedEntry, known: ReadonlyMap<string, string> | null): string {
@@ -177,10 +178,25 @@
 		return { text: town, href: `/?region=${entry.locationId}`, classes: 'text-secondary' };
 	}
 
-	/** The face the line is marked with: the winner's, or the reporter's where nobody won.
-	 * One mark and not a portrait of each side — the sentence is what names them both. */
+	/** The face at the head of the line: the winner's, or the reporter's where nobody won. */
 	function winner(entry: CombatFeedEntry): CombatFeedPlayer {
 		return entry.outcome === 'lose' && entry.rival ? entry.rival : entry.player;
+	}
+
+	/**
+	 * The face at the far end of it: whoever was on the other side of the same fight.
+	 *
+	 * A fight is two accounts and the line now stands one at each end of itself — which is
+	 * mostly the town's holder, since that is who a challenge is against, and is the reporter
+	 * where the holder is the one who won. Null where there was no account to be against: a
+	 * town still on its seeded house team belongs to nobody, so there is no face for it and the
+	 * far end of the line is left empty rather than filled with something standing in for one.
+	 * That is also the only case {@link winner} falls back to the reporter for, so the same
+	 * portrait can never come up twice on one line.
+	 */
+	function beaten(entry: CombatFeedEntry): CombatFeedPlayer | null {
+		if (!entry.rival) return null;
+		return entry.outcome === 'lose' ? entry.player : entry.rival;
 	}
 
 	function close(): void {
@@ -196,7 +212,7 @@
 	<!-- The list scrolls inside the sheet rather than the sheet scrolling, as the leaderboard's
 	     table does: the title bar stays put however far down the feed a fight sits. -->
 	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-box bg-base-200/50">
-		{#each lines as { entry, said, face } (entry.id)}
+		{#each lines as { entry, said, face, beatenFace } (entry.id)}
 			<!-- One fight: the line it is read as, and under it the whole of what was announced
 			     about it, while it is open. The rule the row carried moves out here, so a fight
 			     is one block however much of it is showing and the record is inside the same
@@ -208,8 +224,10 @@
 				     word — which is a fight the reader has to assemble out of its parts, and which
 				     leaves the grammar to the layout: where a verb sits and what a preposition is
 				     are the catalogue's to decide, not a flex row's.
-				     One face beside it, the winner's, which is a mark on the line and not a fourth
-				     thing to read: the sentence has already named them.
+				     A face at each end of it, the winner's and the account they were against, which
+				     are marks on the line and not two more things to read: the sentence has already
+				     named them both. The far one comes off entirely against a town on its house
+				     team, there being no account on that side to draw.
 
 				     **Four presses on one line, and none of them inside another.** The three names
 				     go somewhere — a page each — and the line itself opens the record; a link
@@ -257,6 +275,20 @@
 						<span class="flex-none self-start text-xs opacity-60"
 							>{timeFormat.format(new Date(entry.at))}</span
 						>
+						{#if beatenFace}
+							<!-- The other side of the same fight, at the other end of the line: two accounts
+							     fought and the row is bracketed by the two of them. Nothing stands here for a
+							     town on its house team — a side that is not anybody's has no portrait, and a
+							     placeholder in the corner would read as an account nobody can open. -->
+							<PlayerAvatar
+								characterId={beatenFace.characterId}
+								color={beatenFace.color}
+								initial={(beatenFace.name ?? '?').slice(0, 1).toUpperCase()}
+								size="w-10"
+								textClasses="text-base"
+								ownColors={false}
+							/>
+						{/if}
 					</div>
 				</div>
 				{#if opened.has(entry.id)}

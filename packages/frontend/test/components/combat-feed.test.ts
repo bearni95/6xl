@@ -65,6 +65,12 @@ const lineOf = (container: HTMLElement, id: string): HTMLElement =>
 const said = (element: Element | null): string =>
 	(element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
+/** The faces on one fight's line, in the order they stand, read as the letters they fall
+ * back to — an account with no portrait picked wears the first letter of its name, which is
+ * what says whose face it is without a manifest having to load. */
+const initials = (container: HTMLElement, id: string): string[] =>
+	[...(lineOf(container, id).parentElement?.querySelectorAll('.avatar span') ?? [])].map(said);
+
 describe('the sheet of other fights', () => {
 	let release: (() => void) | null = null;
 
@@ -182,6 +188,49 @@ describe('the sheet of other fights', () => {
 		// Two links and not three: the winner and the town. Nothing points at the house.
 		const links = [...line.querySelectorAll('a')].map(said);
 		expect(links).toEqual(['Guifré', "L'Hospitalet de Llobregat"]);
+	});
+
+	/**
+	 * A fight is two accounts, so the line is bracketed by the two of them.
+	 *
+	 * The winner heads it and whoever they were against closes it — which is the town's holder
+	 * on a challenge won, and the reporter on one lost, since the announcement is worded from
+	 * the reporter's side either way. The letters are read rather than the portraits, both
+	 * sides here wearing none: what is being pinned is which face stands at which end, and a
+	 * line that drew the same account twice would read as somebody having beaten themselves.
+	 */
+	it('stands a face at each end of the line: the winner and the side they beat', async () => {
+		combatFeedService.receive(fight('faces', 'ES_08101', { rival: RIVAL }));
+		combatFeedService.receive(
+			fight('facesLost', 'ES_08101', {
+				outcome: 'lose',
+				player: { id: 'p5', name: 'Sibil·la', character_id: null, color: 'green', level: 5 },
+				rival: RIVAL
+			})
+		);
+		const { container } = render(CombatFeedModal);
+		await waitFor(() => expect(lineOf(container, 'facesLost')).toBeTruthy());
+
+		// Won: the reporter heads it, the holder closes it.
+		expect(initials(container, 'faces')).toEqual(['G', 'E']);
+		// Lost: the same fight from the other side, so the two ends swap.
+		expect(initials(container, 'facesLost')).toEqual(['E', 'S']);
+	});
+
+	/**
+	 * A town on its seeded house team has nobody on the other side, so nothing is drawn there.
+	 *
+	 * The far end is left empty rather than given a stand-in: a portrait in that corner reads
+	 * as an account, and there is none. It is also the one case the head of the line falls back
+	 * to the reporter with no win to their name, which is exactly where the same face could
+	 * come up twice.
+	 */
+	it('leaves the far end of the line empty against the house team', async () => {
+		combatFeedService.receive(fight('facesHouse', 'ES_08101'));
+		const { container } = render(CombatFeedModal);
+		await waitFor(() => expect(lineOf(container, 'facesHouse')).toBeTruthy());
+
+		expect(initials(container, 'facesHouse')).toEqual(['G']);
 	});
 
 	/** Taking the town is a clause of the same sentence, not a badge beside it. */
