@@ -25,6 +25,7 @@
 	},
 	"profile": {
 		"title": "Perfil",
+		"close": "Tanca el perfil",
 		"access": "Accés",
 		"continueWith": "Continua amb {provider}",
 		"password": {
@@ -131,7 +132,8 @@
 		"label": "Xarxes socials"
 	},
 	"settings": {
-		"title": "Configuració"
+		"title": "Configuració",
+		"close": "Tanca la configuració"
 	},
 	"collection": {
 		"title": "Col·lecció",

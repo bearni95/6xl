@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import AvatarPickerModal from '$components/core/AvatarPickerModal.svelte';
 	import CombatFeedModal from '$components/core/CombatFeedModal.svelte';
+	import ProfileModal from '$components/core/ProfileModal.svelte';
 	import SettingsModal from '$components/core/SettingsModal.svelte';
 	import SignInModal from '$components/core/SignInModal.svelte';
 	import LegalModal from '$components/core/LegalModal.svelte';
@@ -46,6 +47,11 @@
 	<CombatFeedModal />
 {/if}
 <AvatarPickerModal />
+<!-- The account, and what is done about it: two sheets and two doors, the plate at the foot
+	of the map opening the first and the cog beside it the second. Both out here for the reason
+	every other modal is — raised from inside the map's pinned panel they would be trapped in
+	its stacking context. -->
+<ProfileModal />
 <SettingsModal />
 <!-- The player's own cards are not here. They were, for as long as they were a sheet raised
 	from two different routes — the side in the map's corner and the arena's "no active team"

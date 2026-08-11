@@ -25,6 +25,7 @@
 	},
 	"profile": {
 		"title": "Profile",
+		"close": "Close profile",
 		"access": "Access",
 		"continueWith": "Continue with {provider}",
 		"password": {
@@ -136,7 +137,8 @@
 		"label": "Social links"
 	},
 	"settings": {
-		"title": "Settings"
+		"title": "Settings",
+		"close": "Close settings"
 	},
 	"collection": {
 		"title": "Collection",

@@ -1,223 +1,57 @@
 <script lang="ts">
-	import classNames from 'classnames';
 	import { onMount } from 'svelte';
 	import { _, locale } from 'svelte-i18n';
-	import { authService, UsernameRejected } from '$services/auth.service';
+	import { authService } from '$services/auth.service';
 	import { settingsModalOpen } from '$services/settingsModal';
-	import { avatarPickerOpen } from '$services/avatarPicker';
-	import { AuthStatus, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from '$types/profile.type';
-	import { isValidUsername } from '$utils/profile/username';
-	import ProfileCard from '$components/core/ProfileCard.svelte';
+	import { AuthStatus } from '$types/profile.type';
+	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import AccountDataRights from '$components/core/AccountDataRights.svelte';
 	import AnalyticsOptOut from '$components/core/AnalyticsOptOut.svelte';
 
-	// The account's settings: the picture it wears, the name it goes by, the details of
-	// how it signs in, and the way out of it. What the account has *earned* is not here —
-	// the level and the experience bar are the panel row's, which is the thing a player
-	// looks at to read their standing, and printing them again on the sheet they open to
-	// change their name only said the same number twice.
+	// What the game does about the player: the visit counter's switch, the copy of
+	// everything held, the record of what has been accepted, and the way out for good.
 	//
-	// The name is a field and nothing else. It used to be a line of text with an "edit"
-	// button that swapped it for the input, so the one screen that exists to change the
-	// name opened with the name unchangeable; there is no reading of it to protect here,
-	// so the field is what stands where the name goes, always, and the caret is the whole
-	// of the old "choose a username" prompt.
+	// Not who they are — the picture, the name, the address they signed in with and the way
+	// out of the session are the account's own sheet, opened by pressing the plate itself
+	// (see ProfileModal). The two were one sheet for a while, which put "delete your
+	// account" four lines under the field somebody was typing their name into, and made the
+	// plate and the cog beside it two doors onto the same thing. The cog is this and only
+	// this.
+	//
+	// Which also settles what the old sheet had to settle by hand: it opened by itself for
+	// an account with no name yet, and that opening is one question — what do you want to be
+	// called — so the rights had to be held back behind a check on the store that raised it.
+	// Nothing raises this sheet but the press, so there is nothing to hold back.
 
 	const status = authService.status;
 	const profile = authService.profile;
-	const loaded = authService.loaded;
-
-	let signingOut = false;
-	let errorMessage: string | null = null;
-
-	let username = '';
-	let savingName = false;
-	let nameError: string | null = null;
-	// Set when the player closes a modal this component raised by itself, so an
-	// account with no name is asked once and not on every page it lands on.
-	let dismissed = false;
-	// Guards seeding the input so it happens once per opening, not on every tick.
-	let seededFor: string | null = null;
 
 	onMount(() => authService.init());
 
 	$: signedIn = $status === AuthStatus.SignedIn && !!$profile;
-	// Only once the stored row has arrived: until then every account looks nameless,
-	// and acting on that would ask players who have a name to pick another.
-	$: unnamed = signedIn && $loaded && $profile?.username == null;
-
-	// Signing out empties the profile, which closes the modal on its own.
-	$: open = signedIn && ($settingsModalOpen || (unnamed && !dismissed));
-
-	// Prefill from the stored name each time the modal opens.
-	$: if (open && $profile && seededFor !== String($profile.id)) {
-		username = $profile.username ?? '';
-		seededFor = String($profile.id);
-	}
-
-	$: trimmedName = username.trim();
-	// The same rule the RPC decides by, checked here so a name that could only be turned
-	// down is not sent at all — and so the reason is on screen while it is being typed
-	// rather than after a round trip.
-	$: nameInvalid = trimmedName !== '' && !isValidUsername(trimmedName);
-	// Blank is an answer too: emptying the field clears the name and leaves the
-	// account unnamed, which is where every account starts and may stay. So the only
-	// other thing that disables saving is having nothing to change.
-	$: canSaveName = !savingName && !nameInvalid && trimmedName !== ($profile?.username ?? '');
-
-	async function saveName(): Promise<void> {
-		if (!canSaveName) return;
-		nameError = null;
-		savingName = true;
-		try {
-			await authService.updateUsername(trimmedName);
-		} catch (error) {
-			// A name the server turned down is said in the player's language; anything
-			// else really is a failure and is reported as it came.
-			if (error instanceof UsernameRejected) {
-				nameError = $_(`profile.username.${error.reason}`, {
-					values: { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }
-				});
-			} else {
-				nameError = error instanceof Error ? error.message : $_('errors.generic');
-			}
-		} finally {
-			savingName = false;
-		}
-	}
-
-	async function handleSignOut(): Promise<void> {
-		if (signingOut) return;
-		errorMessage = null;
-		signingOut = true;
-		try {
-			await authService.signOut();
-		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : $_('errors.generic');
-		} finally {
-			signingOut = false;
-		}
-	}
-
-	// The avatar hands the screen over to its own modal rather than stacking one
-	// dialog on another.
-	function openAvatarPicker(): void {
-		close();
-		avatarPickerOpen.set(true);
-	}
+	// Signing out empties the profile, which closes the sheet on its own.
+	$: open = signedIn && $settingsModalOpen;
 
 	function close(): void {
-		errorMessage = null;
-		nameError = null;
 		settingsModalOpen.set(false);
-		dismissed = true;
-		seededFor = null;
 	}
 </script>
 
 <!-- Mounted at the layout root so it is a modal like any other, free of the panel's
-	stacking context. -->
-{#if open && $locale && $profile}
-	<div class="modal modal-open" role="dialog" aria-modal="true">
-		<div class="modal-box">
-			<!-- The card brings the picture, the details list and the sign-out button; the
-				name column is this sheet's, and what it puts there is the field. -->
-			<ProfileCard
-				profile={$profile}
-				{signingOut}
-				on:signout={handleSignOut}
-				on:editavatar={openAvatarPicker}
-			>
-				<form slot="name" class="flex flex-col gap-2" on:submit|preventDefault={saveName}>
-					<label class="form-control w-full">
-						<span class="label-text mb-1">{$_('profile.username.label')}</span>
-						<div class="flex gap-2">
-							<!-- Focused only when the sheet came up by itself for a nameless account:
-								then it is here to be asked, so the caret belongs in it. A player who
-								opened their own settings may have come for anything on the sheet. -->
-							<!-- svelte-ignore a11y-autofocus -->
-							<input
-								type="text"
-								bind:value={username}
-								disabled={savingName}
-								maxlength={USERNAME_MAX_LENGTH}
-								autofocus={unnamed}
-								placeholder={$_('profile.username.placeholder')}
-								class="input input-bordered flex-1"
-							/>
-							<button
-								type="submit"
-								disabled={!canSaveName}
-								class={classNames('btn btn-primary', { 'btn-disabled': !canSaveName })}
-							>
-								{#if savingName}
-									<span class="loading loading-spinner loading-sm"></span>
-								{/if}
-								{$_('profile.username.save')}
-							</button>
-						</div>
-					</label>
-
-					{#if nameError || nameInvalid}
-						<div class="alert alert-error">
-							<span>
-								{nameError ??
-									$_('profile.username.invalid', {
-										values: { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }
-									})}
-							</span>
-						</div>
-					{/if}
-				</form>
-			</ProfileCard>
-
-			<!-- The account as everybody else reads it. This sheet is where a player changes
-				who they are; the page behind this link is what that comes out as — the plate
-				and the side they field, at an address anyone can open (see
-				routes/profile/[id]). A link and not a button, because it goes somewhere: it
-				carries an href a player can copy, which is half of what the page is for.
-				In a new tab, so the map, the fight and the radio it is all standing over are
-				left running. `noopener` because a new tab given `window.opener` can reach
-				back into the one that spawned it — the target is our own page today, and a
-				rel that only holds while that stays true is not a rel worth writing. -->
-			<a
-				href="/profile/{$profile.id}"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="btn btn-outline mt-4 w-full"
-			>
-				{$_('profile.public.openMine')}
-			</a>
-
-			<!-- The data rights, under the account they are about: the copy of everything
-				held, the record of what has been accepted, and the way out for good.
-				Only when the player opened this sheet themselves. It comes up by itself
-				for an account with no name yet, and that opening is one question — what
-				do you want to be called — with the caret already in the field; putting
-				"delete your account" under somebody's first minute answers a question
-				nobody asked. -->
-			{#if $settingsModalOpen}
-				<!-- The visit counter's switch, above the rights it is not one of: being
-					counted is not personal data the account holds, so it is not something
-					`export_player_data` answers for or that deleting the account settles.
-					It is here because this is the sheet a player opens to change what the
-					game does about them — and it is *also* on the storage note, which is
-					where somebody with no account has to be able to reach it. -->
-				<AnalyticsOptOut classes="mt-4" linkToDocument />
-				<AccountDataRights classes="mt-4" />
-			{/if}
-
-			{#if errorMessage}
-				<div class="alert alert-error mt-4">
-					<span>{errorMessage}</span>
-				</div>
-			{/if}
+	stacking context, and drawn on the full-view sheet every other one of them is drawn on. -->
+{#if open && $locale}
+	<FullScreenModal title={$_('settings.title')} closeLabel={$_('settings.close')} on:close={close}>
+		<div class="min-h-0 flex-1 overflow-y-auto">
+			<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+				<!-- The visit counter's switch, above the rights it is not one of: being counted
+					is not personal data the account holds, so it is not something
+					`export_player_data` answers for or that deleting the account settles. It is
+					here because this is the sheet a player opens to change what the game does
+					about them — and it is *also* on the storage note, which is where somebody
+					with no account has to be able to reach it. -->
+				<AnalyticsOptOut linkToDocument />
+				<AccountDataRights />
+			</div>
 		</div>
-		<button
-			type="button"
-			class="modal-backdrop"
-			aria-label={$_('common.close')}
-			on:click={close}
-		></button>
-	</div>
+	</FullScreenModal>
 {/if}

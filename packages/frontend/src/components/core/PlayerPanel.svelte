@@ -23,10 +23,12 @@
 	// without the lettering ever having to be read off it.
 
 	// The plate is also the way into the account itself: the picture opens the picker, and
-	// the reading beside it opens the settings sheet — which is the sheet this plate is the
-	// summary of, so the summary is what you press to see the whole of it. It was reachable
-	// only from the burger menu, two presses from a plate that was already showing you the
-	// account you wanted to open.
+	// the reading beside it opens the account's own sheet — which is the sheet this plate is
+	// the summary of, so the summary is what you press to see the whole of it. It was
+	// reachable only from the burger menu, two presses from a plate that was already showing
+	// you the account you wanted to open. What it opens is the account and not the settings:
+	// the cog beside the plate is what carries what the game does *about* the player (see
+	// ProfileModal and SettingsModal), the two having been one sheet with two doors onto it.
 	//
 	// Two buttons side by side rather than one around everything: a button inside a button
 	// is not a thing, and the avatar's own job predates this one. So the plate is a row of
@@ -40,7 +42,7 @@
 	export let profile: PlayerPlate;
 	// Whether the plate is the way into the account it reads. True where it is the
 	// player's own (the map's corner): the picture opens the picker and the reading
-	// opens the settings sheet. False where it is somebody else's — there is nothing to
+	// opens the account's sheet. False where it is somebody else's — there is nothing to
 	// press, so it is not a pair of buttons at all rather than two that refuse. The
 	// events are simply not dispatched either way round.
 	export let interactive: boolean = true;
@@ -56,7 +58,7 @@
 		? { type: 'button', title: $_('profile.avatar.edit'), 'aria-label': $_('profile.avatar.edit') }
 		: {};
 	$: readingAttributes = interactive
-		? { type: 'button', title: $_('settings.title'), 'aria-label': $_('settings.title') }
+		? { type: 'button', title: $_('profile.title'), 'aria-label': $_('profile.title') }
 		: {};
 
 	// Same as the full card: the letter avatar stands on the chosen name alone, so an

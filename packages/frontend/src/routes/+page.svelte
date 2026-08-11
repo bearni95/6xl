@@ -35,6 +35,7 @@
 	import LevelBoosterModal from '$components/core/LevelBoosterModal.svelte';
 	import { openRoster } from '$services/roster';
 	import { collectionModalOpen } from '$services/collectionModal';
+	import { profileModalOpen } from '$services/profileModal';
 	import { settingsModalOpen } from '$services/settingsModal';
 	import { openSignIn } from '$services/signInModal';
 	import { avatarPickerOpen } from '$services/avatarPicker';
@@ -4296,18 +4297,22 @@
 									the bar, which turns its own events off so the map stays pannable through the gaps
 									between its plates. This corner is not that column.
 									The plate is the way into the account as well as the reading of it: the picture
-									opens the picker and the rest of it opens the settings sheet, which is the sheet
-									this plate summarises. -->
+									opens the picker and the rest of it opens the account's own sheet, which is the
+									sheet this plate summarises. -->
 								{#if $profile}
 									<div class="flex items-stretch gap-2">
 										<PlayerPanel
 											profile={$profile}
 											on:editavatar={() => avatarPickerOpen.set(true)}
-											on:open={() => settingsModalOpen.set(true)}
+											on:open={() => profileModalOpen.set(true)}
 											classes="min-w-0 flex-1"
 										/>
 
-										<!-- The settings, as a mark at the end of the row that summarises them. It was a
+										<!-- The settings, as a mark at the end of the row. Not a second door onto the
+											plate's own sheet: the plate opens who the player is — the picture, the name,
+											the address, the way out of the session — and the cog opens what the game
+											does about them, which is the counter's switch, the copy of everything held
+											and the way out for good. It was a
 											row of the menu at the other corner of the map, which is where a player had to
 											go looking for the sheet about the account they were already looking at; the
 											menu keeps what is not the account's — the album, and the documents.
