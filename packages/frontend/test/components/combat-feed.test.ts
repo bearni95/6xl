@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, waitFor } from '@testing-library/svelte';
+import { get } from 'svelte/store';
 import { addMessages, init, waitLocale } from 'svelte-i18n';
 import CombatFeedModal from '$components/core/CombatFeedModal.svelte';
 import { combatFeedService } from '$services/combatFeed.service';
@@ -263,6 +264,27 @@ describe('the sheet of other fights', () => {
 		expect(line[1]).toBe(`${day}/${month}/26 ${String(when.getHours()).padStart(2, '0')}:04`);
 		expect(line[2]).toContain('Ermessenda');
 		expect(line[3]).toBe('E');
+	});
+
+	/**
+	 * Going where a name points shuts the sheet behind it.
+	 *
+	 * The sheet is mounted at the root of the app rather than by the page under it, so nothing
+	 * takes it down on a navigation: a reader who pressed a player's name would arrive at that
+	 * profile with the feed still standing over it, and would have to shut the thing they had
+	 * just used before they could see what it had sent them to.
+	 */
+	it('shuts itself when a name in the line is followed', async () => {
+		combatFeedService.receive(fight('followed', 'ES_08101', { rival: RIVAL }));
+		const { container } = render(CombatFeedModal);
+		await waitFor(() => expect(lineOf(container, 'followed')).toBeTruthy());
+		combatFeedService.openFeed();
+		expect(get(combatFeedService.open)).toBe(true);
+
+		// The town, which is the name most likely to be pressed from a page the map is under.
+		const links = [...lineOf(container, 'followed').querySelectorAll('a')];
+		await fireEvent.click(links[2]);
+		expect(get(combatFeedService.open)).toBe(false);
 	});
 
 	/** Taking the town is a clause of the same sentence, not a badge beside it. */

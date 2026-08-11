@@ -284,14 +284,17 @@
 							     flex item being floored at its own content otherwise.
 							     Its three names are the only things in here that take a pointer. They carry
 							     no underline of their own — a sentence ruled in three places is a sentence
-							     nobody reads — and are told apart by colour alone until one is pointed at. -->
+							     nobody reads — and are told apart by colour alone until one is pointed at.
+							     Following one shuts the sheet: it is mounted at the root of the app and would
+							     otherwise still be standing over whatever it had just sent the reader to. -->
 							<span id="feed-said-{entry.id}" class="text-sm">
 								{#each said as piece}{#if piece.href}<a
 											href={piece.href}
 											class={classNames(
 												'pointer-events-auto font-semibold hover:underline',
 												piece.classes
-											)}>{piece.text}</a
+											)}
+											on:click={close}>{piece.text}</a
 										>{:else}{piece.text}{/if}{/each}
 							</span>
 						</div>
