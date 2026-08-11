@@ -3538,20 +3538,24 @@
 								presses on this strip are both ways to a box, and they are the two ends of the
 								same offer: the radar goes and finds one out on the map, and this one is already
 								the player's and is opened on the spot.
-								It is drawn exactly as the radar is — the same square, the same plate, the same
-								count laid over the mark — because they are the same kind of thing and a strip
-								where each press is its own shape is a strip that has to be read rather than
-								recognised. What it says is how many boxes are standing there, which is the one
-								thing a player wants to know before pressing it, and it greys when there are
+								It is drawn exactly as the radar is — the same square, the same plate — because
+								they are the same kind of thing and a strip where each press is its own shape is
+								a strip that has to be read rather than recognised. It greys when there are
 								none: a box that comes with a level is a box that is not there most of the time,
 								and a live button over an empty offer is a press that answers with a refusal.
 								Nothing at all when signed out — a box belongs to an account, and the corner is
 								simply empty until there is one, exactly as the plate at the foot of the map is.
-								The number goes ON the square and not beside it, for the radar's reason: what is
-								greyed and what is counted are one thing in one place. It is a sibling of the
-								button rather than a child, so the dimming that says the press is off does not
-								take the count down with it, and `pointer-events-none` so the square underneath
-								is the whole of the press. -->
+								What stands over it while there is something to open is a DOT and not a number:
+								the question this corner answers is whether anything is waiting, and how many is
+								something the sheet the press raises says in full. The count went ON the square
+								for the radar's reason — what is greyed and what is counted being one thing in
+								one place — but a quantity nobody acts on differently is a number being read for
+								nothing: one box and four boxes are the same errand. So the mark keeps its own
+								face and the dot rides the square's far top corner in the theme's secondary, the
+								one colour up here that is not the plate. It is a sibling of the button rather
+								than a child, so the dimming that says the press is off does not take it down
+								with it, and `pointer-events-none` so the square underneath is the whole of the
+								press. -->
 							{#if $profile}
 								<div class="relative flex-none">
 									<button
@@ -3564,14 +3568,12 @@
 										disabled={levelBoxesOwed === 0}
 										on:click={() => (levelBoosterOpen = true)}
 									>
-										<img src="/assets/icons/delapouite/box-unpacking.svg" class="size-6" alt="" />
+										<img src="/assets/icons/delapouite/bow-tie-ribbon.svg" class="size-6" alt="" />
 									</button>
 									{#if levelBoxesOwed > 0}
 										<span
-											class="pointer-events-none absolute inset-0 flex items-center justify-center text-sm font-bold text-primary-content drop-shadow"
-										>
-											{levelBoxesOwed}
-										</span>
+											class="pointer-events-none absolute -right-1 -top-1 size-3 rounded-full bg-secondary shadow"
+										></span>
 									{/if}
 								</div>
 							{/if}
