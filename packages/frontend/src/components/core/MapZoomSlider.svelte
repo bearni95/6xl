@@ -4,22 +4,29 @@
 
 	// The map's ladder of levels as one control, and the only thing that moves this map's zoom
 	// at all (every gesture that used to is off — see WorldMap's mount): a notch per level, the
-	// coarsest divisions at the left end and the finest at the right, numbered along the bottom.
+	// coarsest divisions at the left end and the finest at the right.
 	//
-	// A rung is a way the terrain is CUT and not a place on it — the territories, the
-	// províncies, the comarques, the municipis — which is what a level is and what the numbers
-	// count. The places are the column's to name (the dots on the band below drop the path down
-	// to where you are); this says how finely the country under it is divided, which no list of
-	// names says, and says it as a distance so the reader can see at a glance how far in they
-	// are and drag either way.
+	// A rung is a way the terrain is CUT and not a place on it — the territoris, the províncies,
+	// the comarques, the municipis — which is what a level is. The places are the column's to
+	// name (the dots on the band below drop the path down to where you are); this says how
+	// finely the country under it is divided, which no list of names says, and says it as a
+	// distance, so how far in the reader has come is read off the thumb without anything being
+	// lettered at all.
+	//
+	// Nothing is drawn but the strip. Each rung was numbered under its notch for a while, and a
+	// column of figures under a control is a second thing to read where the position had already
+	// said it: what a reader wants off this is how deep they are and which way to drag, and both
+	// of those are the thumb. What each rung is is still SAID — to a screen reader, which has no
+	// thumb to look at (see `steps`) — and the level itself is lettered all over the map it
+	// draws: the divisions on the terrain, the places in the column, the badge on the band.
 	//
 	// It adjusts the zoom and nothing else. Where a crumb pressed in that column OPENS the place
 	// it names, a rung here only takes the map to the zoom that level is read at, leaving the
 	// centre where it is (see +page.svelte's zoomLadder and zoomToLadderStep).
 
-	// One rung per level, coarsest first: the number printed under the notch, and what that
-	// level is, said to a screen reader rather than drawn (the names belong to the column).
-	export let steps: { number: number; title: string }[] = [];
+	// One rung per level, coarsest first, each said in full: nothing on screen, and what the
+	// thumb is standing on wherever the strip is read rather than looked at.
+	export let steps: string[] = [];
 	// Which rung the map is standing on — the caller's to say, since it is a fact about where
 	// the map is looking and not about this control.
 	export let value: number = 0;
@@ -50,31 +57,14 @@
 	}
 </script>
 
-<div class={classNames('flex flex-col gap-1', classes)}>
-	<input
-		type="range"
-		class="range range-xs range-primary w-full"
-		min="0"
-		{max}
-		step="1"
-		aria-label={label}
-		aria-valuetext={steps[position]?.title ?? ''}
-		bind:value={position}
-		on:change={pick}
-	/>
-
-	<!-- The numbers, one under each notch. `justify-between` rather than a measured position
-		per number: the ends are the ends, and the rungs between them are evenly spaced because
-		the slider's own steps are. The rung the map is standing on is the one in full ink, so
-		the reading survives the thumb being mid-animation. -->
-	<div class="flex justify-between px-1 text-[10px] leading-none tabular-nums">
-		{#each steps as step, index}
-			<span
-				title={step.title}
-				class={classNames(index === clamped ? 'font-bold opacity-100' : 'opacity-60')}
-			>
-				{step.number}
-			</span>
-		{/each}
-	</div>
-</div>
+<input
+	type="range"
+	class={classNames('range range-xs range-primary w-full', classes)}
+	min="0"
+	{max}
+	step="1"
+	aria-label={label}
+	aria-valuetext={steps[position] ?? ''}
+	bind:value={position}
+	on:change={pick}
+/>

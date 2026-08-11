@@ -3075,7 +3075,7 @@
 	}
 
 	// The levels of the map as a stepped control, on the row over the band (see MapZoomSlider):
-	// one rung per tier of divisions the terrain can be drawn in, coarsest first, numbered.
+	// one rung per tier of divisions the terrain can be drawn in, coarsest first.
 	//
 	// **A rung is a tier of divisions, and is therefore the CONTAINER of that tier and not one
 	// of its parts.** Which divisions the map draws is decided by the region the view is inside
@@ -3083,8 +3083,8 @@
 	// is the same statement about the polygons' wash) — so the zoom that draws the comarques is
 	// the zoom a *province* stands whole at, not the zoom a comarca does. The first cut of this
 	// strip was a rung per place on the path down from the top view, which is off by one against
-	// its own numbers everywhere but the first rung: the comarca's rung drew municipalities, and
-	// its last two rungs — the comarca's and the town's — drew municipalities both, since a town
+	// what each rung stands for everywhere but the first: the comarca's rung drew municipalities,
+	// and its last two rungs — the comarca's and the town's — drew municipalities both, since a town
 	// is a leaf and has no parts of its own to fall to. Hence: the containers, one per tier
 	// under them, and the town at the foot of the path is not a rung at all.
 	//
@@ -3111,13 +3111,13 @@
 		}))
 	].filter((step) => step.bounds);
 
-	// Numbered from the coarsest down, and each number said in full to a screen reader: a figure
-	// on its own is a position on a strip, and what it stands for is the divisions the terrain
-	// is drawn in when the thumb is there.
-	$: zoomLadderSteps = zoomLadder.map((step, index) => ({
-		number: index + 1,
-		title: $_('map.zoom.step', { values: { number: index + 1, divisions: step.divisions } })
-	}));
+	// Each rung said in full, for the reader who has no thumb to look at: the strip draws no
+	// figures and no words (see MapZoomSlider), so this is the whole of what it can be told —
+	// which number of how many, and the divisions the terrain is drawn in when the thumb is
+	// there.
+	$: zoomLadderSteps = zoomLadder.map((step, index) =>
+		$_('map.zoom.step', { values: { number: index + 1, divisions: step.divisions } })
+	);
 
 	// Which rung the map is standing on: the tier it is drawing right now, which is the very
 	// number WorldMap hands back as it re-culls its pins (see `activeLevel` and `effectiveDepth`
@@ -3681,9 +3681,9 @@
 								against the right, over the play/pause square standing at that end of the band
 								below), and each is as wide as what is on it, so the terrain shows through
 								whatever room neither of them needs.
-								`items-end` so both stand on the band under them however tall either grows: the
-								levels are a strip with a line of numbers under it and the title is one line, and
-								a row of plates along an edge is read off that edge. -->
+								`items-end` so both stand on the band under them whatever either is worth in
+								height — a row of plates along an edge is read off that edge, not off their
+								middles. -->
 							<div class="flex w-full items-end gap-2">
 								<!-- The levels of the map — the terrain cut into territoris, províncies,
 									comarques, municipis — as one stepped strip (see MapZoomSlider, and
@@ -3697,14 +3697,17 @@
 									standing at a rung the map is not actually drawing.
 									Rounded where it comes away from the terrain and square against the two edges
 									it is held to (`rounded-tr-lg`), the mirror of what the title's plate does at
-									the far end.
+									the far end. The strip is the whole of what stands on it — the numbers that
+									were lettered under the notches are gone (see MapZoomSlider) — so the plate
+									is a strip's height and no more, and `items-center` inside it is what keeps
+									the range on the band's own line.
 									Nothing at all while the ladder is one rung or none — the polygons have not
 									landed, so there are no levels to offer and nothing to measure them with.
 									The row closes up around the title, exactly as the band below closes up
 									around the badge. -->
 								{#if zoomLadderSteps.length > 1}
 									<div
-										class="pointer-events-auto w-44 flex-none rounded-tr-lg bg-base-100/80 px-3 py-2 text-white shadow-xl"
+										class="pointer-events-auto flex w-44 flex-none items-center rounded-tr-lg bg-base-100/80 px-3 py-2 text-white shadow-xl"
 									>
 										<MapZoomSlider
 											steps={zoomLadderSteps}
