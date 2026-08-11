@@ -101,7 +101,6 @@
 		type RegionType
 	} from '$utils/geo/region-tree';
 	import { buildRegionSieges, type RegionSiege } from '$utils/geo/region-siege';
-	import { groupShapes, type Grouping, type ShapeRun } from '$utils/geo/group-outline';
 	import { boundsForFeatures, boundsByFeatureId, type LatLngBounds } from '$utils/geo/bounds';
 	import { nearestUnclaimedBox } from '$utils/geo/nearest-box';
 	import {
@@ -119,9 +118,8 @@
 	import type {
 		MapBoosterBox,
 		MapChallenge,
-		MapGroupMark,
+		MapGlyphMark,
 		MapMarker,
-		MapOutline,
 		MapOverlay,
 		TownPlateCard
 	} from '$types/map.type';
@@ -464,17 +462,9 @@
 		Municipality: 3
 	};
 
-	// The tier a rank names, which is the same list read the other way round — for the
-	// one question that arrives as a rank and has to be answered about a tier (which
-	// shows the level on screen is grouped by, see `showGroups`).
-	const tierByRank = Object.fromEntries(
-		Object.entries(tierRank).map(([tier, rank]) => [rank, tier as RegionType])
-	) as Record<number, RegionType>;
-
 	// How heavily each tier's border is drawn: the coarser the division, the thicker the
 	// line, so the hierarchy is read off the map without reading a single name. Written
-	// here rather than beside each overlay because the grouping line is drawn from it too
-	// — it runs along these very borders and has to come out over them (see `showGroups`).
+	// here rather than beside each overlay so the four weights are read as one scale.
 	const tierWeight: Record<RegionType, number> = {
 		Territory: 3,
 		Province: 2,
@@ -514,12 +504,6 @@
 
 	$: regionColors = byRegion(regionNodes, (node) => node.color);
 
-	// The same walk for the show each region flies, as its TMDB id — which is what the
-	// grouping line is drawn from (see `showGroups`). The id and not the show: two
-	// regions fly the same show when they fly the same id, and a name is translated
-	// data a TMDB refresh can move under it.
-	$: regionShows = byRegion(regionNodes, (node) => node.show?.id);
-
 	// How a feature of `tier` names itself: a municipality by its feature id, any
 	// grouping by its NAME (see ByRegion). The one place that spelling is written,
 	// so the lookups and the selection test below ask the same question of a shape.
@@ -531,8 +515,7 @@
 
 	// What a polygon of `tier` carries, or null when its region carries none of it (its
 	// show's roster hasn't landed, or the town has no show at all) — such a shape keeps
-	// its white outline and simply goes unwashed, leaving the satellite bare there, and
-	// is left out of the grouping.
+	// its white outline and simply goes unwashed, leaving the satellite bare there.
 	//
 	// A province polygon also answers from its territory: the tree drops the province
 	// tier where a territory holds a single one (Illes Balears, Catalunya Nord, Andorra,
@@ -735,161 +718,49 @@
 	] satisfies MapOverlay[];
 
 	// --- The shows drawn as territory --------------------------------------------
-	// The map says which show a region flies twice over — in the lettering on its pin and
-	// in the list beside the terrain — and both say it one region at a time. What neither
-	// says is the shape of a show: which stretch of the country is flying it, and whether
-	// that stretch is one piece or a scattering. So the level on screen is grouped: every
-	// run of touching shapes flying the same show is drawn round in one pink line, and the
-	// white borders of the level itself go on being drawn inside it.
+	// The map says which show a region flies in the lettering beside the terrain, one region
+	// at a time. What it says on the terrain itself is a disc: the show's own glyph, standing
+	// on each place of the level on screen — the towns of a comarca at the bottom, the
+	// comarques of a province a step up, the six territories at the top. So it is the same
+	// statement at every zoom about a different division, and reading it is walking the map.
 	//
-	// It is worked out on whatever tier the map is imaging, off that tier's own shapes and
-	// that tier's own show — the towns of a comarca at the bottom, the comarques of a
-	// province a step up, the six territories at the top. So it is the same statement at
-	// every zoom about a different division, and reading it is walking the map: a show
-	// holding one comarca whole is one shape there and part of a larger one a tier up.
-	// Nothing here decides what a region flies — that is the plurality the tree already
-	// worked out (see buildRegionTree) — and nothing here knows any geometry either (see
-	// `groupOutlines`).
-
-	// The pink: the theme's own secondary, asked for by the variable Tailwind emits for it
-	// so the map tracks the palette rather than pinning a copy of it, with the literal
-	// behind it for the same reason every colour painted outside the class system carries
-	// one (see REGION_COLOR_CSS) — an unresolvable var() computes to `none` and would
-	// silently erase the line.
-	const GROUP_LINE_COLOR = 'var(--color-secondary, oklch(61.9% 0.249 350.5))';
-
-	// Each tier's polygons, by the url they are served at — the same files WorldMap draws
-	// from, fetched a second time here because the grouping is worked out from the shapes
-	// and the map is handed the answer rather than the question. The browser has them in
-	// cache by then (the map asked first, at mount), so the cost is the parse.
+	// One per place, and never one per stretch of country: the level used to be GROUPED —
+	// every run of touching shapes flying the same show ringed in one pink line with a single
+	// disc inside it — which drew the shape of a show rather than the map, and answered the
+	// question "who else flies this?" nobody standing on a town was asking. The line is gone
+	// with it, so nothing is drawn over the white borders of the level any more.
 	//
-	// Loaded on demand: a reader who never leaves the top view never fetches the towns.
-	// Reassigned rather than mutated, since a Map written into in place moves nothing here.
-	let tierGeometry = new Map<string, GeoJSON.FeatureCollection>();
-
-	// The municipality layer is already on this page for the region tree and the seeds, so
-	// it is put in the cache rather than asked for again.
-	$: if (municipalities && !tierGeometry.has(municipalityLayer)) {
-		tierGeometry = new Map(tierGeometry).set(municipalityLayer, municipalities);
-	}
-
-	// Fetch the imaged tier's shapes the first time the zoom reaches that tier. A failure
-	// leaves the tier ungrouped — the map keeps its borders and its wash, and simply says
-	// nothing about which shows the level divides between.
-	async function loadTierGeometry(rank: number): Promise<void> {
-		const url = tierLayerUrls.get(rank);
-		if (!url || tierGeometry.has(url)) return;
-		try {
-			const collection = (await fetch(url).then((response) =>
-				response.json()
-			)) as GeoJSON.FeatureCollection;
-			tierGeometry = new Map(tierGeometry).set(url, collection);
-		} catch {
-			// Nothing to put back: the tier is simply left ungrouped.
-		}
-	}
-
-	$: void loadTierGeometry(hiddenRank);
-
-	// The grouping line for the tier on screen: the outline of every run of neighbouring
-	// shapes that fly the same show.
-	function showGroups(
-		rank: number,
-		geometry: ReadonlyMap<string, GeoJSON.FeatureCollection>,
-		shows: ByRegion<number>
-	): Grouping {
-		const url = tierLayerUrls.get(rank);
-		const collection = url ? geometry.get(url) : undefined;
-		if (!collection) return NO_GROUPING;
-		const tier = tierByRank[rank];
-		return groupShapes(collection, (feature) => {
-			const show = featureValue(tier, feature, shows);
-			return show == null ? null : String(show);
-		});
-	}
-
-	// A tier with nothing to say about its shows: no line and no discs. Named because it is
-	// three of the answers above and a fresh empty pair each time would redraw both layers
-	// for nothing every time anything on this page moved.
-	const NO_GROUPING: Grouping = { chains: [], runs: [] };
-
-	$: grouping = showGroups(hiddenRank, tierGeometry, regionShows);
-
-	// Drawn a little heavier than the borders it runs along, at that tier's own weight —
-	// where a group ends is a border of the level too, and the pink has to read as the
-	// coarser of the two statements being made along the same line.
-	$: showOutline = {
-		chains: grouping.chains,
-		style: {
-			color: GROUP_LINE_COLOR,
-			weight: tierWeight[tierByRank[hiddenRank]] + 1.5,
-			opacity: 0.95,
-			lineJoin: 'round' as const,
-			lineCap: 'round' as const
-		}
-	} satisfies MapOutline;
-
-	// One disc per group, carrying that show's own mark — so a stretch of country ringed in
-	// pink says WHICH show it is flying, where the line alone only says that the shapes
-	// inside it agree. It stands on the group and not on any one of its shapes: the point is
-	// taken from the union the way a region's pin is taken from its own (see interiorPoint),
-	// so a show holding a crescent of towns is marked inside that crescent rather than in the
-	// bay it curves around.
+	// Nothing here decides what a region flies — that is the plurality the tree already worked
+	// out (see buildRegionTree) — and nothing here works out any geometry either: a mark stands
+	// on the very point that place's pin does, off the pin itself, so the disc and the mark the
+	// column names it with can never drift apart.
 	//
-	// A group whose show has no glyph picked gets no disc, which is the same answer every
+	// A place whose show has no glyph picked gets no disc, which is the same answer every
 	// surface in this game gives (see `forShow`): there is deliberately no placeholder mark,
 	// because a stand-in glyph reads as a fact about the show while its absence reads as
-	// nothing at all. The line round that group is drawn either way — what it says is true
-	// without a name on it.
+	// nothing at all.
 	//
-	// How much land the group covers rides along as its weight, which is what the map thins
-	// the crop by where two discs would stand on one another: the mark that survives a crowd
-	// is the one about the bigger piece of country.
-	function buildGroupMarks(
-		rank: number,
-		geometry: ReadonlyMap<string, GeoJSON.FeatureCollection>,
-		runs: readonly ShapeRun[],
-		glyphs: ReadonlyMap<number, string>
-	): MapGroupMark[] {
-		const url = tierLayerUrls.get(rank);
-		const collection = url ? geometry.get(url) : undefined;
-		if (!collection || !runs.length) return [];
-
-		// One pass over the tier for both readings, exactly as the region geometry takes them
-		// (see buildRegionGeometry): a group's centroid is the area-weighted mean of its
-		// shapes', and its shapes are what that centroid is then checked against.
-		const boxes = boundsByFeatureId(collection);
-		const centroids = centroidsByFeatureId(collection);
-
-		const marks: MapGroupMark[] = [];
-		runs.forEach((run, index) => {
-			const iconSvg = forShow(glyphs, Number(run.group));
-			if (!iconSvg) return;
-
-			const shapes: RegionShape[] = [];
-			const parts: Centroid[] = [];
-			for (const member of run.members) {
-				const feature = collection.features[member];
-				const id = String(feature.properties?.id ?? '');
-				const box = boxes.get(id);
-				const centroid = centroids.get(id);
-				if (box && feature.geometry) shapes.push({ geometry: feature.geometry, box });
-				if (centroid) parts.push(centroid);
-			}
-
-			const centroid = combineCentroids(parts);
-			const point = interiorPoint(shapes, centroid);
-			// A group with no land to stand on — a tier whose shapes never loaded — is left
-			// unmarked rather than marked at a guess.
-			if (!point) return;
-			// The run's place in the list and not its show alone: one show is several groups,
-			// and two of them sharing an id would be one mark in the map's book.
-			marks.push({ id: `${run.group}:${index}`, position: point, iconSvg, weight: centroid?.area ?? 0 });
-		});
+	// How much country the place covers rides along as its weight — the span of its bounding
+	// box, which is what the map thins the crop by where two discs would stand on one another:
+	// the mark that survives a crowd is the one about the bigger place.
+	function buildShowMarks(pins: readonly MapMarker[]): MapGlyphMark[] {
+		const marks: MapGlyphMark[] = [];
+		for (const pin of pins) {
+			if (!pin.iconSvg) continue;
+			const box = pin.bounds;
+			marks.push({
+				id: pin.id,
+				position: pin.position,
+				iconSvg: pin.iconSvg,
+				weight: box ? (box[1][0] - box[0][0]) * (box[1][1] - box[0][1]) : 0
+			});
+		}
 		return marks;
 	}
 
-	$: groupMarks = buildGroupMarks(hiddenRank, tierGeometry, grouping.runs, $showGlyphs);
+	// The level the map has settled on, which is the one the pins are drawn from (see
+	// markerLevels): a disc per place of whatever division is on screen.
+	$: showMarks = buildShowMarks(markerLevels[effectiveDepth] ?? []);
 
 	// --- Which show a town flies -------------------------------------------------
 	// A town starts on the show its own geometry seeds it with, but once a player takes it
@@ -2025,10 +1896,8 @@
 	// (rank 0), which is why it is not listed among the tiers that can be.
 	const territoryLines = '/data/geo/territoris.json';
 
-	// The town shapes, named because three things want the same file: the layer they are
-	// drawn in, the collection this page fetches at mount for the tree and the seeds, and
-	// the grouping's cache, which is handed that same collection rather than fetching it
-	// twice (see tierGeometry).
+	// The town shapes, named because two things want the same file: the layer they are
+	// drawn in, and the collection this page fetches at mount for the tree and the seeds.
 	const municipalityLayer = '/data/geo/municipis.json';
 
 	// The line overlays that subdivide a region, each with its own tier rank. The
@@ -3522,8 +3391,7 @@
 							zoom={8}
 							minZoom={7}
 							{overlays}
-							outline={showOutline}
-							{groupMarks}
+							glyphMarks={showMarks}
 							{markerLevels}
 							{hiddenLineUrls}
 							{pulse}

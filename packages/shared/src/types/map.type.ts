@@ -35,29 +35,7 @@ export interface MapOverlay {
 }
 
 /**
- * A line drawn over the polygons that answers to no single one of them: the edge of
- * something the shapes on screen add up to, worked out by the caller and handed over
- * as plain geometry.
- *
- * Its chains are drawn as ONE path rather than one per chain, which is what makes it
- * affordable: the outline of the show groups at the town tier is a couple of thousand
- * chains, and a Leaflet polyline given a list of lists draws the lot as a single SVG
- * path with a subpath each. Nothing is filled from them and nothing is clicked on them
- * — a chain is a run of edges and need not close.
- *
- * Read live, unlike {@link MapLine}: handing over a fresh one redraws it, so the map
- * can be regrouped as the tier on screen or the data under it changes.
- */
-export interface MapOutline {
-	/** Each run of points as `[lat, lng]`, a straight leg between each pair. */
-	chains: [number, number][][];
-	/** Leaflet path options for the stroke. */
-	style: PathOptions;
-}
-
-/**
- * A disc stood on a point, carrying one glyph: the mark for something the shapes on
- * screen add up to, as {@link MapOutline} is the line round it.
+ * A disc stood on a point, carrying one glyph: the mark for one place on the map.
  *
  * It is a caption and not a control — it catches no pointer, so the land under it is
  * pressed exactly as if it were not there. Which is what lets one be dropped on a
@@ -67,7 +45,7 @@ export interface MapOutline {
  * first: a mark about a bigger thing is the one worth the room. So `weight` is
  * whatever the caller measures its things in — nothing here reads it but the sort.
  */
-export interface MapGroupMark {
+export interface MapGlyphMark {
 	/** Stable id, so a rebuild can tell one mark from another. */
 	id: string;
 	/** Where the disc sits, as [lat, lng] — its centre, not a corner. */

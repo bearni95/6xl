@@ -12,10 +12,9 @@
 	import type {
 		MapBoosterBox,
 		MapCircle,
-		MapGroupMark,
+		MapGlyphMark,
 		MapLine,
 		MapMarker,
-		MapOutline,
 		MapOverlay
 	} from '$types/map.type';
 
@@ -25,8 +24,7 @@
 		minZoom = 2,
 		maxZoom = 19,
 		overlays = [],
-		outline = null,
-		groupMarks = [],
+		glyphMarks = [],
 		circles = [],
 		lines = [],
 		markers = [],
@@ -65,29 +63,15 @@
 		 */
 		overlays?: MapOverlay[];
 		/**
-		 * One line drawn over every overlay, in a pane of its own between the polygons
-		 * and the marks: the edge of something the shapes add up to, which no shape of
-		 * theirs is (see {@link MapOutline}).
-		 *
-		 * Above the polygons because that is where it is legible — where it runs along a
-		 * border it is covering it, and covering it is the point, the border being one of
-		 * the edges the outline is made of. Under the marks and under the spotlight's
-		 * cover, because it is terrain and not reading matter. It catches no pointer, so
-		 * the land under it is clicked exactly as if it were not there.
-		 *
-		 * Null draws nothing, which is also what an outline with no chains in it does.
-		 */
-		outline?: MapOutline | null;
-		/**
-		 * The discs standing on whatever the outline is drawn round — one glyph each, on a
-		 * point of the caller's choosing (see {@link MapGroupMark}).
+		 * The discs standing on the terrain — one glyph each, on a point of the caller's
+		 * choosing (see {@link MapGlyphMark}).
 		 *
 		 * The map does two things with them the caller cannot: it drops the ones off screen,
 		 * and where two would stand on the same spot it keeps the heavier and drops the other
 		 * — both of which are questions about the view and are re-asked every time the view
 		 * settles. Everything else about a mark is the caller's.
 		 */
-		groupMarks?: MapGroupMark[];
+		glyphMarks?: MapGlyphMark[];
 		/** Standalone circular regions drawn above the overlays. */
 		circles?: MapCircle[];
 		/** Standalone straight lines drawn above the overlays. */
@@ -306,17 +290,12 @@
 	// 580, the boxes at 590, the pins at 600. Covering the lot is what "one place, on nothing"
 	// means; the pin of the place itself survives because it is inside the hole (see createPane).
 	const MASK_PANE = 'spotlightMaskPane';
-	// The pane the grouping line is drawn in (see `outline`), between the polygons in
-	// Leaflet's own overlay pane at 400 and the leader lines at 580.
-	const OUTLINE_PANE = 'groupOutlinePane';
-	// The one path that line is, so a fresh outline can take the previous one off the map.
-	// A plain variable: nothing is drawn from it — it IS what was drawn.
-	let outlineLayer: L.Polyline | null = null;
-	// The pane the discs standing on those groups are drawn in (see `groupMarks`), and the
-	// layer holding the crop of them on screen right now. Under the leader lines at 580,
-	// since a disc is a caption on the terrain and not a mark a reader acts on.
-	const GROUP_PANE = 'groupMarkPane';
-	let groupLayer: L.LayerGroup | null = null;
+	// The pane the glyph discs stand in (see `glyphMarks`), and the layer holding the crop
+	// of them on screen right now. Over the polygons in Leaflet's own overlay pane at 400
+	// and under the leader lines at 580, since a disc is a caption on the terrain and not a
+	// mark a reader acts on.
+	const GLYPH_PANE = 'glyphMarkPane';
+	let glyphLayer: L.LayerGroup | null = null;
 	// The BoosterBox components standing in that layer, tracked for the same reason the
 	// pins' mounts are: clearing the layer only detaches their DOM, and a box left
 	// mounted holds its poster and its logo for a town no longer on screen.
@@ -593,50 +572,21 @@
 		});
 	});
 
-	$effect(() => {
-		// Draw the grouping line, or take it off. Gated on `ready` like the framings above,
-		// so an outline handed over before the map mounts is still drawn once there is a
-		// pane to draw it in.
-		//
-		// Redrawn whole rather than edited: the chains are a fresh answer to a question about
-		// every shape on the tier (which of them group together, and where that group ends),
-		// so there is no such thing as moving part of one. One polyline for the lot — a list
-		// of lists is a single path with a subpath each, which is what keeps a couple of
-		// thousand chains to one element on the map.
-		const wanted = outline;
-		if (!ready || !mapInstance || !Leaf) return;
-
-		outlineLayer?.remove();
-		outlineLayer = null;
-		if (!wanted?.chains.length) return;
-
-		outlineLayer = Leaf.polyline(wanted.chains, {
-			...wanted.style,
-			pane: OUTLINE_PANE,
-			// Nothing is inside a chain — it is a run of edges and may not even close — and
-			// a path Leaflet fills would paint the shape a browser closes it into.
-			fill: false,
-			interactive: false
-		}).addTo(mapInstance);
-	});
-
-	// How wide a group disc is (`size-10`), which is the one place that class's size has to be
+	// How wide a glyph disc is (`size-10`), which is the one place that class's size has to be
 	// reckoned with rather than applied: the map decides which discs stand by measuring them
 	// against each other, and a measurement cannot be read out of a class.
-	const GROUP_DISC_EXTENT = 40;
+	const GLYPH_DISC_EXTENT = 40;
 
 	// The disc itself: the glyph on the chrome every plate on this map is drawn on — base-100
-	// at four fifths, so the terrain reads faintly through it — inside a ring in the colour of
-	// the line round the group it belongs to, which is what says the two are one statement.
-	// The ring is the group's colour and the glyph is not: the mark is drawn in the theme's
-	// primary, so what is being said (this show) reads in the game's own ink and the ring goes
-	// on saying which line it belongs to.
+	// at four fifths, so the terrain reads faintly through it — inside a ring that lifts it off
+	// the satellite. The glyph is drawn in the theme's primary, so what is being said (this
+	// show) reads in the game's own ink.
 	//
 	// The glyph is inlined rather than pointed at by an <img> so it paints in the disc's own
 	// ink (see inlineIconMarkup), and sized through a CSS rule, which outranks the svg's own
 	// 1em width and height. Decorative: what the mark says is said in full in the column
 	// beside the map, and a glyph read aloud off a map is a name nobody asked for.
-	function groupDiscElement(mark: MapGroupMark): HTMLElement {
+	function glyphDiscElement(mark: MapGlyphMark): HTMLElement {
 		const disc = document.createElement('div');
 		disc.className =
 			'flex size-10 items-center justify-center rounded-full shadow-md ' +
@@ -646,29 +596,29 @@
 		return disc;
 	}
 
-	// (Re)build the group discs for the current view: clear the crop that was standing, keep
+	// (Re)build the glyph discs for the current view: clear the crop that was standing, keep
 	// the ones inside the viewport, and drop the ones that would stand on a disc already
 	// placed. Runs whenever the marks change and whenever the map settles, so both answers
 	// track what is on screen.
 	//
-	// Heaviest first, so what survives a crowd is the mark about the biggest thing — a show
-	// holding a whole comarca keeps its disc where a single town of it beside the border
-	// loses one. The test is against the discs already placed and in container pixels,
-	// because standing on one another is a fact about the view and not about the ground:
-	// two points a kilometre apart are one mark at the top view and two a few zooms in.
+	// Heaviest first, so what survives a crowd is the mark about the biggest thing — a whole
+	// comarca keeps its disc where a village on its border loses one. The test is against the
+	// discs already placed and in container pixels, because standing on one another is a fact
+	// about the view and not about the ground: two points a kilometre apart are one mark at
+	// the top view and two a few zooms in.
 	//
 	// O(kept²), and kept is bounded by the canvas — a screen only holds so many discs that
 	// are not on top of each other, which is the very thing being enforced.
-	function rebuildGroupMarks() {
+	function rebuildGlyphMarks() {
 		if (!mapInstance || !Leaf) return;
-		if (!groupLayer) groupLayer = Leaf.layerGroup().addTo(mapInstance);
-		groupLayer.clearLayers();
+		if (!glyphLayer) glyphLayer = Leaf.layerGroup().addTo(mapInstance);
+		glyphLayer.clearLayers();
 
 		const bounds = mapInstance.getBounds();
-		const room = GROUP_DISC_EXTENT + PIN_GAP;
+		const room = GLYPH_DISC_EXTENT + PIN_GAP;
 		const placed: L.Point[] = [];
 
-		for (const mark of [...groupMarks].sort((a, b) => b.weight - a.weight)) {
+		for (const mark of [...glyphMarks].sort((a, b) => b.weight - a.weight)) {
 			if (!bounds.contains(mark.position)) continue;
 			const at = mapInstance.latLngToContainerPoint(mark.position);
 			if (placed.some((taken) => Math.abs(taken.x - at.x) < room && Math.abs(taken.y - at.y) < room))
@@ -679,13 +629,13 @@
 			// off it — this is a mark ON a place, not a pin pointing at one, and it is dealt
 			// no room by the placement pass for the same reason.
 			const icon = Leaf.divIcon({
-				html: groupDiscElement(mark),
+				html: glyphDiscElement(mark),
 				className: '',
-				iconSize: [GROUP_DISC_EXTENT, GROUP_DISC_EXTENT],
-				iconAnchor: [GROUP_DISC_EXTENT / 2, GROUP_DISC_EXTENT / 2]
+				iconSize: [GLYPH_DISC_EXTENT, GLYPH_DISC_EXTENT],
+				iconAnchor: [GLYPH_DISC_EXTENT / 2, GLYPH_DISC_EXTENT / 2]
 			});
-			Leaf.marker(mark.position, { icon, pane: GROUP_PANE, interactive: false }).addTo(
-				groupLayer
+			Leaf.marker(mark.position, { icon, pane: GLYPH_PANE, interactive: false }).addTo(
+				glyphLayer
 			);
 		}
 	}
@@ -694,8 +644,8 @@
 		// Rebuild the discs whenever the parent swaps them — the zoom reaching another tier,
 		// a town changing hands, the glyphs landing. Gated on `ready` like every other layer,
 		// so a set handed over before the map mounts is still drawn once there is one.
-		void groupMarks;
-		if (ready) rebuildGroupMarks();
+		void glyphMarks;
+		if (ready) rebuildGlyphMarks();
 	});
 
 	// How long the mask takes to arrive and to go, matched to the 250ms every polygon repaints
@@ -2727,21 +2677,13 @@
 		// needs redrawing only where the marks themselves are dealt again.
 		mapInstance.createPane(LEADER_PANE).style.zIndex = '580';
 
-		// The pane the grouping line hangs in (see OUTLINE_PANE and the `outline` prop),
-		// made before anything is added to it. At 450 it is clear of the polygons at 400
-		// and under every mark on the map; it catches nothing, so a press meant for the
-		// town under it reaches the town.
-		const outlinePane = mapInstance.createPane(OUTLINE_PANE);
-		outlinePane.style.zIndex = '450';
-		outlinePane.style.pointerEvents = 'none';
-
-		// The pane the group discs stand in (see GROUP_PANE and the `groupMarks` prop), over
-		// the line they belong to at 450 and under every mark a reader acts on. It catches
-		// nothing either: a disc says what a stretch of country is flying, and the country
-		// under it goes on being pressed.
-		const groupPane = mapInstance.createPane(GROUP_PANE);
-		groupPane.style.zIndex = '460';
-		groupPane.style.pointerEvents = 'none';
+		// The pane the glyph discs stand in (see GLYPH_PANE and the `glyphMarks` prop), made
+		// before anything is added to it. At 460 it is clear of the polygons at 400 and under
+		// every mark a reader acts on. It catches nothing: a disc says what a place is flying,
+		// and the land under it goes on being pressed.
+		const glyphPane = mapInstance.createPane(GLYPH_PANE);
+		glyphPane.style.zIndex = '460';
+		glyphPane.style.pointerEvents = 'none';
 
 		// The pane the spotlight's cover is drawn in (see MASK_PANE), made before anything is
 		// added to it and made hidden: the mask is faded in by taking that class off, so a
@@ -2804,8 +2746,8 @@
 			rebuildBoxes();
 			// The discs are re-culled and re-thinned here too, both of their answers being
 			// about the view: which are on screen, and which of them are standing on one
-			// another at this zoom (see rebuildGroupMarks).
-			rebuildGroupMarks();
+			// another at this zoom (see rebuildGlyphMarks).
+			rebuildGlyphMarks();
 		});
 
 		// Keep Leaflet's cached viewport in sync with its container: when the parent
@@ -2818,7 +2760,7 @@
 			syncView();
 			rebuildMarkers();
 			rebuildBoxes();
-			rebuildGroupMarks();
+			rebuildGlyphMarks();
 		});
 		resizeObserver.observe(mapContainer);
 
