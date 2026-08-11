@@ -22,6 +22,12 @@
 	//
 	// It holds no list of its own: what the game gets asked is the page's to say, and this is the
 	// shape it is asked in. Nothing at all if it is handed nothing.
+	//
+	// Under the lines, and ruled off from them, whatever the page wants the column to close with
+	// (`foot`). A slot rather than another kind of item, because what stands there is not a line
+	// with a mark and a name that raises a sheet — today it is the row of marks saying where the
+	// author is, which leaves the game entirely, and a menu that knew that about it would be a
+	// menu with a list of its own after all.
 
 	/** The lines, in the order they are read: the mark, the name, and what pressing it does. */
 	export let items: { icon: string; label: string; onSelect: () => void }[] = [];
@@ -50,7 +56,7 @@
 	}}
 />
 
-{#if items.length}
+{#if items.length || $$slots.foot}
 	<!-- The wrapper is the square, not the button inside it: `aspect-square flex-none
 		self-stretch` is exactly the box the two marks this replaces were, taking the row's height
 		and reading its width off that. The box has to be settled HERE because it is the item the
@@ -112,6 +118,16 @@
 						<span class="whitespace-nowrap text-sm font-medium">{item.label}</span>
 					</button>
 				{/each}
+
+				<!-- What the column closes with, ruled off from the lines above it because it is not
+					one of them: a hairline of the column's own ink, and the room a line would have
+					had. Only drawn when the page has handed something over — a rule under the last
+					line with nothing beneath it is a rule about nothing. -->
+				{#if $$slots.foot}
+					<div class="mt-1 border-t border-white/10 pt-1">
+						<slot name="foot" />
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

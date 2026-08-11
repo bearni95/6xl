@@ -12,6 +12,7 @@
 	import WorldMap from '$components/core/WorldMap.svelte';
 	import MapBreadcrumbs from '$components/core/MapBreadcrumbs.svelte';
 	import RegionCurrentBadge from '$components/core/RegionCurrentBadge.svelte';
+	import MapZoomSlider from '$components/core/MapZoomSlider.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import MusicBanner from '$components/core/MusicBanner.svelte';
 	import MusicToggle from '$components/core/MusicToggle.svelte';
@@ -1184,10 +1185,34 @@
 	//
 	// The glyph is the very one each of them wore while it stood open on the row, so nothing a
 	// reader had learned to look for changed; what is added is the name beside it, which is the
-	// thing a square with a mark on it could never say. Both names are the sheet's own title
+	// thing a square with a mark on it could never say. Every name is the sheet's own title
 	// rather than the label the square was reached by ("Obre els crèdits"): a line in a menu is
 	// the thing itself, and the press is said by its being a menu.
+	//
+	// The account's two sheets head the list, above the two questions about the game: they are
+	// the lines a player presses rather than reads once, and both are already reachable from the
+	// plate at the other corner of the map — the plate opens who they are and the cog beside it
+	// what the game does about them (see ProfileModal and SettingsModal). Here because the far
+	// end of the band is where this game folds everything it can be asked, and an account is one
+	// of the things it can be asked about; the cog keeps its own glyph, so the line and the
+	// square a player already knows are the same mark. They stand only for somebody signed in:
+	// both sheets are about an account, and a line that raised nothing would be a line that
+	// lied.
 	$: bandMenuItems = [
+		...($profile
+			? [
+					{
+						icon: '/assets/icons/delapouite/person.svg',
+						label: $_('profile.title'),
+						onSelect: () => profileModalOpen.set(true)
+					},
+					{
+						icon: '/assets/icons/lorc/cog.svg',
+						label: $_('settings.title'),
+						onSelect: () => settingsModalOpen.set(true)
+					}
+				]
+			: []),
 		{ icon: '/assets/icons/sbed/help.svg', label: $_('faq.title'), onSelect: openFaq },
 		{
 			icon: '/assets/icons/delapouite/palette.svg',
@@ -3056,6 +3081,53 @@
 		];
 	}
 
+	// The same ladder as a stepped control, on the row over the band (see MapZoomSlider).
+	//
+	// Its rungs are exactly the steps the dots beside the badge drop — the top view, then every
+	// region the open place sits inside — with the open place itself at the end of them, which
+	// is the one step that column leaves out because the badge next to it is already naming it.
+	// A slider has no such neighbour: a strip that stopped at the parent would be a strip whose
+	// far end is a level the map is not at, and nowhere on it for the thumb to stand.
+	//
+	// The path is the open place's own and not the one under the centre (see centrePath), so the
+	// numbers run from the whole map down to where the reader is standing and no further: what
+	// is offered is the way back up, level by level, which is what there is to offer.
+	$: zoomLadder = [
+		{ key: null as string | null, label: TOP_VIEW_LABEL },
+		...(openNode ? nodePath(regionNodes, openNode.key) : []).map((node) => ({
+			key: node.key as string | null,
+			label: restoreCatalanArticle(node.name)
+		}))
+	];
+
+	// Numbered from the top view down, and each number said in full to a screen reader: a
+	// figure on its own is a position on a strip and not a place on a map.
+	$: zoomLadderSteps = zoomLadder.map((step, index) => ({
+		number: index + 1,
+		title: $_('map.zoom.step', { values: { number: index + 1, place: step.label } })
+	}));
+
+	// A rung let go on: take the map to the zoom that place stands whole at, leaving the centre
+	// where it is — the very movement an empty position of the path is pressed for (see
+	// zoomToTier), asked for a place on the path rather than for a tier under the centre. So the
+	// divisions the terrain is drawn in are the ones that place is made of, which is what the
+	// number on the slider names.
+	//
+	// The pick is dropped first for the same reason a tier press drops it: the ladder follows
+	// the zoom only while nothing is clicked (see openRegion), and a map moving under a ladder
+	// frozen on the click being left behind is a strip whose numbers stop meaning anything.
+	function zoomToLadderStep(index: number) {
+		const step = zoomLadder[index];
+		if (!step) return;
+		const bounds = step.key ? (regionGeometry.boxes.get(step.key) ?? null) : wholeMapBounds;
+		if (!bounds) return;
+		if (regionParam) open(null);
+		zoomBounds = [
+			[bounds[0][0], bounds[0][1]],
+			[bounds[1][0], bounds[1][1]]
+		];
+	}
+
 	// Selecting a region doesn't recolour its polygons — a shape's colour says which
 	// region it belongs to, not which one is open — it only brings the shape's own wash
 	// forward (see tierStyle), on top of the framing (focusBounds) and the pins, which
@@ -3227,8 +3299,9 @@
 			a margin of their own again.) -->
 
 		<!-- What the game can be asked, at the far end and folded into one square: the dots, and
-			under them a line each for the questions and for who drew the fighters (see BandMenu,
-			and `bandMenuItems` for the two of them).
+			under them a line each for the account, the settings, the questions and who drew the
+			fighters, closing on the row of marks saying where the author is (see BandMenu, and
+			`bandMenuItems` for the lines).
 			They stood open on this row, a square each carrying its glyph alone — and a glyph alone
 			is a thing a reader has to already know, a palette being no more obviously a table of
 			artists than any other mark. The column is where the names fit, and the marks go down
@@ -3263,7 +3336,16 @@
 			classes="aspect-square flex-none self-stretch"
 			buttonClasses="size-full rounded-lg bg-primary text-white shadow-xl"
 		/>
-		<BandMenu items={bandMenuItems} />
+		<BandMenu items={bandMenuItems}>
+			<!-- Where the author is, closing the column the same way it closed the panel it came
+				from: the one row on the page that names something outside the game. It stood at the
+				foot of the player's own corner, under the plate saying who is playing — which put a
+				row about whoever made this among the things this player has, where it read as one
+				more of them. It belongs with the questions instead: what the game is, who drew the
+				fighters and where the person who built it can be found are the same question asked
+				three ways, and this menu is where the other two already were. -->
+			<SocialLinks slot="foot" />
+		</BandMenu>
 	</div>
 
 	<!-- The three columns, and the three are the three things this game is made of:
@@ -3570,7 +3652,45 @@
 						<div
 							class="pointer-events-none absolute inset-x-0 bottom-0 z-[900]"
 						>
-							<!-- What is playing, on a row of its own directly over the band that names the
+							<!-- The row over the band: the levels of the map at one end of it and what is
+								playing at the other, each on a plate of its own with the terrain between them.
+								Two plates and not one, because they are two statements about two different
+								things — where the map is looking, and what is on the radio — and a single plate
+								spanning the edge would join them into a strip that says both at once. Each is
+								held against the side it belongs to (the levels against the left, the title
+								against the right, over the play/pause square standing at that end of the band
+								below), and each is as wide as what is on it, so the terrain shows through
+								whatever room neither of them needs.
+								`items-end` so both stand on the band under them however tall either grows: the
+								levels are a strip with a line of numbers under it and the title is one line, and
+								a row of plates along an edge is read off that edge. -->
+							<div class="flex w-full items-end gap-2">
+								<!-- The levels of the map, from the whole of it to the place the map is standing
+									in, as one stepped strip (see MapZoomSlider). At the left end of the row and
+									against the map's left edge, which is the end the path below it starts from:
+									the dots on the band drop that same path as a column of names, and this is
+									the same walk read as a distance and dragged rather than pressed.
+									Rounded where it comes away from the terrain and square against the two edges
+									it is held to (`rounded-tr-lg`), the mirror of what the title's plate does at
+									the far end.
+									Nothing at all where there is nowhere to go: at the top view the ladder is one
+									rung — the whole map, which is what is already on screen — and a slider with a
+									single notch is a control with nothing to offer. The row closes up around the
+									title, exactly as the band below closes up around the badge. -->
+								{#if zoomLadderSteps.length > 1}
+									<div
+										class="pointer-events-auto w-44 flex-none rounded-tr-lg bg-base-100/80 px-3 py-2 text-white shadow-xl"
+									>
+										<MapZoomSlider
+											steps={zoomLadderSteps}
+											value={zoomLadderSteps.length - 1}
+											label={$_('map.zoom.label')}
+											on:pick={(event) => zoomToLadderStep(event.detail.index)}
+										/>
+									</div>
+								{/if}
+
+								<!-- What is playing, on a row of its own directly over the band that names the
 								place (see MusicBanner). Two rows and not two cells of one — what is playing and
 								where the map is standing are two statements, and a reader who wants the second
 								should not have to read past the first to reach it. Stacked in the strip's own
@@ -3606,10 +3726,11 @@
 								the band below this one, and the last line of the pin the map stands on the open
 								place. Nothing at all until a song is loaded, and the band under it is anchored
 								to the map's edge, so it never moves for what happens above it. -->
-							<div
-								class="pointer-events-auto ml-auto flex w-fit max-w-[50vw] items-center rounded-tl-lg bg-base-100/80 px-3 py-2 shadow-xl"
-							>
-								<MusicBanner />
+								<div
+									class="pointer-events-auto ml-auto flex w-fit max-w-[50vw] items-center rounded-tl-lg bg-base-100/80 px-3 py-2 shadow-xl"
+								>
+									<MusicBanner />
+								</div>
 							</div>
 
 							<!-- One statement on one band: where you are and the way out of it, the dots
@@ -4335,27 +4456,12 @@
 						{/if}
 					{/if}
 
-					<!-- Where the author is, and it closes this column: the one row on the page that names
-						something outside the game. It was the foot of the column beside this one, under
-						everything the open place had to say for itself — which put a row about whoever made
-						this under a list of towns, where it read as one more thing about the place. It sits
-						under the player instead, because these two rows are the only ones here that name a
-						person: who is playing, and who drew what they are playing with.
-						The column's free space is pushed above exactly one row, and which row that is
-						depends on what is standing: the block above already takes it with `mt-auto` where
-						there is a block, so this row simply follows it to the foot — two `mt-auto`s in one
-						flex column split the space between them and would leave the account floating in the
-						middle. Where there is no block (the session is still being read), the marks take
-						the push themselves and close the column alone rather than sitting at its top.
-						`flex-none` because the room this column has is not much: without it this row is the
-						first thing the column takes back when the side above it wants room, and the marks
-						squash instead of the column scrolling.
-						Outside `{#if ready}`, since nothing about it waits on the polygons, and it never comes
-						and goes for anything else either: it is the last thing in a panel that is folded to a
-						strip by default, so a row arriving or leaving at the foot of it is a row moving the
-						whole of what unfolds. A full view used to veil it with the rest of the chrome and no
-						longer does (see CHROME_BLUR). -->
-					<SocialLinks classes={classNames('flex-none', { 'mt-auto': !playerBlockShown })} />
+					<!-- (The row of marks saying where the author is closed this column for a while, under
+						the plate saying who is playing — and before that the column beside it, under
+						everything the open place had to say for itself. It is a line of the menu the dots
+						at the far end of the band drop now, with the questions it was always the third of:
+						see the `foot` slot on BandMenu above. What is left in this column is what it was
+						always for — who is playing, and the side they field.) -->
 				</div>
 			</div>
 		</div>
