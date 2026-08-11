@@ -87,6 +87,10 @@
 		"radar": {
 			"nearest": "Ves al sobre sense obrir més proper"
 		},
+		"zoom": {
+			"label": "Nivell del mapa",
+			"step": "Nivell {number}: {place}"
+		},
 		"side": {
 			"expand": "Mostra el teu equip",
 			"collapse": "Amaga el teu equip"

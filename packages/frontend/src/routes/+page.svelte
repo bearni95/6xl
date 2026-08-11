@@ -3081,24 +3081,35 @@
 		];
 	}
 
-	// The same ladder as a stepped control, on the row over the band (see MapZoomSlider).
+	// The same ladder as a stepped control, on the row over the band (see MapZoomSlider): a rung
+	// per level, the whole map at one end and the town at the other, numbered.
 	//
-	// Its rungs are exactly the steps the dots beside the badge drop — the top view, then every
-	// region the open place sits inside — with the open place itself at the end of them, which
-	// is the one step that column leaves out because the badge next to it is already naming it.
-	// A slider has no such neighbour: a strip that stopped at the parent would be a strip whose
-	// far end is a level the map is not at, and nowhere on it for the thumb to stand.
+	// Its rungs are the very stops the wheel rests on (see zoomStops, built out of this same
+	// path and these same boxes), which is what makes the strip and the wheel two ways of doing
+	// one thing rather than two ladders that could disagree about how many levels this map has.
+	// The names on it are the ones the dots beside the badge drop — the path down to where the
+	// map is standing — with the open place itself among them, which is the one step that
+	// column leaves out because the badge next to it is already naming it. A slider has no such
+	// neighbour, and a strip whose far end is a level the map is not at has nowhere for the
+	// thumb to stand.
 	//
-	// The path is the open place's own and not the one under the centre (see centrePath), so the
-	// numbers run from the whole map down to where the reader is standing and no further: what
-	// is offered is the way back up, level by level, which is what there is to offer.
+	// The path is the one under the CENTRE and not the open place's own, so it goes on down past
+	// where the reader is standing to the town the map is over. Cut at the open place, the strip
+	// would be a control that could only ever be dragged one way: every drag up shortens it to
+	// the level it just arrived at, and the way back down would be off it. What is on screen is
+	// the levels this view has, and the reader is somewhere along them.
+	//
+	// A rung whose box the geometry has no answer for is left out rather than drawn: a notch
+	// that cannot zoom anywhere is a dead notch, and the numbers either side of it would be
+	// counting something that is not there.
 	$: zoomLadder = [
-		{ key: null as string | null, label: TOP_VIEW_LABEL },
-		...(openNode ? nodePath(regionNodes, openNode.key) : []).map((node) => ({
+		{ key: null as string | null, label: TOP_VIEW_LABEL, bounds: wholeMapBounds },
+		...centrePath.map((node) => ({
 			key: node.key as string | null,
-			label: restoreCatalanArticle(node.name)
+			label: restoreCatalanArticle(node.name),
+			bounds: regionGeometry.boxes.get(node.key) ?? null
 		}))
-	];
+	].filter((step) => step.bounds);
 
 	// Numbered from the top view down, and each number said in full to a screen reader: a
 	// figure on its own is a position on a strip and not a place on a map.
@@ -3107,19 +3118,33 @@
 		title: $_('map.zoom.step', { values: { number: index + 1, place: step.label } })
 	}));
 
+	// Which rung the map is standing on: the one naming the open place, which is the place the
+	// badge on the band below names and the place the path beside it ends at — so the strip and
+	// the row under it are never two answers to where the map is.
+	//
+	// Where that place is not on the centre's own ladder — a click has framed a region the
+	// centre has since been dragged out of — it is stood at its own depth instead, both paths
+	// being walked down the same tree from the same root: a territory is the first rung under
+	// the top view whichever way you got to it. Clamped, since the ladder can be shorter than
+	// the path is deep (a rung with no box is not drawn).
+	$: zoomLadderIndex = (() => {
+		if (!openNode) return 0;
+		const at = zoomLadder.findIndex((step) => step.key === openNode.key);
+		if (at >= 0) return at;
+		return Math.min(nodePath(regionNodes, openNode.key).length, zoomLadder.length - 1);
+	})();
+
 	// A rung let go on: take the map to the zoom that place stands whole at, leaving the centre
 	// where it is — the very movement an empty position of the path is pressed for (see
-	// zoomToTier), asked for a place on the path rather than for a tier under the centre. So the
-	// divisions the terrain is drawn in are the ones that place is made of, which is what the
-	// number on the slider names.
+	// zoomToTier), asked for a place on the ladder rather than for a tier under the centre. So
+	// the divisions the terrain is drawn in are the ones that place is made of, which is what
+	// the number on the slider names.
 	//
 	// The pick is dropped first for the same reason a tier press drops it: the ladder follows
 	// the zoom only while nothing is clicked (see openRegion), and a map moving under a ladder
 	// frozen on the click being left behind is a strip whose numbers stop meaning anything.
 	function zoomToLadderStep(index: number) {
-		const step = zoomLadder[index];
-		if (!step) return;
-		const bounds = step.key ? (regionGeometry.boxes.get(step.key) ?? null) : wholeMapBounds;
+		const bounds = zoomLadder[index]?.bounds;
 		if (!bounds) return;
 		if (regionParam) open(null);
 		zoomBounds = [
@@ -3683,7 +3708,7 @@
 									>
 										<MapZoomSlider
 											steps={zoomLadderSteps}
-											value={zoomLadderSteps.length - 1}
+											value={zoomLadderIndex}
 											label={$_('map.zoom.label')}
 											on:pick={(event) => zoomToLadderStep(event.detail.index)}
 										/>
