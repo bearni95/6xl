@@ -3267,13 +3267,19 @@
 		belongs to neither, and the rule stands at both widths because the fold below it changes
 		the columns' axis and not this band's.
 
-		`items-stretch` is what makes them all one height: three of the four are squares, and
-		stretching means they and the name's plate take whatever height the row comes to rather
-		than a number written here that would have to be kept in step with it. The padding is the
-		band's rather than each child's, so they are spaced by one `gap-2` and inset by one
-		`px-2`. What holds the far end against the far edge is the radio in the middle, which is
-		the one item here that gives: the two marks were pushed over by an `ml-auto` for as long as
-		nothing between the ends did.
+		`items-stretch` is what makes them all one height: the marks at the far end are squares,
+		and stretching means they and the name's plate take whatever height the row comes to
+		rather than a number written here that would have to be kept in step with it. Which is
+		also why every one of them is a **direct child** of this row and none of them is wrapped:
+		a square that reads its width off its own stretched height needs that height to have been
+		resolved, and one box further in it has not been. The padding is the band's rather than
+		each child's, so they are spaced by one `gap-2` and inset by one `px-2`.
+		What holds the far end against the far edge is the **name plate's own `mr-auto`** — one
+		margin, at the near end, pushing everything after it over as a group. It used to be an
+		`ml-auto` on the last mark, which was right while there was one of them; a second mark
+		asking for the same slack shares it rather than queueing behind it, and what that drew was
+		two marks each holding a corner of nothing. Taking it once at the other end is the answer
+		that does not depend on how many marks the far end grows.
 
 		It stands exactly as it is whatever else is on screen. A full view used to veil it — blur
 		it out and make it inert for as long as a sheet was up — which was a row of furniture going
@@ -3311,7 +3317,7 @@
 			RegionLocationList). So the plate is only the plate — nothing hangs off it and nothing
 			is asked about the pointer — and it is a `<div>` at every width. -->
 		<div
-			class="flex flex-none items-center gap-3 rounded-lg bg-primary px-3 py-1.5 text-white shadow-xl"
+			class="mr-auto flex flex-none items-center gap-3 rounded-lg bg-primary px-3 py-1.5 text-white shadow-xl"
 		>
 			<!-- The word twice: the same lettering in the panel's surface colour, offset 3px down
 				and right, and the word itself over it. A shadow drawn as a copy rather than as a
@@ -3356,33 +3362,33 @@
 			Both are the same kind of question — where all this came from — which is what makes them
 			one menu rather than two things that happen to share a corner, and they are on the
 			game's own top row rather than three screens in for the same reason they always were. -->
-		<!-- The far end of the band, and it is now two marks rather than one, so they are held
-			there as a pair: what is happening everywhere else, and then the dots the rest of the
-			questions fold into.
-			One `ml-auto` and it is on the pair, not on each of them. Two flex items both asking
-			for the free space **share** it — that is what an auto margin does — so a second one
-			put the feed's square in the middle of the row with the dots still at the end, which
-			is the two of them each holding a corner of nothing. Held together in one box, the
-			slack is taken once and they stand side by side at the edge. The box carries the
-			band's own `gap-2`, so the space between them is the space between everything else on
-			the row, and it stretches with the band, so the squares inside still read their width
-			off the row's height.
-			The feed is on this row because this row is the fixed things about the game and it is
-			one of them — it is not about the place the map is open on, which is what the band
-			along the foot of the terrain says — and it is beside the dots because both are the
-			same kind of press: a way to look at something other than the map. It is not folded
-			*into* that menu because a line in a column nobody has dropped cannot say that
-			something has happened, which is the whole of what this mark is for. It draws nothing
-			at all until a fight has landed, and the dots then sit at the edge alone, exactly where
-			they stood before there was a feed. Sized and surfaced as the band's own presses are:
-			a square as tall as the row, the name plate's fill, white artwork on it. -->
-		<div class="ml-auto flex flex-none items-stretch gap-2">
-			<CombatFeedButton
-				classes="aspect-square flex-none self-stretch"
-				buttonClasses="size-full rounded-lg bg-primary text-white shadow-xl"
-			/>
-			<BandMenu items={bandMenuItems} />
-		</div>
+		<!-- What is happening everywhere else, immediately before the dots at the far end (see
+			CombatFeedButton). It is on this row because this row is the fixed things about the
+			game and the feed is one of them — it is not about the place the map is open on,
+			which is what the band along the foot of the terrain says — and it is beside the dots
+			because both are the same kind of press: a way to look at something other than the
+			map. It is not folded *into* that menu because a line in a column nobody has dropped
+			cannot say that something has happened, which is the whole of what this mark is for.
+			It draws nothing at all until a fight has landed, and the dots then stand at the edge
+			alone, exactly as they did before there was a feed.
+			**Both squares are direct children of the band**, and that is not a detail: each reads
+			its width off the row's own height (`aspect-square self-stretch`, see BandMenu for
+			why the box is settled on the item the row lays out and not on the button inside it),
+			and a height a flex line has not resolved yet is no height at all. Held one box deeper
+			— the pair wrapped together to share one margin — that is exactly what they were
+			measured against, and both squares came out wide enough to carry themselves off the
+			end of the screen.
+			So the slack is taken at the OTHER end instead: the name plate carries `mr-auto` and
+			everything after it is pushed to the far edge, as a pair, by one margin. Two auto
+			margins would have shared the space between them — which is what put this square in
+			the middle of the row with the dots still at the end — and there is now exactly one on
+			the row. Surfaced as the band's own presses are: the name plate's fill, white artwork
+			on it. -->
+		<CombatFeedButton
+			classes="aspect-square flex-none self-stretch"
+			buttonClasses="size-full rounded-lg bg-primary text-white shadow-xl"
+		/>
+		<BandMenu items={bandMenuItems} />
 	</div>
 
 	<!-- The three columns, and the three are the three things this game is made of:

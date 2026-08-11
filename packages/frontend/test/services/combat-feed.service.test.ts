@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { combatFeedService } from '$services/combatFeed.service';
 import { COMBAT_FEED_LIMIT } from '$types/combat-feed.type';
@@ -22,6 +22,21 @@ const fight = (id: string, town = 'ES_08019', at = '2026-08-10T17:04:00.000Z') =
 const entries = combatFeedService.entries;
 const unread = combatFeedService.unread;
 const open = combatFeedService.open;
+
+/**
+ * The map's own layer, which the first fight to arrive asks for so its town can be named.
+ *
+ * Stubbed to an empty one rather than left alone: nothing here reads a name — these are all
+ * about what the service does with what it hears — but the ask is real, and an unstubbed
+ * `fetch` in this environment reaches for a dev server that is not running, which is a pile
+ * of connection errors at teardown for a request no assertion is waiting on.
+ */
+beforeAll(() => {
+	vi.stubGlobal(
+		'fetch',
+		vi.fn(async () => new Response(JSON.stringify({ type: 'FeatureCollection', features: [] })))
+	);
+});
 
 /** The service is the app's one feed and holds what it has heard, so each test opens the
  * sheet (which is what marks everything read) and closes it again to start from nothing
