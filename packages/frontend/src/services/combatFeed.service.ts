@@ -83,11 +83,17 @@ class CombatFeedService {
 	 *
 	 * An announcement names its town by geojson id and can do nothing else — no table on the
 	 * server holds a place name, and the only thing that does is the layer the map is drawn
-	 * from. So the feed reads that layer itself, and it reads it the moment anybody starts
-	 * listening rather than when the sheet is opened: it is two megabytes of geometry for the
+	 * from. So the feed reads that layer itself, and it reads it when the **first fight
+	 * arrives** rather than when the sheet is opened: it is two megabytes of geometry for the
 	 * sake of 1,790 names, and asked for at the press it would leave every line of the sheet
-	 * lettered with an id for as long as it took to arrive. Asked for at the top of a fight,
-	 * it has been in hand for minutes by the time there is anything to draw with it.
+	 * lettered with an id for as long as it took to arrive. Asked for at the first
+	 * announcement, it is in flight before there is any way to raise the sheet at all — the
+	 * button that raises it is not drawn until a fight has landed either.
+	 *
+	 * It used to be asked for as the channel was subscribed to, which was the same moment
+	 * while an arena was the only thing listening. The listening is the app's now (see
+	 * `+layout.svelte`), so that would have meant every visit pulling the layer down before
+	 * anything had happened — on pages that draw no map and may never show a line.
 	 */
 	get townNamesById(): Readable<ReadonlyMap<string, string> | null> {
 		return this.namesStore;
@@ -111,8 +117,6 @@ class CombatFeedService {
 			// both are keyed on the record id.
 			void this.loadHistory();
 		}
-		// Alongside the socket, and never on the way to the sheet: see `townNamesById`.
-		void this.loadTownNames();
 		let released = false;
 		return () => {
 			if (released) return;
@@ -167,6 +171,10 @@ class CombatFeedService {
 		// One fight is one fight, however it got here — heard live, read back, or both.
 		if (!entry || this.heard.has(entry.id)) return;
 		this.heard.add(entry.id);
+		// The names for it, once: the layer is asked for by the first fight to arrive rather
+		// than by the socket opening, and memoised, so a session that hears nothing never pulls
+		// two megabytes of geometry down (see `townNamesById`).
+		void this.loadTownNames();
 		this.entriesStore.update((current) =>
 			[entry, ...current]
 				.sort((a, b) => Date.parse(b.at) - Date.parse(a.at))

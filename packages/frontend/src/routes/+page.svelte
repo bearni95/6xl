@@ -16,6 +16,7 @@
 	import MusicBanner from '$components/core/MusicBanner.svelte';
 	import MusicToggle from '$components/core/MusicToggle.svelte';
 	import BandMenu from '$components/core/BandMenu.svelte';
+	import CombatFeedButton from '$components/core/CombatFeedButton.svelte';
 	import RegionLocationList from '$components/core/RegionLocationList.svelte';
 	import ShowShareGrid from '$components/core/ShowShareGrid.svelte';
 	import LocationSearchBox from '$components/core/LocationSearchBox.svelte';
@@ -3355,6 +3356,25 @@
 			Both are the same kind of question — where all this came from — which is what makes them
 			one menu rather than two things that happen to share a corner, and they are on the
 			game's own top row rather than three screens in for the same reason they always were. -->
+		<!-- What is happening everywhere else, at the far end of the band and immediately before
+			the dots: how many fights have finished anywhere in the game since this tab was opened,
+			and the sheet that reads them out (see CombatFeedButton). It is on this row because
+			this row is the fixed things about the game and the feed is one of them — it is not
+			about the place the map is open on, which is what the band along the foot of the
+			terrain says — and it is beside the dots because both are the same kind of press: a
+			way to look at something other than the map.
+			Not folded into that menu, and this is the difference between them: a line in a column
+			nobody has dropped cannot carry a count, and a count is the whole of what this mark is
+			for. So it keeps a square of its own on the row.
+			It draws nothing at all until a fight has landed, which is why the `ml-auto` is here
+			rather than only on the dots: the first auto margin takes the row's slack, so the pair
+			sits at the far edge together — and with this one absent the dots keep their own, which
+			is exactly where they stood before. Sized and surfaced as the band's own presses are:
+			a square as tall as the row, the name plate's fill, white artwork on it. -->
+		<CombatFeedButton
+			classes="ml-auto aspect-square flex-none self-stretch"
+			buttonClasses="size-full rounded-lg bg-primary text-white shadow-xl"
+		/>
 		<BandMenu items={bandMenuItems} classes="ml-auto" />
 	</div>
 

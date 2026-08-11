@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import CombatArena from '$components/core/CombatArena.svelte';
-	import CombatFeedModal from '$components/core/CombatFeedModal.svelte';
 	import { combatFeedService } from '$services/combatFeed.service';
 	import { stagedFight, leaveCombat } from '$services/combat';
 	import { territoryService } from '$services/territory.service';
@@ -44,18 +43,11 @@
 	// carrying a staging left over from a fight that has since been reported.
 	onMount(() => void readTerritory());
 
-	// The game's own channel, open for as long as this page is. Every fight that finishes
-	// anywhere is broadcast onto one Supabase Realtime topic (see `combat-feed.type`), and
-	// this is where the arena listens: the socket is opened on mount and dropped when the
-	// player leaves, so nothing is held open behind the map. It is pushed and never polled —
-	// there is no request here at all — and the count of what has arrived rides the head of
-	// the fight, where pressing it raises the sheet at the foot of this file.
-	//
-	// The listener stands on the page rather than inside the arena because the arena is
-	// remounted whenever the line-up keys change, and a socket that came and went with a
-	// `{#key}` would drop the very fights it was mounted to hear.
-	onMount(() => combatFeedService.listen());
-
+	// Whether the feed of everybody else's fights is being read over this one. The channel and
+	// the sheet are both the layout's now — a feed of what is happening in the game is not a
+	// thing about being in a fight, and holding either here meant a player heard nothing
+	// anywhere else (see +layout.svelte). What is still this page's business is what a sheet
+	// standing over the arena does to the arena's own way out, below.
 	const feedOpen = combatFeedService.open;
 
 	// --- Whose town this is, read here rather than taken on trust ------------------------
@@ -184,12 +176,4 @@
 			/>
 		{/key}
 	</FullScreenModal>
-{/if}
-
-<!-- The other fights, when they are asked for. Written after the arena's own sheet so it is
-     mounted after it and therefore drawn over it — which is how two of these stack (see
-     FullScreenModal) — and outside the `{#if}` above, since a feed being read is not about
-     there being a fight staged to read it over. It closes back onto the board. -->
-{#if $feedOpen}
-	<CombatFeedModal />
 {/if}

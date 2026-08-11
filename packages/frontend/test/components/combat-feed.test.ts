@@ -76,10 +76,11 @@ describe('the sheet of other fights', () => {
 			'fetch',
 			vi.fn(async () => new Response(JSON.stringify(LAYER)))
 		);
-		// Listening is what reads the layer, and it is deliberately not this sheet that does:
-		// the names are fetched as the fight starts so that they are already in hand whenever
-		// somebody presses the button. Which is what this stands in for — the page's own
-		// `onMount(() => combatFeedService.listen())`.
+		// The app's own `onMount(() => combatFeedService.listen())`, which is the layout's now:
+		// the channel is open for as long as the app is, on every route. It is the first fight
+		// to arrive that reads the layer of town names — deliberately not this sheet, and no
+		// longer the subscribing either, so a session that hears nothing never pulls two
+		// megabytes of geometry down for names it will not print.
 		release = combatFeedService.listen();
 	});
 

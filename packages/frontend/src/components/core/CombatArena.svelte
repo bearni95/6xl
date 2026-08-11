@@ -1676,7 +1676,10 @@
 							     and not a mark a third of the way in: the cell is a third of the panel
 							     because the account across from it needs the room to change size in, and
 							     this one is a square. -->
-							<CombatFeedButton classes="col-start-3 justify-self-end" />
+							<CombatFeedButton
+							classes="col-start-3 justify-self-end"
+							buttonClasses="btn btn-outline btn-square btn-sm"
+						/>
 						</div>
 						<!-- What the panel is worked by, at the foot of it: the way round the line, and
 						     then what may be asked of the fighter it is turned to. Two rows of one stack

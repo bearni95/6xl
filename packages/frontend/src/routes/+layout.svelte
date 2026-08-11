@@ -1,17 +1,50 @@
 <script lang="ts">
 	import '../css/app.css';
+	import { onMount } from 'svelte';
 	import AvatarPickerModal from '$components/core/AvatarPickerModal.svelte';
+	import CombatFeedModal from '$components/core/CombatFeedModal.svelte';
 	import SettingsModal from '$components/core/SettingsModal.svelte';
 	import SignInModal from '$components/core/SignInModal.svelte';
 	import LegalModal from '$components/core/LegalModal.svelte';
 	import LegalGate from '$components/core/LegalGate.svelte';
 	import TeamGate from '$components/core/TeamGate.svelte';
 	import WelcomeBoosterModal from '$components/core/WelcomeBoosterModal.svelte';
+	import { combatFeedService } from '$services/combatFeed.service';
 
 	let { children } = $props();
+
+	/**
+	 * The game's own channel, open for as long as the app is.
+	 *
+	 * Every fight that finishes anywhere is broadcast onto one Supabase Realtime topic (see
+	 * `combat-feed.type`), and this is where the game listens. It was the arena's — opened when
+	 * a fight was walked into and dropped when it was left — which made the feed a thing that
+	 * only existed inside a battle: a player standing on the map, arranging a team or reading
+	 * somebody's page heard nothing, and what they had missed was gone by the time they were
+	 * fighting again, a broadcast reaching only whoever is on the channel when it is made.
+	 * Out here it runs from the moment the app loads, on every route, so what the feed holds is
+	 * everything that has happened since this tab was opened.
+	 *
+	 * It is pushed and never polled — there is no request here at all — and it is one
+	 * subscription for the session rather than one per surface: `listen` nests, and this is the
+	 * outermost caller, so a page that wanted its own could still ask without opening a second
+	 * socket.
+	 */
+	onMount(() => combatFeedService.listen());
+
+	const feedOpen = combatFeedService.open;
 </script>
 
 {@render children?.()}
+<!-- The fights finishing everywhere else, when somebody asks to see them. Out here because
+	the channel is out here: the sheet is raised from the band at the top of the map and from
+	the corner of the orders panel in a fight, and a sheet mounted on either of those pages
+	could only be opened on that page. Mounted first of the modals, so every other one of them
+	stands over it — a feed is the most casual thing this app raises, and neither a gate nor a
+	box a player is being given should end up behind it. -->
+{#if $feedOpen}
+	<CombatFeedModal />
+{/if}
 <AvatarPickerModal />
 <SettingsModal />
 <!-- The player's own cards are not here. They were, for as long as they were a sheet raised
