@@ -1100,6 +1100,18 @@
 		TIER_LADDER.map(([tier, word]) => [word, tier])
 	);
 
+	// The same four tiers said as what a map drawn in them is covered with, which is a
+	// different statement from the one above and is why it is a list of its own: the ladder
+	// names the tier a POSITION stands for, and this names the divisions a LEVEL draws. The
+	// slider is read in these (see zoomLadder) — a rung is the terrain cut into comarques, not
+	// a comarca — and the plural is the whole of the difference on screen.
+	const TIER_DIVISIONS: Record<RegionType, string> = {
+		Territory: 'territoris',
+		Province: 'províncies',
+		Comarca: 'comarques',
+		Municipality: 'municipis'
+	};
+
 	$: mapPlurality = everyTownPlurality(regionNodes);
 
 	/**
@@ -3025,25 +3037,6 @@
 		? boundsForFeatures(municipalities, new Set(fillIndex.keys()))
 		: null;
 
-	// The same ladder as boxes, coarsest first — the whole map, then every region the centre
-	// stands in down to its town. The map turns each into the zoom it stands whole at and rests
-	// the wheel on those and nothing between them, so a spin walks the tiers and stops where
-	// the bar's own positions are pressed for (see zoomToTier, which fits the same boxes).
-	$: zoomStops = ladderBoxes(centrePath, regionGeometry, wholeMapBounds);
-
-	function ladderBoxes(
-		path: RegionNode[],
-		geometry: RegionGeometry,
-		all: LatLngBounds | null
-	): LatLngBounds[] {
-		const boxes: LatLngBounds[] = all ? [all] : [];
-		for (const node of path) {
-			const box = geometry.boxes.get(node.key);
-			if (box) boxes.push(box);
-		}
-		return boxes;
-	}
-
 	// Take the map to the zoom a tier is read at, leaving the centre where it is: press the
 	// comarca position and the bar's comarca position is the one that fills.
 	//
@@ -3081,17 +3074,25 @@
 		];
 	}
 
-	// The same ladder as a stepped control, on the row over the band (see MapZoomSlider): a rung
-	// per level, the whole map at one end and the town at the other, numbered.
+	// The levels of the map as a stepped control, on the row over the band (see MapZoomSlider):
+	// one rung per tier of divisions the terrain can be drawn in, coarsest first, numbered.
 	//
-	// Its rungs are the very stops the wheel rests on (see zoomStops, built out of this same
-	// path and these same boxes), which is what makes the strip and the wheel two ways of doing
-	// one thing rather than two ladders that could disagree about how many levels this map has.
-	// The names on it are the ones the dots beside the badge drop — the path down to where the
-	// map is standing — with the open place itself among them, which is the one step that
-	// column leaves out because the badge next to it is already naming it. A slider has no such
-	// neighbour, and a strip whose far end is a level the map is not at has nowhere for the
-	// thumb to stand.
+	// **A rung is a tier of divisions, and is therefore the CONTAINER of that tier and not one
+	// of its parts.** Which divisions the map draws is decided by the region the view is inside
+	// — the tier drawn is that region's children (see levelIndexForView, and imagedRank, which
+	// is the same statement about the polygons' wash) — so the zoom that draws the comarques is
+	// the zoom a *province* stands whole at, not the zoom a comarca does. The first cut of this
+	// strip was a rung per place on the path down from the top view, which is off by one against
+	// its own numbers everywhere but the first rung: the comarca's rung drew municipalities, and
+	// its last two rungs — the comarca's and the town's — drew municipalities both, since a town
+	// is a leaf and has no parts of its own to fall to. Hence: the containers, one per tier
+	// under them, and the town at the foot of the path is not a rung at all.
+	//
+	// So the rungs are the whole map (which draws the territories), then every region the centre
+	// stands in except the last: `centrePath` ends at the town under the centre, and each of its
+	// members but that one contains a tier. A place that skips a tier skips a rung with it —
+	// Andorra has no province and no comarca, so its ladder is two rungs, the map and Andorra —
+	// which is the truth about a place whose divisions are the towns straight off the territory.
 	//
 	// The path is the one under the CENTRE and not the open place's own, so it goes on down past
 	// where the reader is standing to the town the map is over. Cut at the open place, the strip
@@ -3103,42 +3104,37 @@
 	// that cannot zoom anywhere is a dead notch, and the numbers either side of it would be
 	// counting something that is not there.
 	$: zoomLadder = [
-		{ key: null as string | null, label: TOP_VIEW_LABEL, bounds: wholeMapBounds },
-		...centrePath.map((node) => ({
-			key: node.key as string | null,
-			label: restoreCatalanArticle(node.name),
+		{ divisions: TIER_DIVISIONS.Territory, bounds: wholeMapBounds },
+		...centrePath.slice(0, -1).map((node) => ({
+			divisions: TIER_DIVISIONS[node.children[0]?.type ?? 'Municipality'],
 			bounds: regionGeometry.boxes.get(node.key) ?? null
 		}))
 	].filter((step) => step.bounds);
 
-	// Numbered from the top view down, and each number said in full to a screen reader: a
-	// figure on its own is a position on a strip and not a place on a map.
+	// Numbered from the coarsest down, and each number said in full to a screen reader: a figure
+	// on its own is a position on a strip, and what it stands for is the divisions the terrain
+	// is drawn in when the thumb is there.
 	$: zoomLadderSteps = zoomLadder.map((step, index) => ({
 		number: index + 1,
-		title: $_('map.zoom.step', { values: { number: index + 1, place: step.label } })
+		title: $_('map.zoom.step', { values: { number: index + 1, divisions: step.divisions } })
 	}));
 
-	// Which rung the map is standing on: the one naming the open place, which is the place the
-	// badge on the band below names and the place the path beside it ends at — so the strip and
-	// the row under it are never two answers to where the map is.
+	// Which rung the map is standing on: the tier it is drawing right now, which is the very
+	// number WorldMap hands back as it re-culls its pins (see `activeLevel` and `effectiveDepth`
+	// — level 0 is the territories, one rung per tier down from there, exactly as here). So the
+	// thumb is not a guess at where a zoom landed: it is the map saying what it drew.
 	//
-	// Where that place is not on the centre's own ladder — a click has framed a region the
-	// centre has since been dragged out of — it is stood at its own depth instead, both paths
-	// being walked down the same tree from the same root: a territory is the first rung under
-	// the top view whichever way you got to it. Clamped, since the ladder can be shorter than
-	// the path is deep (a rung with no box is not drawn).
-	$: zoomLadderIndex = (() => {
-		if (!openNode) return 0;
-		const at = zoomLadder.findIndex((step) => step.key === openNode.key);
-		if (at >= 0) return at;
-		return Math.min(nodePath(regionNodes, openNode.key).length, zoomLadder.length - 1);
-	})();
+	// Clamped to the ladder, which can be shorter than the stack of levels is deep: a place that
+	// skips a tier has fewer rungs than the map has levels, and zoomed in past the finest
+	// container there is nothing left to draw but the finest tier — the last rung, whatever the
+	// level index has climbed to.
+	$: zoomLadderIndex = Math.min(effectiveDepth, Math.max(zoomLadder.length - 1, 0));
 
-	// A rung let go on: take the map to the zoom that place stands whole at, leaving the centre
-	// where it is — the very movement an empty position of the path is pressed for (see
-	// zoomToTier), asked for a place on the ladder rather than for a tier under the centre. So
-	// the divisions the terrain is drawn in are the ones that place is made of, which is what
-	// the number on the slider names.
+	// A rung let go on: take the map to the zoom that rung's container stands whole at, leaving
+	// the centre where it is — the very movement an empty position of the path is pressed for
+	// (see zoomToTier), asked for a level rather than for a tier under the centre. The tier the
+	// map then draws is the one that container holds, which is what the number on the slider
+	// names.
 	//
 	// The pick is dropped first for the same reason a tier press drops it: the ladder follows
 	// the zoom only while nothing is clicked (see openRegion), and a map moving under a ladder
@@ -3510,7 +3506,6 @@
 							{pulse}
 							{focusBounds}
 							{zoomBounds}
-							{zoomStops}
 							bind:currentZoom
 							bind:activeLevel
 							bind:currentCenter
@@ -3690,18 +3685,23 @@
 								levels are a strip with a line of numbers under it and the title is one line, and
 								a row of plates along an edge is read off that edge. -->
 							<div class="flex w-full items-end gap-2">
-								<!-- The levels of the map, from the whole of it to the place the map is standing
-									in, as one stepped strip (see MapZoomSlider). At the left end of the row and
-									against the map's left edge, which is the end the path below it starts from:
-									the dots on the band drop that same path as a column of names, and this is
-									the same walk read as a distance and dragged rather than pressed.
+								<!-- The levels of the map — the terrain cut into territoris, províncies,
+									comarques, municipis — as one stepped strip (see MapZoomSlider, and
+									zoomLadder). At the left end of the row and against the map's left edge,
+									which is the end the coarsest cut belongs to: the dots on the band below
+									drop the path down to the open place as a column of names, and this is the
+									same walk read as a depth and dragged rather than pressed.
+									It is the only thing that zooms this map now — the wheel, the pinch, the
+									double click and the keyboard's +/- are all off (see WorldMap's mount), so
+									the terrain is never left between two levels and the thumb is never
+									standing at a rung the map is not actually drawing.
 									Rounded where it comes away from the terrain and square against the two edges
 									it is held to (`rounded-tr-lg`), the mirror of what the title's plate does at
 									the far end.
-									Nothing at all where there is nowhere to go: at the top view the ladder is one
-									rung — the whole map, which is what is already on screen — and a slider with a
-									single notch is a control with nothing to offer. The row closes up around the
-									title, exactly as the band below closes up around the badge. -->
+									Nothing at all while the ladder is one rung or none — the polygons have not
+									landed, so there are no levels to offer and nothing to measure them with.
+									The row closes up around the title, exactly as the band below closes up
+									around the badge. -->
 								{#if zoomLadderSteps.length > 1}
 									<div
 										class="pointer-events-auto w-44 flex-none rounded-tr-lg bg-base-100/80 px-3 py-2 text-white shadow-xl"

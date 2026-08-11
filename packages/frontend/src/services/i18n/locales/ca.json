@@ -89,7 +89,7 @@
 		},
 		"zoom": {
 			"label": "Nivell del mapa",
-			"step": "Nivell {number}: {place}"
+			"step": "Nivell {number}: {divisions}"
 		},
 		"side": {
 			"expand": "Mostra el teu equip",

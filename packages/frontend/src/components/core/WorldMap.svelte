@@ -40,7 +40,6 @@
 		pulse = null,
 		focusBounds = null,
 		zoomBounds = null,
-		zoomStops = [],
 		spotlight = null,
 		chromeInsets = {},
 		currentZoom = $bindable(zoom),
@@ -183,15 +182,6 @@
 		 * boundsFitAtZoom). A fresh array re-zooms even to the same box.
 		 */
 		zoomBounds?: [[number, number], [number, number]] | null;
-		/**
-		 * The boxes whose fits are the zooms a wheel comes to rest at, coarsest first — the
-		 * ladder of regions the view is inside, which is the ladder the breadcrumb bar draws.
-		 * A notch of the wheel is one step along it rather than an amount of zoom, so a spin
-		 * settles where a tier stands whole in the canvas and never between two (see
-		 * wheelStopZooms). Read live, so the ladder can be rebuilt as the view moves; empty
-		 * leaves the wheel stepping the map's own whole zoom levels.
-		 */
-		zoomStops?: [[number, number], [number, number]][];
 		/**
 		 * One shape the map is asked to look at alone — a town a fight is being staged on —
 		 * as its own GeoJSON geometry. Null is the map as it usually stands.
@@ -2332,290 +2322,25 @@
 		return wrap;
 	}
 
-	// The wheel is driven by hand, in the shape Leaflet drives a pinch: a gesture that moves
-	// the view while it is happening, and a single settle at the end of it. Leaflet's own
-	// wheel handler is off (see scrollWheelZoom below) because on a map zoomed fractionally
-	// it loses most of what the reader pushes into it, in two ways that compound. It maps a
-	// wheel's pixels through a sigmoid onto a zoom, and rounds that UP to the nearest whole
-	// zoom step — except with zoomSnap at 0 there is no step to round to, so what a notch is
-	// worth stays the raw fraction the sigmoid gave: a fraction of a level where a snapped
-	// map moved a whole one. And what survives that is then dropped outright while a zoom
-	// animation is in flight: every 40ms it asks the map to zoom by what has accumulated
-	// since the last ask, each ask starts a 250ms animation, and an ask arriving inside one
-	// is discarded by Leaflet along with the wheel that earned it — so roughly five ticks in
-	// six of a continuous spin go nowhere. Hence the long spinning for a short movement.
+	// The wheel does not zoom this map, and neither does anything else the reader might reach
+	// for: the levels are driven from one control and one only (see MapZoomSlider, on the row
+	// along the map's bottom edge). Every gesture that used to change the scale is off at the
+	// map's own options below — Leaflet's wheel handler, the pinch, the double click, the
+	// shift-drag box and the keyboard's +/- — and the hand-driven wheel gesture that stood here
+	// is gone with them.
 	//
-	// A pinch has neither problem because it is not a series of requests to zoom: it holds a
-	// zoom of its own, moves the map towards it every frame with no animation to be swallowed
-	// by, and redraws once when the fingers lift. That is what this is, with the wheel's
-	// notches where the fingers' distance was.
+	// It was a substantial thing to lose and it is recorded rather than mourned: a notch was one
+	// step along the ladder of tiers rather than an amount of zoom, glided towards over about a
+	// sixth of a second in the shape Leaflet drives a pinch, anchored on the point under the
+	// pointer, with a trackpad's fractions of a notch added up until they were worth a step. What
+	// it was for was a spin that came to rest ON a tier instead of somewhere in the middle of one
+	// — and that is exactly what the slider is, said as a position rather than as a gesture: the
+	// same ladder, the same boxes, the same fits, and no way to land between two of them at all.
+	// Two ways of walking one ladder is two ways of disagreeing about where the map is standing.
 	//
-	// Towards, not to. A pinch can be moved straight onto the gesture's zoom because the
-	// fingers are already moving smoothly and every frame is a small step; a notch is a jump,
-	// and a map put on the far side of one instantly is the clunk this had at first. So the
-	// notch moves a zoom the map is *heading for* and each frame takes a share of what is left
-	// of the distance — a glide the length of a wheel animation, except that a notch landing
-	// mid-glide extends the same glide rather than queueing a second one behind it.
-	//
-	// What the notch is heading for is a STOP and not an amount (see zoomStops). The map draws
-	// a tier of the region hierarchy and the bar across the top names where in that hierarchy
-	// the view is, so the zooms worth resting at are the ones where a tier stands whole in the
-	// canvas — the same zooms the bar's own positions are pressed for. A notch is therefore one
-	// step along that ladder rather than a zoom level: the wheel walks the tiers, and a spin
-	// comes to rest on one instead of somewhere in the middle of it. What the pointer does is
-	// unchanged — the place under it is what the gesture holds still.
-
-	// What one detent of a wheel reports, in each of the three units a browser may report it
-	// in. The pixel figure is what Chrome, Safari and Edge send per notch; Firefox reports
-	// lines and sends three; pages are the fallback nothing modern uses. A trackpad sends the
-	// same units in small amounts, so a two-finger push is read as the fraction of a notch it
-	// covers, and moves the map when those fractions have added up to one.
-	const WHEEL_NOTCH = { 0: 100, 1: 3, 2: 1 } as const;
-	// The most a single event may be worth, against a mouse whose driver reports one flick as
-	// hundreds of pixels: the gesture stays fast (the events keep coming) without one of them
-	// crossing the whole ladder.
-	const MAX_NOTCHES_PER_WHEEL = 2;
-	// A pause long enough that the next push is a new gesture, and the part of a notch left
-	// over from the last one is forgotten rather than counting towards it. The first push of
-	// one is a step whatever it is worth (see onWheelZoom).
-	const WHEEL_GESTURE_GAP = 400;
-	// The least time between two steps. A trackpad goes on sending for a second after the
-	// fingers have left it, and a ladder is six or seven rungs long: without this, the tail of
-	// one flick is the whole of it. It is also what makes a spin readable — a tier at a time,
-	// at a pace a reader can stop on the one they wanted.
-	const WHEEL_STEP_GAP = 120;
-	// Near enough to a stop to be standing on it, when working out which one a notch steps
-	// from. Also what keeps two tiers that fit at the same zoom — a tier the place under the
-	// view does not have has its parent's box — from being two stops with nothing between
-	// them, which would be a notch that appeared to do nothing.
-	const STOP_SLACK = 0.05;
-	// The glide: how long the remaining distance takes to halve. Measured in time and not in
-	// frames, so the movement lasts as long on a 120Hz screen as on a 60Hz one. At this figure
-	// a notch is most of the way there in about a sixth of a second — near enough Leaflet's
-	// own zoom animation, which is the movement a wheel used to make and the one a reader of
-	// this map already knows.
-	const WHEEL_HALF_LIFE = 55;
-	// Close enough to be there. A hair under a hundredth of a zoom level: past this the glide
-	// stops rather than crawling the last thousandths, and stopping is what redraws the map.
-	const WHEEL_ARRIVED = 0.005;
-	// How often, while the glide is still running, the tiles are re-cut for the level the map
-	// has reached. A gesture scales the tiles it has rather than fetching new ones (which is
-	// what keeps it smooth), so a long spin would otherwise be a long blur ending in a snap.
-	const WHEEL_TILES_MS = 300;
-
-	// Leaflet's pinch handler drives its gesture through these, so a wheel gesture is written
-	// against the same ones. `_move` puts the map at a centre and a zoom with no animation;
-	// told it is a pinch, the tiles scale in place instead of a fresh set being fetched for a
-	// frame that is about to be replaced. `_resetView` is the redraw at the end that does
-	// fetch them, and is what fires the moveend the pins and boxes are re-culled on.
-	// `_animatingZoom` is Leaflet's own flag, read only where an animation and this gesture
-	// would otherwise be moving the same map (see below).
-	type GestureMap = L.Map & {
-		_move(center: L.LatLng, zoom: number, data?: { pinch?: boolean; round?: boolean }): void;
-		_resetView(center: L.LatLng, zoom: number): void;
-		_onZoomTransitionEnd(): void;
-		_stop(): void;
-		_animatingZoom?: boolean;
-	};
-
-	// The zoom the gesture is heading for, held apart from the map's own for two reasons: the
-	// map is behind it by design, gliding towards it, and events arriving faster than the
-	// screen redraws all count, since what accumulates between two frames accumulates here
-	// rather than on a zoom that has not caught up yet. Null between gestures.
-	let wheelZoom: number | null = null;
-	// The point on the canvas the zoom is anchored to — the place under the pointer stays
-	// under the pointer, so a reader zooms into what they are looking at rather than into the
-	// middle of the map.
-	let wheelAnchor: L.Point | null = null;
-	let wheelFrame = 0;
-	// When the last frame was drawn, and when the tiles were last re-cut.
-	let wheelLast = 0;
-	let wheelTiles = 0;
-	// The part of a notch pushed but not yet spent. A wheel with detents sends whole notches
-	// and steps a stop each time; a trackpad sends a stream of small fractions, and this is
-	// where they add up until they are worth a step. Cleared when a gesture has been over long
-	// enough that the next push is a new one.
-	let wheelPush = 0;
-	let wheelPushAt = 0;
-	let wheelStepAt = 0;
-	// Whether this gesture has yet to move the map. The first push of one steps whatever it is
-	// worth, so a device that reports a flick as a handful of pixels is not a device this map
-	// ignores; it is only *inside* a gesture that a step costs a whole notch.
-	let wheelFresh = false;
-
-	// The zooms a gesture may come to rest at, coarsest first: each box that the ladder is made
-	// of, at the zoom it stands whole in the canvas at — computed here rather than handed over
-	// ready-made because the fit depends on the canvas and the projection, which are the map's.
-	// The margin is the framing's own, so a stop is exactly where a click on that region would
-	// have put the map, and the tier drawn there is the tier that region contains.
-	//
-	// Two stops closer together than the slack are one stop: a tier the place under the view
-	// does not have is handed the box of the tier above it, and a notch between two zooms that
-	// are the same zoom is a notch that does nothing. The map's own deepest zoom closes the
-	// ladder, so the imagery can still be read at the detail it holds — past the last tier is
-	// not between two tiers.
-	//
-	// A map given no ladder at all (the polygons never loaded) falls back to its whole zoom
-	// levels, which is a notch a level: the wheel a map without a hierarchy would have had.
-	function wheelStopZooms(map: L.Map): number[] {
-		const min = map.getMinZoom();
-		const max = map.getMaxZoom();
-		const found: number[] = [];
-		if (zoomStops.length) {
-			const padding = focusPadding();
-			for (const box of zoomStops) found.push(map.getBoundsZoom(box, false, padding));
-			found.push(max);
-		} else {
-			for (let zoom = Math.ceil(min); zoom <= max; zoom++) found.push(zoom);
-		}
-
-		const stops: number[] = [];
-		for (const zoom of found.sort((a, b) => a - b)) {
-			const clamped = Math.max(min, Math.min(max, zoom));
-			if (!stops.length || clamped - stops[stops.length - 1] > STOP_SLACK) stops.push(clamped);
-		}
-		return stops;
-	}
-
-	// The stop a number of steps away from a zoom. Counted from where the zoom stands in the
-	// ladder rather than from the nearest stop, so a first notch out of a view that is between
-	// two stops (a click has framed a region, or the ladder has changed under a pan) lands on
-	// the one it is heading towards rather than skipping it.
-	function stopAfter(stops: number[], zoom: number, steps: number): number {
-		if (steps > 0) {
-			const next = stops.findIndex((stop) => stop > zoom + STOP_SLACK);
-			if (next < 0) return stops[stops.length - 1];
-			return stops[Math.min(next + steps - 1, stops.length - 1)];
-		}
-		let previous = -1;
-		for (let i = stops.length - 1; i >= 0; i--) {
-			if (stops[i] < zoom - STOP_SLACK) {
-				previous = i;
-				break;
-			}
-		}
-		if (previous < 0) return stops[0];
-		return stops[Math.max(previous + steps + 1, 0)];
-	}
-
-	function onWheelZoom(event: WheelEvent) {
-		if (!mapInstance) return;
-		// The page must not scroll and the browser must not zoom under us: over the canvas a
-		// wheel means this and nothing else.
-		event.preventDefault();
-
-		// A sideways push is a wheel event with nothing on the axis that means zoom. Nothing
-		// on this map reads one, so it is refused a gesture rather than given one worth no
-		// zoom, which would still cost the redraw at the end of it.
-		if (!event.deltaY) return;
-
-		const now = performance.now();
-		// A gesture is a run of pushes with no real pause in it. A new one forgets whatever
-		// part-notch the last one ended on, and is owed a step for its first push.
-		if (now - wheelPushAt > WHEEL_GESTURE_GAP) {
-			wheelPush = 0;
-			wheelFresh = true;
-		}
-		wheelPushAt = now;
-
-		const notch = WHEEL_NOTCH[(event.deltaMode as 0 | 1 | 2) ?? 0] ?? WHEEL_NOTCH[0];
-		wheelPush += Math.max(
-			-MAX_NOTCHES_PER_WHEEL,
-			Math.min(MAX_NOTCHES_PER_WHEEL, -event.deltaY / notch)
-		);
-
-		// One step at a time, and one to a step gap. What earns it is a whole notch of pushing
-		// — a detent of a wheel, or as much of a trackpad — except for the push that opens a
-		// gesture, which earns one whatever it is worth: a device that reports a flick as a few
-		// pixels is asking for the same thing as a device that reports it as a hundred, and a
-		// map that waits for the hundred does nothing at all on the first.
-		if (now - wheelStepAt < WHEEL_STEP_GAP) return;
-		if (!wheelFresh && Math.abs(wheelPush) < 1) return;
-		const steps = wheelPush > 0 ? 1 : -1;
-		// Spent, along with anything pushed while the gap was closed: a step is a step, and the
-		// tail of a trackpad's flick is not a queue of them waiting to be taken.
-		wheelPush = 0;
-		wheelFresh = false;
-		wheelStepAt = now;
-
-		// Before the map has moved a pixel of this step — the gesture's first frame is still an
-		// animation frame away. A step landing mid-glide clears an already empty layer.
-		clearMarkers();
-
-		const map = mapInstance as GestureMap;
-		// A wheel overtakes whatever the map was doing on its own. A pan or a fly is stopped
-		// outright; a zoom animation cannot be, so it is landed at its destination now —
-		// otherwise it would finish 250ms later by putting the map back where it had been
-		// going, over the top of the gesture the reader has started since.
-		//
-		// `_stop` and not the public `stop`, which is what Leaflet's own wheel handler calls
-		// here and for the reason found by measuring this: `stop` sets the zoom to the zoom the
-		// map is already at, and a move of no distance still ends — it fires a moveend. Which is
-		// this map's "the view has settled, build the pins for it", one line after the pins were
-		// taken off for the zoom about to start, so the set came straight back and stood through
-		// the whole glide. `_stop` cancels the animations and says nothing.
-		map._stop();
-		if (map._animatingZoom) map._onZoomTransitionEnd();
-
-		wheelAnchor = map.mouseEventToContainerPoint(event);
-		wheelZoom = stopAfter(wheelStopZooms(map), wheelZoom ?? map.getZoom(), steps);
-
-		if (!wheelFrame) {
-			wheelLast = now;
-			wheelTiles = now;
-			wheelFrame = requestAnimationFrame(stepWheelZoom);
-		}
-	}
-
-	// One frame of the glide: take a share of what is left of the way to the gesture's zoom,
-	// and put the map there keeping the anchored point where it is. That centre is the one
-	// `setZoomAround` computes — the offset from the middle of the canvas to the anchor, grown
-	// by how much the scale is about to change, taken off the middle again — and it is
-	// recomputed per frame, so the anchor holds across a glide of any length.
-	function stepWheelZoom(now: number) {
-		wheelFrame = 0;
-		if (!mapInstance || wheelZoom === null || !wheelAnchor) return;
-
-		const map = mapInstance as GestureMap;
-		// The map has been sent somewhere else mid-glide — a region framed by a click. That
-		// movement is the newer of the two and knows where it is going; this one drops.
-		if (map._animatingZoom) {
-			wheelZoom = null;
-			wheelAnchor = null;
-			return;
-		}
-
-		const from = map.getZoom();
-		const gap = wheelZoom - from;
-		const arrived = Math.abs(gap) < WHEEL_ARRIVED;
-		const share = 1 - Math.pow(2, -(now - wheelLast) / WHEEL_HALF_LIFE);
-		wheelLast = now;
-
-		const next = arrived ? wheelZoom : from + gap * share;
-		const scale = map.getZoomScale(next, from);
-		const half = map.getSize().divideBy(2);
-		const offset = wheelAnchor.subtract(half).multiplyBy(1 - 1 / scale);
-		const centre = map.containerPointToLatLng(half.add(offset));
-
-		if (arrived) {
-			// The end of the gesture, and the one full redraw of it: the tiles, the polygons and
-			// the pins all at the zoom the map came to rest at.
-			wheelZoom = null;
-			wheelAnchor = null;
-			map._resetView(centre, next);
-			return;
-		}
-
-		// Every so often through a long glide, let the tiles be re-cut for the level reached
-		// (a frame that is not called a pinch is one the tile layer reloads for) — the pins and
-		// the polygons are left alone until the map stops, since those are rebuilt rather than
-		// transformed and a rebuild per frame is the jerk this is avoiding.
-		const recut = now - wheelTiles >= WHEEL_TILES_MS;
-		if (recut) wheelTiles = now;
-
-		map._move(centre, next, { pinch: !recut, round: false });
-		wheelFrame = requestAnimationFrame(stepWheelZoom);
-	}
+	// What still moves the map is what is asked of it in so many words: a place framed by a click
+	// (focusBounds), a level asked for by the slider (zoomBounds), and dragging, which pans and
+	// changes no scale.
 
 	onMount(async () => {
 		// Leaflet touches `window` at import time, so it must be loaded
@@ -2631,22 +2356,45 @@
 			minZoom,
 			maxZoom,
 			worldCopyJump: true,
-			// Any zoom, not the whole ones a tile pyramid is cut at. Two things want it, and
-			// the second is why it is here. A wheel or a pinch moves the view by the amount it
-			// was pushed rather than by a doubling, which is what a map that changes what it
-			// draws as it is zoomed wants: the tier gives way when the region on screen has
-			// grown past the canvas, and the reader can stop on either side of that. And the
-			// framing can land exactly on the fit — a whole-numbered zoom can only land at or
-			// under it, by up to a factor of two, so a region opened by a click came to rest
-			// anywhere between filling the canvas and taking a quarter of it, and whether its
-			// children were pinned or it was pinned by itself came down to where that fell
-			// (see the focus effect and levelIndexForView).
+			// Any zoom, not the whole ones a tile pyramid is cut at. What wants it is the
+			// framing: it can then land exactly on the fit — a whole-numbered zoom can only
+			// land at or under it, by up to a factor of two, so a region opened by a click came
+			// to rest anywhere between filling the canvas and taking a quarter of it, and
+			// whether its children were pinned or it was pinned by itself came down to where
+			// that fell (see the focus effect and levelIndexForView). The same is true of a
+			// level asked for by the slider, which is that same fit asked for without the
+			// framing (see the zoomBounds effect).
+			//
+			// It used to be here for the gestures as well — a wheel or a pinch moving the view
+			// by the amount it was pushed rather than by a doubling, so a reader could stop on
+			// either side of the threshold where a tier gives way. There are no gestures now
+			// (see just below), and nothing lands between two fits any more.
 			zoomSnap: 0,
-			// The wheel is handled here instead (see onWheelZoom): Leaflet's own handler and a
-			// zoom with no steps in it are the pair that made a spin of the wheel move the map
-			// by almost nothing.
+
+			// --- Nothing zooms this map but the slider ---------------------------------
+			// One control decides which divisions the terrain is drawn in (see MapZoomSlider,
+			// and the note above this mount): the levels of this map are a ladder of four
+			// tiers, each read at the zoom its container stands whole at, and a gesture that
+			// moves the scale by an amount of its own is a reader put down between two rungs —
+			// where the map draws whichever tier the arithmetic happens to land on and the
+			// strip along the bottom edge can only round off what it is standing on. So every
+			// one of them is off here, and each is off on purpose rather than by default:
+			//
+			// the wheel (Leaflet's own handler, and the hand-driven gesture that replaced it),
 			scrollWheelZoom: false,
-			// No +/- zoom buttons — the map is driven by scroll/pinch only.
+			// two fingers,
+			touchZoom: false,
+			// a double click,
+			doubleClickZoom: false,
+			// and a shift-drag box.
+			boxZoom: false,
+			// The keyboard keeps its arrows — panning is not zooming and a map that cannot be
+			// walked without a mouse is a map some readers cannot walk at all — but its +/- are
+			// worth nothing, which is what a zoom step of zero is. (`zoomDelta` reaches nothing
+			// else here: the buttons that read it are off, and `zoomIn`/`zoomOut` are never
+			// called.) The slider is a range input, so the keyboard still has every rung.
+			zoomDelta: 0,
+			// No +/- buttons either — the strip along the map's bottom edge is the whole of it.
 			zoomControl: false,
 			// The badge carries the Esri credit the imagery licence requires, so it
 			// stays on for as long as the satellite basemap is there.
@@ -2707,9 +2455,6 @@
 		// in step.
 		maskPane.classList.add('transition-opacity', 'duration-[250ms]', 'ease-in-out', 'opacity-0');
 
-		// Not passive: the handler's first act is to refuse the page the scroll.
-		mapContainer.addEventListener('wheel', onWheelZoom, { passive: false });
-
 		// Esri World Imagery: pure satellite tiles, no labels or roads.
 		// Note the {z}/{y}/{x} order — ArcGIS swaps y and x vs the OSM scheme.
 		Leaf.tileLayer(
@@ -2730,9 +2475,9 @@
 			currentCenter = [c.lat, c.lng];
 		};
 		syncView();
-		// The other way a zoom begins: a region framed by a click, or a tier asked for from the
-		// bar. The wheel clears the pins itself, since a gesture moves the map without ever
-		// telling Leaflet a zoom has started (see onWheelZoom) — this is for the ones that do.
+		// A zoom begins: a region framed by a click, or a level asked for by the slider. Both
+		// go through Leaflet and both say so, which is every zoom this map has now that no
+		// gesture moves the scale behind its back.
 		// A pan is not one of them and keeps its pins: a pin carried sideways is still the pin
 		// that view calls for, at the size it was drawn at.
 		mapInstance.on('zoomstart', clearMarkers);
@@ -2872,8 +2617,6 @@
 
 	onDestroy(() => {
 		destroyed = true;
-		mapContainer?.removeEventListener('wheel', onWheelZoom);
-		if (wheelFrame) cancelAnimationFrame(wheelFrame);
 		if (maskTimer) clearTimeout(maskTimer);
 		resizeObserver?.disconnect();
 		unmountPinMounts();

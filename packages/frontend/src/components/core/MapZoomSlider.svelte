@@ -2,21 +2,20 @@
 	import classNames from 'classnames';
 	import { createEventDispatcher } from 'svelte';
 
-	// The map's ladder of levels as one control: a notch per rung, the whole of the map at the
-	// left end and the place the map is standing in at the right, numbered along the bottom.
+	// The map's ladder of levels as one control, and the only thing that moves this map's zoom
+	// at all (every gesture that used to is off — see WorldMap's mount): a notch per level, the
+	// coarsest divisions at the left end and the finest at the right, numbered along the bottom.
 	//
-	// It says the same thing the dots on the band below it say — the path from the top view
-	// down to where you are — and it says it as a distance rather than as a list of names: how
-	// deep the reader has walked is read off the thumb's position without opening anything, and
-	// any level above is one drag away instead of a press, a column and a name to find in it.
-	// Which is also why the rungs are numbered and not lettered: the names are the column's to
-	// give, and a name at every notch of a strip this wide is a row of shreds.
+	// A rung is a way the terrain is CUT and not a place on it — the territories, the
+	// províncies, the comarques, the municipis — which is what a level is and what the numbers
+	// count. The places are the column's to name (the dots on the band below drop the path down
+	// to where you are); this says how finely the country under it is divided, which no list of
+	// names says, and says it as a distance so the reader can see at a glance how far in they
+	// are and drag either way.
 	//
 	// It adjusts the zoom and nothing else. Where a crumb pressed in that column OPENS the place
-	// it names, a rung here only takes the map to the zoom that place stands whole at, leaving
-	// the centre where it is — so what changes is the divisions drawn on the terrain, which is
-	// the whole of what a level is (see +page.svelte's zoomToLadderStep, and zoomToTier beside
-	// it, which is the same movement asked for a tier rather than a place).
+	// it names, a rung here only takes the map to the zoom that level is read at, leaving the
+	// centre where it is (see +page.svelte's zoomLadder and zoomToLadderStep).
 
 	// One rung per level, coarsest first: the number printed under the notch, and what that
 	// level is, said to a screen reader rather than drawn (the names belong to the column).
