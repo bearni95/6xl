@@ -11,6 +11,9 @@ import {
 import type { CombatColor } from '$types/character-definition.type';
 import type { BattleBoardSnapshot } from '$types/battle.type';
 import type { MugenBoard } from '$utils/mugen/mugen-board';
+// A turn is committed and then pressed on from, row by row — see the helper, which is where
+// what "a turn played out" means is written down for the whole combat suite.
+import { playTurn, settleTurn } from './play-turn';
 
 /** Three a side, in line-up order: the first three colours are the rivals', the
  * last three the player's. */
@@ -69,14 +72,6 @@ function recordingBoard(): { calls: string[]; board: MugenBoard } {
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-/** Everything the turn in flight still has to do, done at once. */
-const settleTurn = (): Promise<void> => vi.runAllTimersAsync().then(() => undefined);
-
-/** Play one turn out, however the fighters were ordered. */
-async function playTurn(controller: CombatController): Promise<void> {
-	controller.commit();
-	await settleTurn();
-}
 
 describe('CombatController — giving orders', () => {
 	afterEach(() => vi.restoreAllMocks());
@@ -185,8 +180,7 @@ describe('CombatController — the fight as it thins', () => {
 
 			for (const fighter of playerFighters(controller)) tap(controller, fighter, pick(fighter));
 			expect(get(controller).ready).toBe(true);
-			controller.commit();
-			await settleTurn();
+			await playTurn(controller);
 		}
 		return sawLoss;
 	}
@@ -261,12 +255,90 @@ describe('CombatController — giving the fight up', () => {
 		controller.concede();
 		expect(get(controller).outcome).toBeNull();
 
-		await settleTurn();
+		await settleTurn(controller);
 		controller.concede();
 		expect(get(controller).outcome).toBe('lose');
 		// A fight already over stays as it was called.
 		controller.concede();
 		expect(get(controller).outcome).toBe('lose');
+	});
+});
+
+describe('CombatController — a turn walked through an encounter at a time', () => {
+	afterEach(() => vi.restoreAllMocks());
+
+	/** Three lanes of blue against blue, everybody loading: three rows, nothing thrown down
+	 * any of them, and so three encounters with nothing else in the turn to confuse them. */
+	function quietTurn(): CombatController {
+		vi.spyOn(Math, 'random').mockReturnValue(0);
+		const controller = new CombatController(
+			seeds(['blue', 'blue', 'blue', 'blue', 'blue', 'blue'])
+		);
+		for (const fighter of playerFighters(controller)) tap(controller, fighter, 'charge');
+		controller.commit();
+		return controller;
+	}
+
+	it('stops at the end of an encounter and waits to be let on', async () => {
+		const controller = quietTurn();
+		await vi.runAllTimersAsync();
+
+		// The turn is standing still with the row it just played still on the panel.
+		expect(get(controller).awaiting).toBe(true);
+		expect(get(controller).phase).toBe('resolving');
+		const held = get(controller).cue;
+		expect(held).not.toBeNull();
+
+		// And running the clock on changes nothing: it is waiting on a person now, not on a
+		// beat, which is the whole of what the button on the panel is for.
+		await vi.runAllTimersAsync();
+		expect(get(controller).cue).toBe(held);
+		expect(get(controller).awaiting).toBe(true);
+		expect(get(controller).phase).toBe('resolving');
+	});
+
+	it('carries on one encounter per press, and hands the turn back at the last of them', async () => {
+		const controller = quietTurn();
+		await vi.runAllTimersAsync();
+
+		const seen = [get(controller).cue];
+		let presses = 0;
+		while (get(controller).awaiting && presses < 8) {
+			presses++;
+			controller.next();
+			await vi.runAllTimersAsync();
+			if (get(controller).cue) seen.push(get(controller).cue);
+		}
+		// Three lanes stood off, so three rows were played and three presses walked through
+		// them — the last of which handed the turn back rather than opening a fourth row.
+		expect(presses).toBe(3);
+		expect(new Set(seen.slice(0, 3)).size).toBe(3);
+		expect(get(controller).phase).toBe('planning');
+		expect(get(controller).turn).toBe(2);
+		// Nothing is left waiting between turns: the panel is the player's to plan on.
+		expect(get(controller).awaiting).toBe(false);
+		expect(get(controller).cue).toBeNull();
+	});
+
+	it('lets nothing through when it is not waiting on anybody', async () => {
+		const controller = quietTurn();
+		await vi.runAllTimersAsync();
+		// A second press on a row already let on would take the next row off the screen
+		// before it had been read, so a press only ever answers a fight that is waiting.
+		controller.next();
+		controller.next();
+		controller.next();
+		await vi.runAllTimersAsync();
+		expect(get(controller).phase).toBe('resolving');
+		expect(get(controller).awaiting).toBe(true);
+
+		// And between turns it does nothing at all.
+		await settleTurn(controller);
+		expect(get(controller).phase).toBe('planning');
+		const planning = get(controller);
+		controller.next();
+		expect(get(controller).phase).toBe('planning');
+		expect(get(controller).turn).toBe(planning.turn);
 	});
 });
 
@@ -280,7 +352,7 @@ describe('CombatController — the rivals fight the way their colour does', () =
 			.fighters.filter((fighter) => fighter.side === 'error')
 			.map((fighter) => fighter.action);
 
-	const settle = (_controller: CombatController): Promise<void> => settleTurn();
+	const settle = (controller: CombatController): Promise<void> => settleTurn(controller);
 
 	/**
 	 * What three rivals of `rivals` order on a turn where each is loaded, faces somebody
@@ -381,8 +453,7 @@ describe('CombatController — what the board is left showing', () => {
 		controller.attachBoard(board);
 
 		for (const fighter of playerFighters(controller)) tap(controller, fighter, 'charge');
-		controller.commit();
-		await settleTurn();
+		await playTurn(controller);
 
 		// The turn played out in pictures alone: the brace, the walk, the blow, the slash.
 		expect(get(controller).phase).toBe('planning');

@@ -392,6 +392,19 @@ export interface CombatState {
 	/** True when every player fighter still standing has a complete order. */
 	ready: boolean;
 	/**
+	 * True while the turn is standing still at the end of an encounter, waiting to be let
+	 * on ({@link CombatController.next}).
+	 *
+	 * A turn is a run of encounters and it is now walked through one at a time: the row is
+	 * played out on the canvas, its line is said over the panel, and there the fight stops
+	 * until the player presses on. So this is the one moment in a turn when nothing at all
+	 * is happening — everything the encounter had to show has been shown, which is exactly
+	 * what makes it the moment a press is answered. It is what the Next button is drawn off:
+	 * up while the row is still playing, so the reader knows what carries them on, and
+	 * pressable only from here.
+	 */
+	awaiting: boolean;
+	/**
 	 * Encounters won, per side. The fight is not to sudden death: it is three duels,
 	 * and each one is won by whichever fighter is left standing when the other falls —
 	 * so this is the score, and the side ahead on it is the side that wins the fight.
@@ -417,20 +430,15 @@ type ShotGroup = [Shot] | [Shot, Shot];
 
 const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** How long the revealed orders are left to be read before the shooting starts. */
-const REVEAL_MS = 600;
-
-/** The beat held after each shot has been answered, before the next is taken. */
-const SHOT_BEAT_MS = 320;
-
 /**
- * How long a row nothing was thrown down is left standing before the next row is taken.
+ * How long the revealed orders are left to be read before the shooting starts.
  *
- * Longer than a shot's beat because it is the whole of that encounter: a blow has a walk
- * out and a strike to be read over, and a lane where both sides only loaded has the aura and
- * nothing else — so the line it is narrated in needs the time to be read on its own.
+ * The last fixed beat in a turn, and it is not an encounter: the reveal is one instant for
+ * everybody at once, with nothing said over it and nothing to press on from. Every beat that
+ * *was* an encounter's — a third of a second after a blow, nine tenths after a row nothing was
+ * thrown down — is now the player's own press instead (see {@link CombatController.next}).
  */
-const QUIET_LANE_MS = 900;
+const REVEAL_MS = 600;
 
 /** 'charge' → 'Charge', for the pickers' labels and the status lines. */
 export const actionLabel = (action: CombatAction): string =>
@@ -449,6 +457,12 @@ export class CombatController {
 	 * event's pile of authored lines, which is dealt rather than rolled — so a phrase is
 	 * not said again until every other way of saying that same thing has been said. */
 	private readonly cues = new Map<CombatNarrationEvent, number>();
+	/**
+	 * What lets the turn on from the encounter it is standing at — see {@link hold}. Null
+	 * whenever the fight is not waiting on anybody, which is what {@link CombatState.awaiting}
+	 * is read off, so there is one answer to "is it waiting" and it is this field.
+	 */
+	private carryOn: (() => void) | null = null;
 	/** Which fight this is, for the deal above: the line-up it is fought between, which
 	 * is the one thing about a fight that is settled before the first turn and outlives a
 	 * reload. Two fights shuffle differently; the same fight resumed shuffles the same. */
@@ -466,6 +480,7 @@ export class CombatController {
 		log: [],
 		cue: null,
 		ready: false,
+		awaiting: false,
 		wins: { info: 0, error: 0 },
 		outcome: null
 	});
@@ -672,6 +687,45 @@ export class CombatController {
 		this.end('lose', 'You gave the fight up.');
 	}
 
+	/**
+	 * Let the turn on from the encounter it is standing at.
+	 *
+	 * A turn is walked through an encounter at a time: each row is played out, said over the
+	 * panel, and then the fight **stops** ({@link hold}) until this is called. It used to run
+	 * itself off a pair of fixed beats — a third of a second after a blow, nine tenths after a
+	 * row nothing was thrown down — which is a guess at how fast somebody reads, made once, for
+	 * everybody: too long for a player who has seen it and far too short for one reading the
+	 * line, whose turn carried on while they were still in the middle of it. There is no length
+	 * of time that is right for both, so the fight does not pick one; it waits.
+	 *
+	 * Ignored unless it is actually waiting, which is what makes it safe to press twice: the
+	 * second press falls on a fight already carrying on and lets nothing further through.
+	 */
+	next(): void {
+		this.carryOn?.();
+		this.emit();
+	}
+
+	/**
+	 * Stand still at the end of an encounter until {@link next} is called.
+	 *
+	 * Called as the *last* thing an encounter does, once everything it had to show has been
+	 * shown — the walk out, the blow, the fall, the ground changing hands and the walk home —
+	 * because what the player is being asked is whether they are done reading a row that is
+	 * over, and a fight held mid-swing would be asking it of a picture still being drawn.
+	 */
+	private hold(): Promise<void> {
+		return new Promise((resolve) => {
+			this.carryOn = () => {
+				// Cleared before the turn is let on, so the fight is already not-waiting by the
+				// time anything downstream of the release reads the state back.
+				this.carryOn = null;
+				resolve();
+			};
+			this.emit();
+		});
+	}
+
 	/** Lock both sides' orders in and carry them out together. */
 	commit(): void {
 		if (this.phase !== 'planning' || !this.isReady()) return;
@@ -820,9 +874,10 @@ export class CombatController {
 	 * attacked said nothing at all, which is the turn a player is most likely to wonder about.
 	 *
 	 * Unlike a shot there is nothing on the canvas to hang the words on — the aura came up at
-	 * the reveal and that is the whole of the picture — so each of these gets a beat of its
-	 * own to be read in ({@link QUIET_LANE_MS}). It is the one place the narration lengthens a
-	 * turn, and it lengthens the turns that had nothing in them.
+	 * the reveal and that is the whole of the picture — so one of these is its line and nothing
+	 * else. It is held like any other encounter all the same ({@link hold}): a row that went by
+	 * on its own while every other row waited to be pressed on from would be the game reading
+	 * one of them for the player.
 	 *
 	 * Read down the player's own line, which is the board's top→bottom row order, and a row is
 	 * skipped unless **both** its fighters were in the turn with an order: one that is down, or
@@ -870,7 +925,9 @@ export class CombatController {
 			this.log.push(said);
 			this.announce('loadAgainstCover', { loader, guard }, said);
 		}
-		await pause(QUIET_LANE_MS);
+		// Nothing was thrown, so the line is the whole of the encounter and it is finished
+		// being drawn the moment it is said: the row stands here until the player presses on.
+		await this.hold();
 	}
 
 	/**
@@ -958,7 +1015,9 @@ export class CombatController {
 			this.board?.returnHome(two.shooter.id)
 		]);
 		this.emit();
-		await pause(SHOT_BEAT_MS);
+		// Both are home and neither fell: the encounter is over, and it stands until the
+		// player presses on.
+		await this.hold();
 	}
 
 	/**
@@ -1077,7 +1136,10 @@ export class CombatController {
 			// the right to leave.
 			await this.settleLane(shooter, target);
 			this.emit();
-			await pause(SHOT_BEAT_MS);
+			// The fall and the ground changing hands are the end of this same encounter, so
+			// the hold is here and not before them: the row is only over once the lane it
+			// decided has been walked out.
+			await this.hold();
 			return;
 		}
 		// The blow is over, so the guard is over: the fighter comes out of its brace and out
@@ -1092,7 +1154,9 @@ export class CombatController {
 		// played from the line as it stood.
 		await this.board?.returnHome(shooter.id);
 		this.emit();
-		await pause(SHOT_BEAT_MS);
+		// The attacker is home and nobody fell: the encounter is over, and the fight stands
+		// here until the player presses on.
+		await this.hold();
 	}
 
 	/**
@@ -1386,6 +1450,7 @@ export class CombatController {
 			log: [...this.log],
 			cue: this.cue,
 			ready: this.isReady(),
+			awaiting: this.carryOn !== null,
 			wins: { info: this.lanesWon('info'), error: this.lanesWon('error') },
 			outcome: this.outcome
 		});

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { CombatController, type CombatState, type FighterSeed } from '$services/combat.controller';
+import { playTurn } from './play-turn';
 import type { CombatColor } from '$types/character-definition.type';
 import {
 	narrationPlaceholders,
@@ -102,8 +103,7 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.attachBoard(silentBoard());
 		const said = record(controller);
 		controller.setAction('p0', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 		expect(events(said)).toEqual(['bothLoad']);
 		// The player's own fighter first: with both doing the same thing there are no roles
 		// to tell them apart, so the line reads from the reader's side.
@@ -123,8 +123,7 @@ describe('what the fight says while it plays a turn out', () => {
 		const said = record(controller);
 		controller.setAction('p0', 'defend');
 		controller.setAction('p1', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 
 		expect(events(said)).toEqual(['loadAgainstCover', 'bothLoad']);
 		// Named by what each did rather than by whose side it is on: the rival loaded and
@@ -147,8 +146,7 @@ describe('what the fight says while it plays a turn out', () => {
 		const opening = record(controller);
 		controller.setAction('p0', 'charge');
 		controller.setAction('p1', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 
 		// One row played quietly and one was decided — a line each, the quiet one first.
 		expect(events(opening)).toEqual(['bothLoad', 'hit']);
@@ -159,8 +157,7 @@ describe('what the fight says while it plays a turn out', () => {
 		// said is about the row still being fought.
 		const said = record(controller);
 		controller.setAction('p1', 'defend');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 		expect(events(said)).toEqual(['blocked']);
 		expect(said[0].values).toEqual({ attacker: 'R1', target: 'P1' });
 	});
@@ -177,13 +174,11 @@ describe('what the fight says while it plays a turn out', () => {
 		]);
 		controller.attachBoard(silentBoard());
 		controller.setAction('p0', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 
 		const said = record(controller);
 		controller.setAction('p0', 'shoot');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 
 		// One row was played, so one thing was said about it — not the setting off, the
 		// landing and the ground changing hands as three sentences over one event.
@@ -204,8 +199,7 @@ describe('what the fight says while it plays a turn out', () => {
 		const said = record(controller);
 		controller.setAction('p0', 'charge');
 		controller.setAction('p1', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 
 		expect(events(said)).toEqual(['freeGuard', 'freeGuard']);
 		// One line per row, each about the two fighters standing in that row and no others.
@@ -225,8 +219,7 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.attachBoard(silentBoard());
 		const said = record(controller);
 		controller.setAction('p0', 'defend');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 
 		expect(events(said)).toEqual(['blocked']);
 		expect(get(controller).fighters.find((fighter) => fighter.id === 'p0')?.down).toBe(false);
@@ -239,8 +232,7 @@ describe('what the fight says while it plays a turn out', () => {
 		]);
 		controller.attachBoard(silentBoard());
 		controller.setAction('p0', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 		// The turn was played, something was said about it, and the fight is back to waiting
 		// on the player — so the line comes off with the turn it was about.
 		expect(get(controller).phase).toBe('planning');
@@ -255,11 +247,9 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.attachBoard(silentBoard());
 		const said = record(controller);
 		controller.setAction('p0', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 		controller.setAction('p0', 'shoot');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 
 		expect(get(controller).outcome).toBe('win');
 		// How a fight ended is not an encounter: it is read off the panel that comes up in
@@ -276,8 +266,7 @@ describe('what the fight says while it plays a turn out', () => {
 		controller.attachBoard(silentBoard());
 		const said = record(controller);
 		controller.setAction('p0', 'charge');
-		controller.commit();
-		await vi.runAllTimersAsync();
+		await playTurn(controller);
 		expect(said.length).toBeGreaterThan(0);
 		// Every cue hands over exactly the names its own event's lines may write in, and
 		// every one of them is a fighter's name — nothing here is a sentence.
@@ -299,8 +288,7 @@ describe('what the fight says while it plays a turn out', () => {
 		const said = record(controller);
 		for (let turn = 0; turn < 6; turn++) {
 			controller.setAction('p0', 'defend');
-			controller.commit();
-			await vi.runAllTimersAsync();
+			await playTurn(controller);
 		}
 
 		expect(events(said)).toEqual([

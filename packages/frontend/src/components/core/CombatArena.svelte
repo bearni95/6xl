@@ -1753,9 +1753,18 @@
 				     The middle of the panel is the one band of it that is never anything else: the
 				     account is at the top corner and the orders are along the foot, so a line here
 				     covers nothing that is read or pressed. It is gone between turns, since the cue
-				     is (see the controller's `finishTurn`). -->
+				     is (see the controller's `finishTurn`).
+				     The way on from each encounter is drawn there too, and pressed back into the
+				     controller: a turn is walked through a row at a time now rather than played
+				     on a timer, so the block that says what a row was is also the block that
+				     carries the reader off it. `playing` is what puts the button up and
+				     `awaiting` is what makes it pressable — the first is the turn being carried
+				     out at all, the second is this one row having finished being shown. -->
 				<CombatNarration
 					cue={state?.cue ?? null}
+					playing={state?.phase === 'resolving'}
+					awaiting={state?.awaiting ?? false}
+					on:next={() => controller?.next()}
 					classes="absolute inset-x-3 top-1/2 -translate-y-1/2"
 				/>
 			</div>

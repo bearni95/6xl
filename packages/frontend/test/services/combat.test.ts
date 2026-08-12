@@ -23,6 +23,9 @@ import {
 } from '$utils/mugen/grid';
 import type { CombatColor } from '$types/character-definition.type';
 import type { BattleBoardSnapshot, BattleFighterSnapshot } from '$types/battle.type';
+// A turn is committed and then pressed on from, row by row — see the helper, which is where
+// what "a turn played out" means is written down for the whole combat suite.
+import { playTurn } from './play-turn';
 
 /**
  * The stand-off's rules, played out through the controller: what each of the three
@@ -62,11 +65,6 @@ function seed(
 const fighterOf = (state: CombatState, id: string) =>
 	state.fighters.find((fighter) => fighter.id === id)!;
 
-/** Play the committed turn out — the controller's resolution is timed. */
-async function playTurn(controller: CombatController): Promise<void> {
-	controller.commit();
-	await vi.runAllTimersAsync();
-}
 
 /**
  * Play the opening turn with every player fighter loading.

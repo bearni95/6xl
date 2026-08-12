@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { readable } from 'svelte/store';
 import { render } from '@testing-library/svelte';
+import { addMessages, init, waitLocale } from 'svelte-i18n';
 import CombatNarration from '$components/core/CombatNarration.svelte';
+import ca from '../../src/services/i18n/locales/ca.json';
 
 /**
  * The line laid over the player's panel while a turn is played out.
@@ -37,6 +39,14 @@ const inked = (container: HTMLElement): string =>
 		.trim();
 
 describe('the narration over the panel', () => {
+	// The one word this block draws that is not authored narration: the button's own label,
+	// which comes out of the catalogue like every other word in the game.
+	beforeAll(async () => {
+		addMessages('ca', ca);
+		init({ fallbackLocale: 'ca', initialLocale: 'ca' });
+		await waitLocale();
+	});
+
 	beforeEach(() => vi.useFakeTimers());
 	afterEach(() => vi.useRealTimers());
 
@@ -113,6 +123,86 @@ describe('the narration over the panel', () => {
 	it('draws nothing between turns', () => {
 		const { container } = render(CombatNarration, { props: { cue: null } });
 		expect(container.textContent?.trim()).toBe('');
+	});
+
+	it('holds the way on until both the canvas and the words are done', async () => {
+		// The button stands from the moment the row starts being played — the reader is told
+		// what carries them on before they need it, and the plate does not change size when
+		// it comes alive — and it is dead until the encounter is over on both counts.
+		const presses: unknown[] = [];
+		const { container, rerender } = render(CombatNarration, {
+			props: {
+				cue: { event: 'hit', values: { attacker: 'Goku', target: 'Bulma' }, seq: 1, fight: 'p0|r0' },
+				playing: true,
+				awaiting: false
+			},
+			events: { next: () => presses.push(true) }
+		});
+		const button = () => container.querySelector('button') as HTMLButtonElement;
+		expect(button()).toBeTruthy();
+		expect(button().disabled).toBe(true);
+
+		// The words finish first: the canvas is still playing the row out, so nothing yet.
+		await typed();
+		expect(button().disabled).toBe(true);
+
+		// The canvas finishes too, and only now is the press answered.
+		await rerender({ awaiting: true });
+		expect(button().disabled).toBe(false);
+
+		button().click();
+		expect(presses).toHaveLength(1);
+	});
+
+	it('will not be pressed while the line is still being typed', async () => {
+		// The other way round: the canvas is done and the sentence is half written. Pressing
+		// on from a line nobody has read yet is the fight reading it for them.
+		const { container } = render(CombatNarration, {
+			props: {
+				cue: { event: 'hit', values: { attacker: 'Goku', target: 'Bulma' }, seq: 1, fight: 'p0|r0' },
+				playing: true,
+				awaiting: true
+			}
+		});
+		const button = () => container.querySelector('button') as HTMLButtonElement;
+		await vi.advanceTimersByTimeAsync(45 * 2);
+		expect(button().disabled).toBe(true);
+		await typed();
+		expect(button().disabled).toBe(false);
+	});
+
+	it('is still the way on out of an encounter nobody wrote a line for', async () => {
+		// A silent row stops the fight like any other, and a hold with nothing on screen to
+		// release it would be a fight that could not be carried on at all.
+		const { container } = render(CombatNarration, {
+			props: {
+				cue: {
+					event: 'exchange',
+					values: { attacker: 'Goku', target: 'Bulma' },
+					seq: 1,
+					fight: 'p0|r0'
+				},
+				playing: true,
+				awaiting: true
+			}
+		});
+		expect(container.querySelector('p')).toBeNull();
+		expect((container.querySelector('button') as HTMLButtonElement).disabled).toBe(false);
+	});
+
+	it('offers no way on once the fight is over', async () => {
+		// The line that decided a fight stands after it is done — and a press then would lead
+		// nowhere, the turn it belonged to having been the last one.
+		const { container } = render(CombatNarration, {
+			props: {
+				cue: { event: 'hit', values: { attacker: 'Goku', target: 'Bulma' }, seq: 1, fight: 'p0|r0' },
+				playing: false,
+				awaiting: false
+			}
+		});
+		await typed();
+		expect(container.querySelector('p')?.textContent).toBe('El cop de Goku entra: Bulma cau.');
+		expect(container.querySelector('button')).toBeNull();
 	});
 
 	it('stays quiet about an encounter nobody has written a line for', () => {

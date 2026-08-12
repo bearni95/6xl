@@ -1,6 +1,7 @@
 <script lang="ts">
 	import classNames from 'classnames';
-	import { onDestroy } from 'svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { _ } from 'svelte-i18n';
 	import { narration } from '$services/narration.service';
 	import { pickNarrationSegments, type CombatNarrationCue } from '$types/combat-narration.type';
 	import { typewriterParts, typewriterWords } from '$utils/string/typewriter';
@@ -39,20 +40,43 @@
 	 * from the start — text growing into a centred, balanced box would re-wrap under the eye
 	 * on every word.
 	 *
-	 * Nothing at all is drawn when there is no cue or the event has no line authored for it:
-	 * between turns the panel is the player's to plan on, and a plate that stayed up empty
-	 * would be a caption box with nothing in it standing over the orders.
+	 * No line is drawn when there is no cue or the event has no line authored for it: between
+	 * turns the panel is the player's to plan on, and a plate that stayed up empty would be a
+	 * caption box with nothing in it standing over the orders.
+	 *
+	 * **The way on from the encounter is here too** — the one control on this plate, and the
+	 * whole reason it is not `pointer-events-none` throughout. A turn no longer plays itself
+	 * out on a timer: each row stops when it is done and waits to be pressed on from (the
+	 * controller's `next`), so the button is drawn from the moment the row starts being played
+	 * — greyed, saying what carries the reader on before they need it, and standing in room the
+	 * plate already holds so nothing moves when it comes alive — and it is pressable only once
+	 * **both** halves of the encounter are finished: the canvas, which is `awaiting`, and the
+	 * words, which is this component's own typing. Either one alone would be a fight that could
+	 * be skipped past the half of it the player was still reading or watching.
+	 *
+	 * It is drawn for a silent encounter as well, which is the one case where the line is not
+	 * what the button waits for: an event nobody has authored a line for still stops the fight,
+	 * and a hold with nothing on screen to release it would be a fight that could not be
+	 * carried on at all.
 	 */
 	export let cue: CombatNarrationCue | null = null;
+	/** The fight is standing at the end of this encounter with everything shown, waiting to be
+	 * let on (`CombatState.awaiting`). */
+	export let awaiting: boolean = false;
+	/** A turn is being played out, so a press is what carries it on. What the button is drawn
+	 * off, as against `awaiting`, which is what makes it pressable. */
+	export let playing: boolean = false;
 	export let classes: string = '';
+
+	const dispatch = createEventDispatcher<{ next: void }>();
 
 	/**
 	 * How long one word stands before the next joins it.
 	 *
-	 * The whole sentence has to be typed well inside the beat its encounter is played out
-	 * over — the shortest of those is a lane where nothing was thrown, which the controller
-	 * holds for `QUIET_LANE_MS` — so this is fast: a dozen words land in about half a second,
-	 * which reads as writing rather than as waiting.
+	 * Fast — a dozen words land in about half a second, which reads as writing rather than as
+	 * waiting. The fight is held at the reader's own pace now, so nothing is lost by a line
+	 * that is still being typed when the canvas falls quiet; what a slow one would cost is the
+	 * press, which cannot be answered until the sentence is on the plate whole.
 	 */
 	const WORD_MS = 45;
 
@@ -89,35 +113,62 @@
 	}
 
 	onDestroy(stop);
+
+	/** Whether the sentence is on the plate whole. True where there is nothing to type, which
+	 * is a silent encounter: the words cannot be what such a row is waited on for. */
+	$: typed = revealed >= words;
+	/** The press is answered only where the canvas is finished *and* the words are. */
+	$: pressable = awaiting && typed;
 </script>
 
-{#if line}
-	<!-- Read out as it changes as well as drawn: the narration is the one part of a turn
-	     that is words, so it is what a screen reader can follow the fight by. Polite, because
-	     it arrives beat after beat and must not cut across whatever is being read.
-	     It takes no pointer — it is laid over a panel that is pressed, and a caption is a
-	     reading, not a surface. -->
-	<div
-		class={classNames('pointer-events-none z-20 flex justify-center', classes)}
-		role="status"
-		aria-live="polite"
-	>
-		<p
-			class="max-w-md rounded-box bg-base-100/90 px-3 py-2 text-center text-xl font-medium text-balance shadow-lg"
-		>
-			{#each parts as part, index (index)}
-				<!-- A word not yet typed is drawn and not inked, so it holds its own room: the
-				     box is the size of the finished sentence from the first word on. The gaps
-				     between words are never hidden — there is nothing to see either way, and a
-				     space that came and went would move the words that were already up. -->
-				<span
-					class={classNames(
-						'transition-opacity duration-100',
-						part.color ? SPAWN_INK_CLASSES[part.color as SpawnColor] : undefined,
-						{ 'opacity-0': part.word && part.index >= revealed }
-					)}>{part.text}</span
-				>
-			{/each}
-		</p>
+{#if line || playing || awaiting}
+	<!-- The plate takes no pointer — it is laid over a panel that is pressed, and a caption
+	     is a reading, not a surface. The one thing in it that *is* pressed takes its own
+	     back. -->
+	<div class={classNames('pointer-events-none z-20 flex flex-col items-center gap-2', classes)}>
+		{#if line}
+			<!-- Read out as it changes as well as drawn: the narration is the one part of a turn
+			     that is words, so it is what a screen reader can follow the fight by. Polite,
+			     because it arrives beat after beat and must not cut across whatever is being
+			     read. The live region is the sentence itself and not the box around it, so the
+			     button coming alive under it is not a change to be read out. -->
+			<p
+				class="max-w-md rounded-box bg-base-100/90 px-3 py-2 text-center text-xl font-medium text-balance shadow-lg"
+				role="status"
+				aria-live="polite"
+			>
+				{#each parts as part, index (index)}
+					<!-- A word not yet typed is drawn and not inked, so it holds its own room: the
+					     box is the size of the finished sentence from the first word on. The gaps
+					     between words are never hidden — there is nothing to see either way, and a
+					     space that came and went would move the words that were already up. -->
+					<span
+						class={classNames(
+							'transition-opacity duration-100',
+							part.color ? SPAWN_INK_CLASSES[part.color as SpawnColor] : undefined,
+							{ 'opacity-0': part.word && part.index >= revealed }
+						)}>{part.text}</span
+					>
+				{/each}
+			</p>
+		{/if}
+		{#if playing || awaiting}
+			<!-- The way on. It stands from the moment the row starts being played and is dead
+			     until the row is over on both counts, rather than appearing when it comes alive:
+			     a button that arrived at the moment it became pressable would move the line above
+			     it just as the reader reached the end of it, and would leave the player with
+			     nothing on screen saying what a stopped fight is waiting for.
+			     Only while a turn is being played out, which is the whole of when a press means
+			     anything: the line that decided a fight stands after it is over, and a way on
+			     from a fight that has ended leads nowhere. -->
+			<button
+				type="button"
+				class="btn pointer-events-auto btn-sm btn-primary"
+				disabled={!pressable}
+				on:click={() => dispatch('next')}
+			>
+				{$_('combat.next')}
+			</button>
+		{/if}
 	</div>
 {/if}

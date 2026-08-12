@@ -14,6 +14,9 @@ import {
 import { cellScreenY, FIRST_COLUMN, LAST_COLUMN } from '$utils/mugen/grid';
 import type { CombatColor } from '$types/character-definition.type';
 import type { BattleBoardSnapshot } from '$types/battle.type';
+// A turn is committed and then pressed on from, row by row — see the helper, which is where
+// what "a turn played out" means is written down for the whole combat suite.
+import { playTurn } from './play-turn';
 
 /** Three a side, in line-up order: the first three colours are the rivals', the
  * last three the player's. Mirrors the seeding in combat.controller.test. */
@@ -41,8 +44,6 @@ const COLORS: CombatColor[] = ['red', 'yellow', 'blue', 'red', 'yellow', 'blue']
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-/** Everything the turn in flight still has to do, done at once. */
-const settleTurn = (): Promise<void> => vi.runAllTimersAsync().then(() => undefined);
 
 /** Play `turns` turns out, every standing player fighter shooting when it can and
  * charging when it can't — enough to bank charges, spend guards and fell fighters. */
@@ -54,8 +55,7 @@ async function playTurns(controller: CombatController, turns: number): Promise<v
 			controller.setAction(fighter.id, fighter.canShoot ? 'shoot' : 'charge');
 		}
 		if (!get(controller).ready) return;
-		controller.commit();
-		await settleTurn();
+		await playTurn(controller);
 	}
 }
 
@@ -144,8 +144,7 @@ describe('CombatController — leaving a fight and coming back to it', () => {
 		expect(orders(after)).toEqual(orders(given));
 		expect(after.ready).toBe(true);
 
-		resumed.commit();
-		await settleTurn();
+		await playTurn(resumed);
 		// And it lands where the turn would have left it: the next turn, or the end of the
 		// fight if that turn settled it.
 		expect(get(resumed).turn > given.turn || !!get(resumed).outcome).toBe(true);

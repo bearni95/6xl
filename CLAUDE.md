@@ -323,9 +323,8 @@ are a blow answered — `exchange`, `blocked`, `freeGuard`, `hit`, `spent` — a
 `playExchange` and `playShot`'s four branches. The other three are the rows where **nothing
 was thrown**: `bothLoad`, `bothCover`, `loadAgainstCover`, announced by `playQuietLanes`
 after the reveal and before the shooting, since a lane that only loaded is settled the
-moment the orders are read. Those are the one place the narration costs a turn any time —
-there is no animation to hang the words on, so each holds `QUIET_LANE_MS` to be read in —
-and it is the turns that had nothing in them that pay it. Which two names a line gets
+moment the orders are read — those are the rows whose line is the whole of the encounter,
+there being no animation to hang the words on. Which two names a line gets
 depends on what the pair were to each other: `{attacker}`/`{target}` for a blow,
 `{loader}`/`{guard}` where one loaded and one covered, and `{one}`/`{other}` where both did
 the same thing (the player's own fighter first, so a line reads from the reader's side).
@@ -335,6 +334,24 @@ was played for — is not an encounter and says nothing. Neither is the reveal, 
 banking (one instant, everybody at once) or the fight's own result, which is read off the
 panel in the middle of the board. The cue comes off when the next turn is handed back
 (`finishTurn`); a fight that ends keeps the encounter that decided it.
+
+**A turn is walked through an encounter at a time, and the player is what carries it on.**
+Each row plays itself out on the canvas, is said over the panel, and then the fight *stops*
+(`hold`, released by `CombatController.next`, with `CombatState.awaiting` saying which of
+those two it is at any moment). The way on is the one control on the narration plate: drawn
+from the moment the row starts being played, so the reader is told what carries them on
+before they need it and the plate does not change size when it comes alive, and pressable
+only once **both** halves of the encounter are finished — the canvas, which is `awaiting`,
+and the words, which is the typewriter's own count. It stands for a **silent** encounter too
+(an event nobody has authored a line for still stops the fight, and a hold with nothing on
+screen to release it could not be carried on at all), and not at all once the fight is over,
+a press then leading nowhere. It replaced a pair of fixed beats — a third of a second after
+a blow, nine tenths after a row nothing was thrown down — which were one guess at how fast
+somebody reads, made for everybody: too long for a player who has seen it, far too short for
+one still in the middle of the line. Only `REVEAL_MS` survives, the reveal being one instant
+for everybody at once with nothing said over it. In the tests, playing a turn out is
+therefore committing it and pressing on from every row it holds at — `test/services/play-turn.ts`,
+which the whole combat suite goes through.
 
 The wording is authored data — `@3xl/data`'s `public/combat-narration.json`, written on the
 admin `/narration` screen, read once by `narration.service.ts` — so a line can be rewritten
