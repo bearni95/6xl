@@ -687,9 +687,15 @@
 	/**
 	 * Mark the fighter the panel is turned to on the board itself
 	 * ({@link MugenBoardEngine.setPacing}), which says it twice over: that fighter walks on
-	 * the spot on its own cell, and a triangle stands in the middle of its lane — on the
-	 * ground between it and the rival across from it — aimed at it. One call for the pair,
-	 * off one id, so the two marks are never on different fighters.
+	 * the spot on its own cell, and its own three orders stand in the middle of its lane —
+	 * on the ground between it and the rival across from it. One call for the pair, off one
+	 * id, so the two marks are never on different fighters.
+	 *
+	 * The lane column is that fighter's own column drawn a second time, off the very list
+	 * this component hands the board for it ({@link orderButtons}), so it wears the chosen
+	 * order, the greyed one and the gift edging exactly as the column beside the fighter
+	 * does — the board mirrors the list rather than being handed a second one, which is why
+	 * nothing here has to push it.
 	 *
 	 * The panel and the board are two ways of reaching the same three orders, and the one
 	 * thing the panel could not say was *which* of the fighters on the canvas it was
@@ -699,9 +705,10 @@
 	 *
 	 * Both are off exactly when the panel is ({@link panelLocked}): the moment the last order
 	 * is given the turn is taken out of the player's hands and played out, and a fighter
-	 * still pacing through it — or still pointed at — would be saying it is waiting to be
-	 * told something. The board goes still, the turn happens, and the pace and the pointer
-	 * come back together on the fighter the next turn opens on.
+	 * still pacing through it — or still standing over a column of orders — would be saying
+	 * it is waiting to be told something. The board goes still, the turn happens, and the
+	 * pace and the lane column come back together on the fighter the next turn opens on,
+	 * which is also what keeps a column off the lane while the lane is being played out.
 	 * A fighter with nothing left to be asked — down, or holding the ground its lane was
 	 * played for — is never marked either: it keeps its row in the panel because it is still
 	 * one of the player's three, and there is nothing to answer for it.
@@ -1475,7 +1482,7 @@
 			     view's.
 			     Which fighter it is turned to is said on the board rather than here — that
 			     fighter, and no other, walks on the spot on its own cell while it is waiting to be
-			     told something, with a triangle standing in its lane (see `syncPacing`). So the
+			     told something, with its own three orders standing in its lane (see `syncPacing`). So the
 			     panel is turned to one of the three and the board is what points at the same one,
 			     which is the whole reason this plate need not name them again — and, now that
 			     nothing here steps the line, the only thing that says which fighter the buttons
@@ -1681,7 +1688,8 @@
 						     something still to answer and each order given moves the panel to the next
 						     such fighter (see {@link giveOrderFromPanel}), which is the whole of the
 						     three being answered once each. The board says which one it is at every
-						     moment — that fighter paces its own cell, and a triangle stands in its lane —
+						     moment — that fighter paces its own cell, and this very column of orders
+						     stands out in its lane —
 						     so nothing is lost by the panel having no way round the line of its own.
 						     What *is* lost, and is worth saying plainly: an order once given cannot be
 						     taken back inside its turn, because there is no longer a way to turn the

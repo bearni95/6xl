@@ -11,7 +11,6 @@ import {
 } from 'pixi.js';
 import { destroyPixiApp } from '../pixi/release-context';
 import { combatColorHex } from '../color/combat-color';
-import { themeColorHex } from '../color/theme-color-hex';
 import {
 	GROUND_BOTTOM_EDGE_TILE,
 	GROUND_BROW_SQUARES,
@@ -503,84 +502,58 @@ const PACE_SPEED = 140;
  */
 const PACE_FRAME_RATE = 2;
 
-// --- The pointer in the lane of the fighter being answered for ----------------
+// --- The orders standing in the lane of the fighter being answered for --------
 // The second half of the same mark, and the half that says it in one glance rather than
-// over a stride: a triangle standing in the middle of that fighter's lane, aimed across at
-// it. The pace is a fighter *moving*, which is unmissable but takes a moment to notice and
-// is a thing about the whole board — the only one stirring — where this is a thing about
-// one lane, read on the very ground that lane is being fought over. Neither is a caption:
-// between them the canvas answers "which of my three is the panel talking about" without a
-// word on it.
+// over a stride: the three orders that fighter can be given, drawn out on the ground of
+// its own lane. The pace is a fighter *moving*, which is unmissable but takes a moment to
+// notice and is a thing about the whole board — the only one stirring — where this is a
+// thing about one lane, read on the very ground that lane is being fought over. Neither is
+// a caption: between them the canvas answers "which of my three is the panel talking
+// about" without a word on it.
+//
+// **It is that fighter's own column, drawn a second time.** Not a mark that stands for the
+// column but the column itself — the same three glyphs in the same order, chosen and greyed
+// and edged exactly as the one beside the fighter is, because it is drawn off the very list
+// that one is ({@link Actor.orderList}). Which is the whole reason the board mirrors the
+// list rather than being handed a second one: two drawings of one list cannot come to
+// disagree about what a fighter has been told, what it may be told, or what its colour
+// hands it free. A triangle stood here before it, in the theme's secondary, and said only
+// "this one" — where a column says which one *and* what is being answered.
 //
 // It is raised and taken down by the very call that starts and stops the pace
 // ({@link MugenBoard.setPacing}), off the very same id, so the two can never point at
 // different fighters or be up at different moments. That is also the whole of its
 // lifetime: it stands while the player may give an order and goes the instant the turn is
-// out of their hands, and comes back in whichever lane the next turn opens on.
+// out of their hands, and comes back in whichever lane the next turn opens on. So nothing
+// is ever standing on the lane while the lane is being played out, which is what lets a
+// column stand on the ground two fighters walk into.
 //
 // **Between the two fighters, and not over either of them.** It stands on the white column
 // ({@link LANE_COLUMN}) of that fighter's own row — the ground the lane is played for, which
 // is empty while a turn is being planned and is exactly the gap between the rival and the
-// fighter facing it. So the mark is in the one place on that row nobody is standing, level
-// with the pair either side of it and reading as the lane's own rather than as something
-// hung on a figure. It was over the fighter's head, riding its pace: a mark on a head is a
-// hat, and it moved with the very thing it was pointing at.
-//
-// Which way it points is the fighter's own half ({@link Actor.side}, the board's own answer
-// for which way a half faces): the tip aims across the white cell at the fighter being
-// answered for, and away from the one facing it. The player's line stands in the blue half,
-// so in practice it points right — but the direction is read off the actor rather than
-// assumed, so a mark asked for on either half is aimed at what it is about.
+// fighter facing it. So it is in the one place on that row nobody is standing, level with
+// the pair either side of it and reading as the lane's own rather than as something hung on
+// a figure. Centred in that cell rather than flush inside one of its ruled sides, which is
+// what every other column on this board is: the two ends of a lane are somebody's, and the
+// middle of it is the one place that is nobody's.
 //
 // Placed on the lane and not on the fighter, it holds still: it takes nothing from the
 // pace, which is the division of labour between the two marks. The pace is the fighter
-// moving; this is the ground saying which fighter to watch, and a mark that stirred on its
-// own would be a third thing happening in a lane that already has two.
+// moving; this is the ground saying which fighter to watch.
 //
 // **It slides between lanes rather than jumping.** The panel is stepped along the line by
-// its arrows and by every order given, and a mark that vanished from one lane and appeared
-// in another leaves the reader to work out that it was the same mark — where a mark that
-// travels there is plainly the one mark, still about one fighter, now about a different
-// one. It is the same reading a fighter's own walk gives: this board moves things from
-// where they were to where they are going, and never cuts.
+// every order given, and a column that vanished from one lane and appeared in another leaves
+// the reader to work out that it was the same column — where one that travels is plainly the
+// one column, still about one fighter, now about a different one. It is the same reading a
+// fighter's own walk gives: this board moves things from where they were to where they are
+// going, and never cuts.
 
 /** The board's own middle column — the white ground a lane is played for, between the two
  * fighters holding that row. Empty for the whole of a planning phase, which is what makes
- * it somewhere to stand a mark. */
+ * it somewhere to stand a column. */
 const LANE_COLUMN = 0;
-/** The triangle's side, as a share of a cell — it is equilateral, so this is the whole of
- * its size. Read against a cell's 219: getting on for half the ground a fighter stands on,
- * which is a mark read from across the board rather than one looked for. It lies on its
- * side, so what it costs the lane is its *height* — √3/2 of this, against a white cell
- * drawn two thirds of a cell wide ({@link closeCut}) — and it stands clear inside that. */
-const POINTER_SIDE_RATIO = 0.4;
-/** How thick its border is drawn, as a share of that side. Aligned to the inside of the
- * shape, so the silhouette stays the equilateral triangle the side describes. It is drawn
- * in the fill's own colour ({@link POINTER_TOKEN}), so what it amounts to on screen is a
- * solid tile — the width is what would carry a second colour if the mark is ever given
- * one, and is kept at a thickness that would show. */
-const POINTER_BORDER_RATIO = 0.14;
 /**
- * The theme token the mark is drawn in — fill and line alike — and what it falls back to
- * where the theme cannot be read at all ({@link themeColorHex}).
- *
- * The theme's **secondary**, which is the one colour on this board that belongs to no
- * fighter: the six a card can roll are its own table ({@link combatColorHex}), the ground
- * is grass and the guards and sparks wear whoever threw them, so a mark in any of those
- * would be read as being about a side. Secondary is not in that vocabulary at all, which
- * is what lets it say "look here" without also seeming to say whose.
- *
- * Filled *and* lined in it, so what stands in the lane is one solid shape. The border is
- * still drawn and still thick ({@link POINTER_BORDER_RATIO}) — the width is what would
- * carry a second colour if the mark is ever given one.
- *
- * The fallback is synthwave's own secondary, so a board with no document over it still
- * draws the mark the game draws.
- */
-const POINTER_TOKEN = '--color-secondary';
-const POINTER_FALLBACK = 0xe81799;
-/**
- * How quickly the mark closes on the lane it has been sent to, as the time constant of an
+ * How quickly the column closes on the lane it has been sent to, as the time constant of an
  * exponential ease in ms: the share of the distance left that it covers is
  * `1 - e^(-Δt/this)`, so it leaves fast, arrives slowly and never overshoots or lands with
  * a stop. Read against the ~219px between one lane and the next, this is a slide of a
@@ -591,7 +564,7 @@ const POINTER_FALLBACK = 0xe81799;
  * as one that is not: the ease is asked how far to go for the time that has actually
  * passed, not once per frame.
  */
-const POINTER_GLIDE_MS = 90;
+const LANE_GLIDE_MS = 90;
 
 /** Frames of an aura animation (static/auras/<color>/1..N.png). */
 const AURA_FRAMES = 4;
@@ -1034,7 +1007,14 @@ export interface OrderPlacement {
 interface OrderStrip {
 	container: Container;
 	buttons: BoardMark[];
-	placement: OrderPlacement;
+	/**
+	 * Which cell of the board it stands in and which of that cell's sides it is flush
+	 * inside — **null on the one column that is not stood on a cell by rule**: the copy out
+	 * in the lane of the fighter being answered for, which is centred on the white column
+	 * and eased along it ({@link MugenBoard.updateLane}) rather than put anywhere by
+	 * {@link MugenBoard.updateOrders}.
+	 */
+	placement: OrderPlacement | null;
 }
 
 /** A character standing (and, during combat, running) on the board. */
@@ -1140,6 +1120,16 @@ interface Actor {
 	/** The column of order buttons drawn beside this fighter, or null when it commands
 	 * nothing (every rival, and the player's side once the fight is over). */
 	orders: OrderStrip | null;
+	/**
+	 * The very list that column was last drawn from, kept so it can be drawn **twice**:
+	 * the fighter being answered for has this same column standing out in its lane as
+	 * well ({@link MugenBoard.aimLane}), and the two are one list rather than two so they
+	 * cannot come to disagree about what the fighter has been told or what it may be told.
+	 *
+	 * Empty for a fighter that commands nothing, which is what takes the lane column down
+	 * with it.
+	 */
+	orderList: BoardOrder[];
 	/** Nominal on-screen size (px) of the character at its fit scale, measured
 	 * from its base animation frames; sizes the aura that envelops it. */
 	displayWidth: number;
@@ -1298,15 +1288,17 @@ export class MugenBoard {
 	/** The dot every one of them is drawn from, built on first use (see {@link sparkArt}). */
 	private sparkContext: GraphicsContext | null = null;
 	/**
-	 * The triangle standing over the fighter the panel is turned to, and which fighter that
-	 * is — null on both counts when nobody is being answered for.
+	 * The column of orders standing in the lane of the fighter the panel is turned to, and
+	 * which fighter that is — null on both counts when nobody is being answered for.
 	 *
 	 * One of them for the board rather than one per actor, because there is only ever one:
-	 * {@link setPacing} names a single fighter, and a mark that says "this one" cannot be in
-	 * two places. It is built once and moved, not raised and torn down each turn.
+	 * {@link setPacing} names a single fighter, and a column that says "this one" cannot be
+	 * in two places. It is built once and moved, not raised and torn down each turn — which
+	 * is also what makes "was it up already?" the question that decides between placing it
+	 * and sliding it ({@link aimLane}).
 	 */
-	private pointer: Graphics | null = null;
-	private pointerAt: string | null = null;
+	private lane: OrderStrip | null = null;
+	private laneAt: string | null = null;
 	/** Callouts pinned to a cell rather than to a fighter (see {@link showCellCallout}).
 	 * A fighter's own is held on the actor, which is what takes it down; these have
 	 * nobody, so the board keeps them until the turn's callouts are cleared. */
@@ -1625,10 +1617,10 @@ export class MugenBoard {
 		// board built again builds its own.
 		this.sparkContext?.destroy();
 		this.sparkContext = null;
-		// The pointer went with the stage; what is dropped here is this board's hold on it and
-		// on whoever it was standing over, so a board built again builds its own.
-		this.pointer = null;
-		this.pointerAt = null;
+		// The lane column went with the stage; what is dropped here is this board's hold on it
+		// and on whoever it was standing for, so a board built again builds its own.
+		this.lane = null;
+		this.laneAt = null;
 		// The grass goes the same way, sources and all: the sprites that drew it went with the
 		// stage, and this board cut its tiles for itself out of the sheet.
 		const { fills, topEdge, bottomEdge, earth } = this.groundTiles;
@@ -2127,6 +2119,7 @@ export class MugenBoard {
 			ring: null,
 			label: null,
 			orders: null,
+			orderList: [],
 			displayWidth,
 			displayHeight,
 			reachLeft: reach.left,
@@ -2351,12 +2344,12 @@ export class MugenBoard {
 			this.updateRing(actor, deltaMs);
 			this.updateOrders(actor);
 			this.updateLabel(actor);
-			// The one fighter being answered for, if it is this one. The mark stands on the
-			// lane rather than on the fighter, so it takes nothing from the pace — but it is
-			// eased towards the lane it has been sent to, and a fighter still walking home as
-			// the next turn opens moves that lane under it, so both are read afresh each frame.
-			if (actor.id === this.pointerAt) this.updatePointer(actor, deltaMs);
 		}
+		// The orders standing in the lane of the one fighter being answered for. Outside the
+		// loop because there is one of them for the whole board and it belongs to no actor's
+		// frame: it stands on ground rather than on a figure, so it takes nothing from the
+		// pace — it is only eased towards the lane it has been sent to.
+		this.updateLane(deltaMs);
 		// After the guards, since this is the tick they were struck on: a spark drawn where
 		// it was struck and moved on the next frame is one frame of a dot sitting on the arc.
 		this.updateSparks(deltaMs);
@@ -2810,15 +2803,15 @@ export class MugenBoard {
 	/**
 	 * Say which fighter is the one being answered for, in the two ways this board says it:
 	 * by walking it on the spot on its own cell — across it and back, in the two walk cycles
-	 * it already owns — and by standing a triangle in the middle of its lane, on the ground
-	 * between it and the rival facing it, aimed across at it ({@link LANE_COLUMN}). Every
-	 * other lane is empty and every other fighter stands still, so exactly one of them is
-	 * ever moving or marked on a board between turns, and `null` is nobody: the board goes
-	 * still and the triangle goes with it the moment the turn is out of the player's hands
+	 * it already owns — and by standing its own three orders out in the middle of its lane,
+	 * on the ground between it and the rival facing it ({@link LANE_COLUMN}). Every other
+	 * lane is empty and every other fighter stands still, so exactly one of them is ever
+	 * moving or answered for on a board between turns, and `null` is nobody: the board goes
+	 * still and the lane column goes with it the moment the turn is out of the player's hands
 	 * (see {@link PACE_REACH_RATIO} for what the pace is and what it deliberately is not).
 	 *
 	 * The two are raised off this one id together and can therefore never disagree — which
-	 * is the whole reason the pointer is put up here rather than asked for separately.
+	 * is the whole reason the lane column is put up here rather than asked for separately.
 	 *
 	 * Idempotent per fighter — asking again for the one already pacing leaves it mid-stride
 	 * rather than snapping it back to its mark, which is what makes this safe to push from a
@@ -2840,129 +2833,7 @@ export class MugenBoard {
 				actor.sprite.x = actor.x;
 			}
 		}
-		this.aimPointer(id);
-	}
-
-	/**
-	 * Stand the pointer over the named fighter, or take it off the board when there is
-	 * nobody to point at — an id nothing on this board answers to counts as nobody, so a
-	 * fighter that has left cannot be left marked.
-	 *
-	 * It is hidden rather than destroyed between turns: the shape is the same shape every
-	 * turn, and a triangle rebuilt three times a turn is geometry uploaded for no reason.
-	 *
-	 * **A mark already up is left where it stands** and glides to the new lane on the tick
-	 * ({@link POINTER_GLIDE_MS}) — that slide is what says the two lanes are about the same
-	 * mark. **A mark that is not up yet starts where it is going**, placed on the spot and
-	 * shown there: it has no last lane to travel out of. That covers both the first raise of
-	 * a fight and every turn after one — the lane a mark was taken down in belongs to a turn
-	 * that is over, and sliding out of it would be the mark crossing the board for a reason
-	 * nobody watched happen.
-	 *
-	 * Whether it is up is the whole of the question, which is why the shape is built hidden
-	 * ({@link pointerArt}) rather than made and then placed.
-	 */
-	private aimPointer(id: string | null): void {
-		const actor = id ? this.findActor(id) : null;
-		this.pointerAt = actor?.id ?? null;
-		if (!actor) {
-			if (this.pointer) this.pointer.visible = false;
-			return;
-		}
-		const pointer = this.pointerArt();
-		if (!pointer) return;
-		const raising = !pointer.visible;
-		// Placed before it is shown, so there is never a frame of it standing anywhere but
-		// in the lane it is about.
-		this.updatePointer(actor, 0, raising);
-		pointer.visible = true;
-	}
-
-	/**
-	 * The triangle itself, built on first use and kept for the life of the board.
-	 *
-	 * **Equilateral, and lying on its side** — drawn pointing right, and turned to point
-	 * left by a mirror when it is aimed at the other half ({@link updatePointer}). Its tip
-	 * is half its height to one side of the graphics' own origin and its two other corners
-	 * half a height to the other, a side's width apart: so the origin is the middle of the
-	 * shape, and placing it *is* placing what the mark stands on. The √3/2 between the side
-	 * and the height is the one piece of arithmetic that makes it a perfect triangle rather
-	 * than a wedge that happens to look like one at this size.
-	 *
-	 * Filled and lined alike in the theme's secondary, read off the live theme
-	 * ({@link POINTER_TOKEN}) rather than spelled here, so the mark is the same pink as
-	 * everything the *document* draws in that colour and follows it if the theme is ever
-	 * retuned. The border is aligned to the inside of the shape, which is what keeps the
-	 * silhouette exactly the triangle described above however thick it is drawn: a centred
-	 * stroke would blunt all three corners outwards by half its width.
-	 *
-	 * **It is built hidden**, and that is not tidiness: a Pixi display object is visible the
-	 * moment it is made and stands at the stage's own origin until it is placed, which is
-	 * the top-left corner of the canvas. Hidden, it is nowhere until {@link aimPointer} has
-	 * a lane to put it in — and, because "was it up already?" is what that method reads to
-	 * decide between placing the mark and sliding it, being born hidden is also what makes
-	 * the very first raise a placement. Visible from birth, the first turn of every fight
-	 * opened with the triangle in the corner of the board, gliding down to the fighter it
-	 * was about.
-	 */
-	private pointerArt(): Graphics | null {
-		if (this.pointer) return this.pointer;
-		if (!this.app) return null;
-		const side = this.options.cellSize * POINTER_SIDE_RATIO;
-		const height = (side * Math.sqrt(3)) / 2;
-		const color = themeColorHex(POINTER_TOKEN, POINTER_FALLBACK);
-		const pointer = new Graphics()
-			.moveTo(height / 2, 0)
-			.lineTo(-height / 2, -side / 2)
-			.lineTo(-height / 2, side / 2)
-			.closePath()
-			.fill({ color })
-			.stroke({ width: side * POINTER_BORDER_RATIO, color, alignment: 1 });
-		pointer.visible = false;
-		this.app.stage.addChild(pointer);
-		this.pointer = pointer;
-		return pointer;
-	}
-
-	/**
-	 * Stand the pointer in its fighter's lane, aimed across at that fighter.
-	 *
-	 * **On the white cell of the fighter's own row** ({@link LANE_COLUMN}) — the ground
-	 * between it and the rival facing it, taken at that cell's own standing mark so the
-	 * triangle stands where a fighter would and not at some point measured off one. Its
-	 * height is the middle of the fighter it is about, which is where a blow is aimed and
-	 * where a guard is centred ({@link angleTo}) — level with the body rather than with the
-	 * feet the cell is marked at.
-	 *
-	 * That place is a **target** rather than a position: the mark is eased towards it by the
-	 * share of the remaining distance that {@link POINTER_GLIDE_MS} allows for the time that
-	 * has actually passed, so a step along the line is a slide down the board and not a cut.
-	 * `snap` is what puts it there outright, for the one case that is not a step — a mark
-	 * coming back up after a turn (see {@link aimPointer}).
-	 *
-	 * The ease is over both axes though only one of them ever moves in practice: the three
-	 * lanes share the white column, so a step along the player's line is a slide down it.
-	 * The other axis costs nothing and is what a mark handed to the other half would need.
-	 *
-	 * Mirrored to face the fighter's own half, which is the board's own way of asking which
-	 * direction a side lies in ({@link fallenDrift} asks it the same way). The scale is ±1,
-	 * so the border keeps its width whichever way the mark is turned. Turned outright rather
-	 * than eased: which way a mark points is a fact about it and not a place it is at.
-	 *
-	 * Over everything, as a mark about a fighter has to be: a good part of this roster is
-	 * drawn wider than the cell it stands on, and a triangle behind an overhanging shoulder
-	 * is a triangle nobody sees.
-	 */
-	private updatePointer(actor: Actor, deltaMs: number, snap = false): void {
-		const pointer = this.pointer;
-		if (!pointer) return;
-		const x = this.cellMark(LANE_COLUMN, actor.row).x;
-		const y = actor.y - actor.displayHeight / 2;
-		const closed = snap ? 1 : 1 - Math.exp(-deltaMs / POINTER_GLIDE_MS);
-		pointer.x += (x - pointer.x) * closed;
-		pointer.y += (y - pointer.y) * closed;
-		pointer.scale.x = actor.side === 'blue' ? 1 : -1;
-		pointer.zIndex = actor.y + 10000;
+		this.aimLane(id);
 	}
 
 	/** Walk an actor back to the cell it started on — the ground it holds, which a
@@ -3646,22 +3517,48 @@ export class MugenBoard {
 	): void {
 		const actor = this.findActor(actorId);
 		if (!actor || !this.app) return;
+		// Held whether or not there is a column to draw it in, since it is also what the lane
+		// column is drawn from: an empty list is what takes *both* of them down.
+		actor.orderList = orders;
 		if (orders.length === 0) {
 			this.clearOrders(actor);
+			this.syncLane();
 			return;
 		}
 
-		const sameSet =
-			actor.orders?.buttons.length === orders.length &&
-			actor.orders.buttons.every((button, i) => button.id === orders[i].id);
-		if (!sameSet) {
+		if (!this.sameOrders(actor.orders, orders)) {
 			this.clearOrders(actor);
-			actor.orders = this.buildOrders(actor, orders, placement);
+			actor.orders = this.buildStrip(orders, placement);
 		}
 
 		const strip = actor.orders;
 		if (!strip) return;
 		strip.placement = placement;
+		this.paintStrip(strip, orders);
+		this.updateOrders(actor);
+		// The same list again, out on this fighter's own lane, when this is the fighter being
+		// answered for. Pushed from here rather than watched for, so the two columns are
+		// repainted on the one call and can never be a frame apart.
+		this.syncLane();
+	}
+
+	/** Whether a strip is already drawing this very set of orders, so it can be repainted
+	 * rather than rebuilt: same count, same ids, same order. */
+	private sameOrders(strip: OrderStrip | null, orders: BoardOrder[]): boolean {
+		return (
+			strip?.buttons.length === orders.length &&
+			strip.buttons.every((button, i) => button.id === orders[i].id)
+		);
+	}
+
+	/**
+	 * Paint a strip's buttons for the states they are in — the whole of what changes from
+	 * one call to the next, the set of orders itself hardly ever changing.
+	 *
+	 * A button whose every state is what it already was is left alone: repainting it would
+	 * be the same picture drawn again, and this runs on every store write of the fight.
+	 */
+	private paintStrip(strip: OrderStrip, orders: BoardOrder[]): void {
 		const size = this.orderSize();
 		orders.forEach((order, i) => {
 			const button = strip.buttons[i];
@@ -3687,11 +3584,13 @@ export class MugenBoard {
 			button.gift = gift;
 			this.paintMark(button, size);
 		});
-		this.updateOrders(actor);
 	}
 
-	/** Build a fighter's strip: one button per order, glyphs loaded as they arrive. */
-	private buildOrders(actor: Actor, orders: BoardOrder[], placement: OrderPlacement): OrderStrip {
+	/** Build a strip: one button per order, glyphs loaded as they arrive. Placed by whoever
+	 * asked for it — a fighter's own column stands on a cell ({@link updateOrders}), the lane
+	 * column is eased along the white one ({@link updateLane}). */
+	private buildStrip(orders: BoardOrder[], placement: OrderPlacement | null): OrderStrip {
+		let strip: OrderStrip | null = null;
 		const container = new Container();
 		container.sortableChildren = false;
 		this.app!.stage.addChild(container);
@@ -3727,18 +3626,21 @@ export class MugenBoard {
 			if (!order.empty) {
 				void this.loadIcon(order.icon).then((texture) => {
 					// The strip may have been rebuilt (or the board torn down) while loading.
-					if (!texture || glyph.destroyed) return;
+					if (!texture || glyph.destroyed || !strip) return;
 					glyph.texture = texture;
-					this.layOutOrders(actor);
+					this.layOutOrders(strip);
 				});
 			}
 			this.paintMark(button, size);
 			return button;
 		});
 
-		const strip: OrderStrip = { container, buttons, placement };
-		actor.orders = strip;
-		this.layOutOrders(actor);
+		// Named before the buttons are built so their glyph loads can lay the strip out again
+		// as each picture lands, and assigned after, since there is nothing to lay out until
+		// there are buttons. Nothing reads it in between: a fetch cannot resolve inside the
+		// synchronous run that starts it.
+		strip = { container, buttons, placement };
+		this.layOutOrders(strip);
 		return strip;
 	}
 
@@ -3880,9 +3782,7 @@ export class MugenBoard {
 	 * handed in. Three buttons and their gaps are a cell tall ({@link ORDER_COLUMN_COUNT}),
 	 * so the top one finishes on the line over it and the column is the cell.
 	 */
-	private layOutOrders(actor: Actor): void {
-		const strip = actor.orders;
-		if (!strip) return;
+	private layOutOrders(strip: OrderStrip): void {
 		const size = this.orderSize();
 		const { height, gap } = size;
 		const step = height + gap;
@@ -3919,7 +3819,9 @@ export class MugenBoard {
 	 */
 	private updateOrders(actor: Actor): void {
 		const strip = actor.orders;
-		if (!strip) return;
+		// A strip with no placement is not stood on a cell by any rule of this method's —
+		// the lane column places itself ({@link updateLane}) — and no actor holds one.
+		if (!strip?.placement) return;
 		const { width } = this.orderSize();
 		const { cell, side } = strip.placement;
 		const edges = this.columnEdges(cell === 'fighter' ? actor.homeColumn : 0);
@@ -3951,6 +3853,128 @@ export class MugenBoard {
 		const strip = actor.orders;
 		if (!strip) return;
 		actor.orders = null;
+		strip.container.parent?.removeChild(strip.container);
+		strip.container.destroy({ children: true });
+	}
+
+	// --- The column standing in the lane being answered for -------------------
+
+	/**
+	 * Stand the answered-for fighter's orders out in the middle of its own lane, or take
+	 * them off the board when there is nobody to answer for — an id nothing on this board
+	 * answers to counts as nobody, so a fighter that has left cannot be left marked.
+	 *
+	 * It is hidden rather than destroyed between turns: the column is the same three orders
+	 * every turn, and a strip torn down and built again three times a turn is geometry
+	 * uploaded and glyphs laid out for no reason.
+	 *
+	 * This names the fighter and nothing else. Whether there is anything to draw for it,
+	 * where it stands and whether it is up at all are {@link syncLane}'s — which is also
+	 * what the orders themselves arrive through, and the two of them can land in either
+	 * order: a pacing pushed before that fighter's orders were is a column with nothing to
+	 * draw yet, and it comes up on the push that gives it something.
+	 */
+	private aimLane(id: string | null): void {
+		this.laneAt = id ? (this.findActor(id)?.id ?? null) : null;
+		this.syncLane();
+	}
+
+	/**
+	 * Draw the lane column off the very list the answered-for fighter's own column is drawn
+	 * off ({@link Actor.orderList}) — the same three orders, chosen and greyed and edged
+	 * alike, because they are one list drawn twice and not two lists kept in step.
+	 *
+	 * Called from both ends of that: when the orders change ({@link setOrders}) and when the
+	 * fighter being answered for changes ({@link aimLane}). Being up is therefore a pure
+	 * reading of those two — somebody to answer for, and something to answer with — and
+	 * never a state of its own that could be left standing after either went away. A fighter
+	 * with no orders at all is a lane that has been settled or a fighter that has gone down.
+	 *
+	 * **A column already up is left where it stands** and glides to the new lane on the tick
+	 * ({@link LANE_GLIDE_MS}) — that slide is what says the two lanes are about the same
+	 * column. **One that is not up yet starts where it is going**, placed on the spot and
+	 * shown there: it has no last lane to travel out of. That covers both the first raise of
+	 * a fight and every turn after one — the lane a column was taken down in belongs to a
+	 * turn that is over, and sliding out of it would be the column crossing the board for a
+	 * reason nobody watched happen. Whether it is up is the whole of that question, so it is
+	 * read here before anything below can change it.
+	 */
+	private syncLane(): void {
+		const actor = this.laneAt ? this.findActor(this.laneAt) : null;
+		const orders = actor?.orderList ?? [];
+		if (!actor || orders.length === 0 || !this.app) {
+			if (this.lane) this.lane.container.visible = false;
+			return;
+		}
+		const raising = !this.lane?.container.visible;
+		if (!this.sameOrders(this.lane, orders)) {
+			// Where it already stands is carried over, since a rebuild is not a raise: the set
+			// of orders changing under a column is not the column going anywhere.
+			const { x, y } = this.lane?.container ?? { x: 0, y: 0 };
+			this.clearLane();
+			// No placement: this one is not stood inside a cell's ruled side like every other
+			// column on the board, it is centred on the lane and eased along it.
+			const strip = this.buildStrip(orders, null);
+			strip.container.visible = false;
+			strip.container.x = x;
+			strip.container.y = y;
+			this.lane = strip;
+		}
+		const strip = this.lane;
+		if (!strip) return;
+		this.paintStrip(strip, orders);
+		// Placed before it is shown, so there is never a frame of it standing anywhere but in
+		// the lane it is about: a strip just built stands at the stage's own origin, which is
+		// the top-left corner of the canvas, until something puts it somewhere.
+		if (raising) this.updateLane(0, true);
+		strip.container.visible = true;
+	}
+
+	/**
+	 * Keep the lane column standing in the white cell of the row being answered for
+	 * ({@link LANE_COLUMN}) — the ground between that fighter and the rival facing it.
+	 *
+	 * **Centred in the cell**, where every other column on this board stands flush inside one
+	 * of its ruled sides: the two ends of a lane belong to the fighters holding it, and the
+	 * middle is the one part of the row that is nobody's. Stood on the cell's floor by the
+	 * same measure its siblings are ({@link updateOrders}), so the three of them are level
+	 * across the row.
+	 *
+	 * That place is a **target** rather than a position: the column is eased towards it by
+	 * the share of the remaining distance that {@link LANE_GLIDE_MS} allows for the time that
+	 * has actually passed, so a step along the line is a slide down the board and not a cut.
+	 * `snap` is what puts it there outright, for the one move that is not a step — a column
+	 * coming back up after a turn (see {@link aimLane}).
+	 *
+	 * The ease is over both axes though only one of them ever moves in practice: the three
+	 * lanes share the white column, so a step along the player's line is a slide down it.
+	 *
+	 * Read off the cell the fighter **holds** rather than wherever it has got to, exactly as
+	 * its own column is: the two are the one column drawn twice, and a lane that moved under
+	 * a fighter walking home would slide the copy while the original stood still.
+	 */
+	private updateLane(deltaMs: number, snap = false): void {
+		const strip = this.lane;
+		const actor = this.laneAt ? this.findActor(this.laneAt) : null;
+		if (!strip || !actor) return;
+		const pad = this.cellWidth() * ORDER_PAD_RATIO;
+		const mark = this.cellMark(LANE_COLUMN, actor.homeRow);
+		const y = mark.y + footToFloor() * this.cellWidth() - pad;
+		const closed = snap ? 1 : 1 - Math.exp(-deltaMs / LANE_GLIDE_MS);
+		strip.container.x += (mark.x - strip.container.x) * closed;
+		strip.container.y += (y - strip.container.y) * closed;
+		// Behind whatever stands on this row, as a fighter's own column is behind its own
+		// fighter: nothing stands in a lane while it is being answered for, but the column
+		// comes down before the lane is played out and never has to be in front of anybody.
+		strip.container.zIndex = mark.y + actor.footDrop - 0.25;
+	}
+
+	/** Take the lane column off the board altogether — for a rebuild, the one thing that is
+	 * not a fighter's column changing hands. Between turns it is hidden and kept. */
+	private clearLane(): void {
+		const strip = this.lane;
+		if (!strip) return;
+		this.lane = null;
 		strip.container.parent?.removeChild(strip.container);
 		strip.container.destroy({ children: true });
 	}
