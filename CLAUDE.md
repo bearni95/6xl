@@ -246,8 +246,24 @@ src/
 └── services/i18n/        # Internationalization
 ```
 
-Frontend routes: `/` (the Països Catalans map, which is the whole game), `/combat` (the
+Frontend routes: `/` (the Països Catalans map, which is the whole game), `/map` (that same
+map with nothing else on the page), `/combat` (the
 fight), `/roster` (the player's own cards) and `/profile/<id>` (any player's public page).
+
+**The map is a component, not a page** — `$components/core/MapScreen.svelte`, which holds the
+terrain, the block saying what is at the open place, and the whole of the machinery both are
+read off: the polygons, the region tree, the show every town flies, the holders, the sieges,
+the packs and the sheets the presses on them raise. None of that divides in two, which is why
+the map and the block are one component rather than a pair — the block is a reading of the
+same tree the terrain is drawn from. `/` and `/map` mount that one component and differ by its
+one prop, `chrome`: the front door takes the band across the top (the game's name, the feed,
+the menu) and the column at the side (the side this player fields, and their account), and
+`/map` takes neither, so the two boxes that are left divide the whole viewport. Everything
+else is identical — the same presses, the same sheets, the same `region` param — so
+`/map?region=…` and `/?region=…` open the same place. Only the splash is the front door's
+alone, drawn beside the component on `/` rather than inside it. Leaving a fight goes to `/`
+either way (`MAP_ROUTE`); the roster comes back to whichever of the two opened it.
+
 Claiming has no route of its own — the booster packs are a full-view modal over the map, as
 are the album and the rest, all drawn on the shared `FullScreenModal` sheet, so there is one
 kind of full-view surface in this app and not one per feature. The two that are *pages* wear
