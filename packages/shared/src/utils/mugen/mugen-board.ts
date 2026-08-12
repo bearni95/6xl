@@ -899,8 +899,14 @@ interface Spark {
 
 /**
  * One order a fighter can be given, drawn as a button beside it. The board knows nothing
- * about what an order *means*, and nothing about it being given either: it draws what it
- * is handed and takes no pointer. Orders are given on the panel beside the board.
+ * about what an order *means*: it draws what it is handed, and where it is pressed it says
+ * which fighter and which order and no more ({@link MugenBoard.onOrder}).
+ *
+ * Most of them are never pressed at all. A column beside a fighter is a reading — what that
+ * fighter has been told, and what its colour hands it free — and only the copy standing out
+ * in the lane of the fighter being answered for takes a tap, that being the one column on
+ * the board asking a question. Everything else is given on the panel beside it, which draws
+ * these same three orders off the same list.
  */
 export interface BoardOrder {
 	/** The caller's id for this order. */
@@ -1015,6 +1021,17 @@ interface OrderStrip {
 	 * {@link MugenBoard.updateOrders}.
 	 */
 	placement: OrderPlacement | null;
+	/**
+	 * What to call when one of these buttons is pressed — **null on every column that is a
+	 * reading**, which is all of them but the lane's.
+	 *
+	 * A column beside a fighter says what that fighter has been told and what its colour
+	 * hands it; it is not asking anything, and a rival's least of all. The one column that
+	 * is a question is the one standing in the lane of the fighter the panel is turned to,
+	 * because that is the fighter being answered for at that moment — so it takes the press,
+	 * and it is the only thing on this canvas that takes one.
+	 */
+	press: ((orderId: string) => void) | null;
 }
 
 /** A character standing (and, during combat, running) on the board. */
@@ -1299,6 +1316,17 @@ export class MugenBoard {
 	 */
 	private lane: OrderStrip | null = null;
 	private laneAt: string | null = null;
+	/**
+	 * Who to tell when an order is pressed on the board itself, and the whole of what this
+	 * canvas asks of anybody: which fighter, and which of its orders.
+	 *
+	 * Only the lane column is ever pressed (see {@link OrderStrip.press}), and what a press
+	 * *means* is not this board's — it hands over the two names and the fight decides, as it
+	 * does for the same three buttons drawn in the document. So a host that sets nothing here
+	 * has a board that is read and not played, which is what every other canvas in this app
+	 * is.
+	 */
+	onOrder: ((actorId: string, orderId: string) => void) | null = null;
 	/** Callouts pinned to a cell rather than to a fighter (see {@link showCellCallout}).
 	 * A fighter's own is held on the actor, which is what takes it down; these have
 	 * nobody, so the board keeps them until the turn's callouts are cleared. */
@@ -1435,11 +1463,15 @@ export class MugenBoard {
 		// Sort stage children by zIndex so characters further down the screen (larger
 		// rows, larger screen-y) paint over those standing behind them.
 		app.stage.sortableChildren = true;
-		// Nothing on this canvas is pressed — the orders are given on the panel beside it and
-		// the board only ever reads them back — so the stage is not hit-tested at all, rather
-		// than walked on every pointer move for targets that no longer exist. It costs the
-		// canvas element none of its own DOM events, which are the host's to listen for.
-		app.stage.eventMode = 'none';
+		// One thing on this canvas is pressed: the column of orders standing in the lane of
+		// the fighter being answered for ({@link syncLane}). So the stage is walked for
+		// targets rather than not hit-tested at all — `passive` being "I am not a target,
+		// my children may be" — and everything numerous enough for that walk to cost
+		// anything says outright that it is not one: the grass is laid `none`
+		// ({@link layTile}), which is several hundred sprites skipped whole rather than
+		// bounds-checked on every pointer move. What is left is a couple of dozen figures
+		// and marks, none of them a target either, and three buttons that are.
+		app.stage.eventMode = 'passive';
 		// Render as a block so the canvas doesn't reserve inline-baseline descender space
 		// below it. Its size is stated once the crop has settled the framebuffer
 		// ({@link sizeToViewport}) — until then it is laid out at its own pixel size, and
@@ -1848,6 +1880,11 @@ export class MugenBoard {
 		sprite.width = square.width;
 		sprite.height = square.height;
 		sprite.zIndex = zIndex;
+		// Ground is never pressed, and there is more of it than of everything else on this
+		// board put together — a ninth of a cell each, over every cell of the field. Said
+		// outright so the hit test skips the lot instead of measuring each one whenever a
+		// pointer crosses the canvas.
+		sprite.eventMode = 'none';
 		this.app.stage.addChild(sprite);
 	}
 
@@ -3583,13 +3620,35 @@ export class MugenBoard {
 			button.inverted = inverted;
 			button.gift = gift;
 			this.paintMark(button, size);
+			this.armMark(strip, button);
 		});
+	}
+
+	/**
+	 * Put one button of a pressable column within reach, or out of it — which is the same
+	 * question its face is painted for: an order that is greyed cannot be given, and a slot
+	 * holding a place is not an order at all.
+	 *
+	 * Called wherever a button's state is settled (built or repainted), so what can be
+	 * pressed is never anything but what is drawn as pressable. A column that is a reading
+	 * takes no press at all and nothing here touches it.
+	 */
+	private armMark(strip: OrderStrip, button: BoardMark): void {
+		if (!strip.press) return;
+		const live = !button.disabled && !button.empty;
+		button.container.eventMode = live ? 'static' : 'none';
+		button.container.cursor = live ? 'pointer' : 'default';
 	}
 
 	/** Build a strip: one button per order, glyphs loaded as they arrive. Placed by whoever
 	 * asked for it — a fighter's own column stands on a cell ({@link updateOrders}), the lane
-	 * column is eased along the white one ({@link updateLane}). */
-	private buildStrip(orders: BoardOrder[], placement: OrderPlacement | null): OrderStrip {
+	 * column is eased along the white one ({@link updateLane}) — and pressed only if that
+	 * caller hands over something to tell ({@link OrderStrip.press}). */
+	private buildStrip(
+		orders: BoardOrder[],
+		placement: OrderPlacement | null,
+		press: ((orderId: string) => void) | null = null
+	): OrderStrip {
 		let strip: OrderStrip | null = null;
 		const container = new Container();
 		container.sortableChildren = false;
@@ -3613,13 +3672,21 @@ export class MugenBoard {
 				gift: order.gift ?? false
 			};
 			button.container.addChild(face, glyph);
-			// Nothing in a column takes a pointer, on either half of the field. Every order in
-			// this fight is given on the panel beside the board, which draws the same three
-			// orders as real buttons in the document, so a canvas button that also took the tap
-			// was a second way of saying the same thing — and one whose hit area is a rectangle
-			// the reader cannot see the edges of. So the whole column is a reading now, the
-			// player's as much as the rival's: it says what a fighter has been given and what
-			// its colour hands it, and it is pressed nowhere.
+			// A column beside a fighter takes no pointer, on either half of the field: it says
+			// what that fighter has been told and what its colour hands it, and it is asking
+			// nothing — a rival's least of all. The one that is asking is the column standing
+			// in the lane of the fighter being answered for, and it is given the tap here.
+			//
+			// The press is refused by a button that is out of reach even though such a button
+			// is not hit-tested at all ({@link armMark}): what may be given is the fight's to
+			// say, and a rule the interaction system happens to enforce is a rule this board
+			// would be relying on a library to keep.
+			if (press) {
+				button.container.on('pointertap', () => {
+					if (button.disabled || button.empty) return;
+					press(button.id);
+				});
+			}
 			container.addChild(button.container);
 
 			// An empty slot has no artwork to fetch and no glyph to show it in.
@@ -3639,7 +3706,8 @@ export class MugenBoard {
 		// as each picture lands, and assigned after, since there is nothing to lay out until
 		// there are buttons. Nothing reads it in between: a fetch cannot resolve inside the
 		// synchronous run that starts it.
-		strip = { container, buttons, placement };
+		strip = { container, buttons, placement, press };
+		for (const button of buttons) this.armMark(strip, button);
 		this.layOutOrders(strip);
 		return strip;
 	}
@@ -3913,8 +3981,13 @@ export class MugenBoard {
 			const { x, y } = this.lane?.container ?? { x: 0, y: 0 };
 			this.clearLane();
 			// No placement: this one is not stood inside a cell's ruled side like every other
-			// column on the board, it is centred on the lane and eased along it.
-			const strip = this.buildStrip(orders, null);
+			// column on the board, it is centred on the lane and eased along it. And it is the
+			// one column that is pressed — the fighter it stands for is read off `laneAt` at
+			// the moment of the press rather than closed over here, so a column that has slid
+			// on to the next fighter answers for the one it is standing with.
+			const strip = this.buildStrip(orders, null, (orderId) => {
+				if (this.laneAt) this.onOrder?.(this.laneAt, orderId);
+			});
 			strip.container.visible = false;
 			strip.container.x = x;
 			strip.container.y = y;
@@ -3966,6 +4039,8 @@ export class MugenBoard {
 		// Behind whatever stands on this row, as a fighter's own column is behind its own
 		// fighter: nothing stands in a lane while it is being answered for, but the column
 		// comes down before the lane is played out and never has to be in front of anybody.
+		// It costs the presses nothing either way — a sprite is not a target, so a figure
+		// drawn over these buttons does not catch the tap meant for them.
 		strip.container.zIndex = mark.y + actor.footDrop - 0.25;
 	}
 

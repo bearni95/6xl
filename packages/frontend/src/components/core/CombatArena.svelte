@@ -426,6 +426,13 @@
 	function onBoardReady(engine: MugenBoardEngine): void {
 		board = engine;
 		controller?.attachBoard(engine);
+		// The one thing on the canvas that is pressed rather than read: the column of orders
+		// standing in the lane of the fighter being answered for. It is the same three orders
+		// the panel draws, off the same list, so the press is answered by the same function —
+		// the board says which fighter and which order, and everything after that (telling the
+		// controller, moving the panel on to the next fighter still to answer) happens exactly
+		// as it does when the press came from the plate.
+		engine.onOrder = giveOrderFromPanel;
 	}
 
 	/**
@@ -459,9 +466,12 @@
 	 * is not a fourth button: it is passive, so it is not among the things that can be given,
 	 * and it is said as a border round the order it is a gift of ({@link giftedOrders}).
 	 *
-	 * The same list is what the panel beside the board draws ({@link orderRows}), and the panel
-	 * is where an order is actually given: on the board this column is a reading, on the panel
-	 * it is the input, and being one list they cannot disagree about what may be pressed.
+	 * The same list is what the panel beside the board draws ({@link orderRows}) and what the
+	 * lane column of the fighter being answered for is drawn from — three drawings of one
+	 * list, which is what keeps them from disagreeing about what may be pressed. Two of the
+	 * three are pressed: the panel's, and the lane's. This one, standing beside a fighter on
+	 * its own ground, is a reading — it says what that fighter has been told, on every row at
+	 * once, where the other two ask about the one row being answered.
 	 */
 	function orderButtons(
 		fighter: FighterView,
@@ -554,10 +564,11 @@
 	 * the board hangs beside it — the very same list, off the very same call, so the two are
 	 * one set of orders drawn twice and cannot come to disagree about what may be pressed.
 	 *
-	 * These are the buttons — the only ones. The board's copy is a reading of the same list,
-	 * and every order in the fight is given here (see the markup). Only the player's own
-	 * fighters are in it: what a rival has done is read where that rival is standing, and
-	 * there is nothing to ask of it.
+	 * These are the buttons the plate carries. The board draws the same list twice more — a
+	 * reading beside each fighter, and, out in the lane of the one being answered for, a copy
+	 * that is pressed like these are and answered by the same function
+	 * ({@link giveOrderFromPanel}). Only the player's own fighters are in it: what a rival has
+	 * done is read where that rival is standing, and there is nothing to ask of it.
 	 *
 	 * A fighter that is out of the turn — down, or holding the ground its lane was played for
 	 * — is left with no orders at all, exactly as the board clears its column: it keeps its
@@ -624,12 +635,18 @@
 	$: shownRow = orderRows.length > 0 ? orderRows[shownIndex % orderRows.length] : null;
 
 	/**
-	 * An order given on the panel, which is where every order in this fight is given: the
-	 * controller is told, the board's column reads it back beside the fighter, and then the
-	 * panel moves on by itself. What an order *means* is the controller's, as it is for every
-	 * other input; there are only three and each button is one of them, and what a fighter's
-	 * colour adds on top is never pressed for — it is passive, it comes off the back of
-	 * whatever order *was* given, and the border round a button is where it is read.
+	 * An order given: the controller is told, the board's column reads it back beside the
+	 * fighter, and then the panel moves on by itself. What an order *means* is the
+	 * controller's, as it is for every other input; there are only three and each button is
+	 * one of them, and what a fighter's colour adds on top is never pressed for — it is
+	 * passive, it comes off the back of whatever order *was* given, and the border round a
+	 * button is where it is read.
+	 *
+	 * **Both places an order can be pressed come through here** — the three buttons along the
+	 * foot of this panel, and the same three standing out in the lane of the fighter being
+	 * answered for on the canvas ({@link onBoardReady}). One function for the pair, because a
+	 * press is the same act wherever it lands: the two are drawn off one list and answered by
+	 * one path, so the panel steps along the line the same way whichever was pressed.
 	 *
 	 * On to the next fighter that has not been ordered yet, not simply the next along —
 	 * planning a turn is answering for each of the three once, so the thing to be shown next
@@ -1689,8 +1706,8 @@
 						     such fighter (see {@link giveOrderFromPanel}), which is the whole of the
 						     three being answered once each. The board says which one it is at every
 						     moment — that fighter paces its own cell, and this very column of orders
-						     stands out in its lane —
-						     so nothing is lost by the panel having no way round the line of its own.
+						     stands out in its lane, where it is pressed exactly as these are — so
+						     nothing is lost by the panel having no way round the line of its own.
 						     What *is* lost, and is worth saying plainly: an order once given cannot be
 						     taken back inside its turn, because there is no longer a way to turn the
 						     panel back to a fighter that has already answered.
