@@ -85,8 +85,9 @@
 	</button>
 
 	<!-- The way to the map on its own — the same terrain, the same open place, at whatever size
-		the screen is, with the band across the top and the column beside it dropped (see
-		`/map`). A globe rather than a word because it stands between two marks and a row of
+		the screen is, with the furniture around it dropped: no column at the side and no block
+		under it, the band across the top staying where it is on both addresses (see `/map`, and
+		MapScreen's `chrome`). A globe rather than a word because it stands between two marks and a row of
 		three reads as one control only if all three are marks. It is a LINK and not a button:
 		what it does is go somewhere, and a reader who wants it in another tab should get one. -->
 	{#if alone}

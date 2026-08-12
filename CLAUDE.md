@@ -256,13 +256,27 @@ read off: the polygons, the region tree, the show every town flies, the holders,
 the packs and the sheets the presses on them raise. None of that divides in two, which is why
 the map and the block are one component rather than a pair — the block is a reading of the
 same tree the terrain is drawn from. `/` and `/map` mount that one component and differ by its
-one prop, `chrome`: the front door takes the band across the top (the game's name, the feed,
-the menu) and the column at the side (the side this player fields, and their account), and
-`/map` takes neither, so the two boxes that are left divide the whole viewport. Everything
-else is identical — the same presses, the same sheets, the same `region` param — so
-`/map?region=…` and `/?region=…` open the same place. Only the splash is the front door's
-alone, drawn beside the component on `/` rather than inside it. Leaving a fight goes to `/`
-either way (`MAP_ROUTE`); the roster comes back to whichever of the two opened it.
+one prop, `chrome`, which is the furniture standing **around** the map: the column at the side
+(the side this player fields, and their account) and the block under the terrain naming the
+open place. `/map` takes neither at any width, so the terrain is one cell of the grid and the
+whole of the page — where it used to give a phone a 1:1 square of that block and the map
+whatever was left. What `chrome` does *not* reach is the band across the top (the game's name,
+the feed, the menu): those are things about the game rather than about the terrain, and a map
+with no way out of it to the rest of the game is a page a reader is stranded on, so the band is
+MapScreen's own first row on **both** addresses — drawn once, in the one component both mount,
+never repeated per page. Everything else is identical — the same presses, the same sheets, the
+same `region` param — so `/map?region=…` and `/?region=…` open the same place. Only the splash
+is the front door's alone, drawn beside the component on `/` rather than inside it. The way to
+`/map` is the globe between the map's two zoom presses, which stands on the front door only
+(see `MapZoomControls`). Leaving a fight goes to `/` either way (`MAP_ROUTE`); the roster comes
+back to whichever of the two opened it.
+
+**Nothing zooms the map but a pair of presses**, on the plate at the left end of the row over
+the band along the map's bottom edge: a minus one tier coarser and a plus one tier finer, over
+the `zoomLadder` (`MapZoomControls`, in MapScreen). Every gesture that used to move the scale —
+the wheel, the pinch, the double click, Leaflet's own +/- — is off (see `WorldMap`'s mount), so
+the terrain is never left between two tiers. It was a stepped range input dragged by its thumb
+until the presses replaced it; the globe between the two is the way to `/map`.
 
 Claiming has no route of its own — the booster packs are a full-view modal over the map, as
 are the album and the rest, all drawn on the shared `FullScreenModal` sheet, so there is one

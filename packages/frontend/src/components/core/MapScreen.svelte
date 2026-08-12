@@ -141,12 +141,20 @@
 	// the block are one component and not a pair: the block is a reading of the same tree the
 	// terrain is drawn from, and a copy of either would be a second answer to what is open.
 	//
-	// `/` is the whole game, so it takes the chrome: the band across the top with the game's
-	// name, the feed and the menu on it, and the column at the side holding the side this player
-	// fields and their account. `/map` is the map alone at whatever size the screen is — chrome
-	// off, and the two boxes that are left divide the page between them (see the grid below).
+	// `/` is the whole game, so it takes the furniture that stands AROUND the map: the column at
+	// the side holding the side this player fields and their account, and the block under the
+	// terrain saying what is at the open place. `/map` is the terrain alone at whatever size the
+	// screen is — neither of those, at any width, so the map is the whole of the page and there is
+	// nothing beside it or under it (see `townBlock` and the grid below).
+	//
+	// What it does NOT drop is the band across the top: the game's name, the feed and the menu are
+	// things about the game rather than about the terrain, and a map with no way out of it to the
+	// rest of the game is a page a reader is stranded on. It is drawn from this one component on
+	// both addresses rather than repeated on either (see the band below).
+	//
 	// Everything else is untouched by it: the same presses, the same sheets, the same `region`
-	// param, so a link into a place opens the same place on either address.
+	// param, so a link into a place opens the same place on either address — the reading of that
+	// place is simply the front door's to draw.
 	export let chrome: boolean = true;
 
 	// The municipality polygons, feeding the region tree and the map framing — and,
@@ -1105,15 +1113,14 @@
 	$: openNode = openRegion ? findNode(regionNodes, openRegion) : null;
 	$: openShow = openNode?.show ?? null;
 
-	// The songs, asked for by the page rather than by whatever happens to be drawing the radio.
-	// Every surface that draws it also asks (see MusicToggle, MusicPlayer) and they all share the
-	// one fetch, but none of them is always up: the radio is a row along the map's bottom edge now
-	// (see MusicBanner and the strip it stands in), and that slot draws nothing until there is a song to
-	// letter. The page is what is always here, and it needs the collection loaded for its own sake
-	// anyway — `follow` below can only
-	// turn a dial that has stations on it, and a radio left playing on the last visit only comes
-	// back on once there is something to play.
-	onMount(() => void musicService.load().catch(() => undefined));
+	// The songs are not asked for here any more. This page asked for them for as long as it was
+	// the thing that was always up — every surface that draws the radio also asks (see
+	// MusicToggle, MusicPlayer) and none of those is always drawn — but the map is one route
+	// among several now, and a radio that is only read into on the map is a radio that is silent
+	// for the whole of a visit that began in a fight, on a roster or on somebody's page. So the
+	// read is the layout's (see +layout.svelte), which is what is really always here. All this
+	// page needs of it is that stations exist by the time `follow` below turns the dial, which
+	// the layout's read settles before this component is created.
 
 	// The radio follows the map. Which show the place on screen flies is a statement this
 	// page already makes everywhere — on the pin, in the crumb, in the column beside the map —
@@ -1392,7 +1399,11 @@
 	// map's box stops moving. It was re-framed by every walk into a town and out of one — WorldMap
 	// answers a change of box with `invalidateSize` + `syncView` + a full rebuild of every pin and
 	// every booster box — and now nothing but a sheet or the window itself ever changes it.
-	$: townBlock = ready;
+	// And whether there is a page for it to stand on: `/map` is the terrain and nothing else (see
+	// `chrome`), so the block is not drawn there at any width. It is the one reading on this page
+	// that is not the terrain itself, and that address is for the terrain — what it held is read
+	// at the front door, on the same tree, over the same open place.
+	$: townBlock = ready && chrome;
 
 	// (Which of the two below the tabs was the square used to be a press: a bead on the rule
 	// between them handed it from the terrain to this block and back. It is the block's for good
@@ -3080,11 +3091,13 @@
 
 	The page never scrolls (`h-dvh`, `overflow-hidden`) and the band takes only the height of
 	its one row (`flex-none`), so what the grid divides is whatever is left — which is why it is a
-	flex column with `min-h-0 flex-1` on the grid rather than the grid being the page. Which is
-	also what makes the band droppable at no cost to anything under it (see `chrome`): the grid
-	takes what is left either way, so with no band there is simply more of it, and the two boxes
-	that are always here — the terrain and the block naming the open place — divide the viewport
-	entire.
+	flex column with `min-h-0 flex-1` on the grid rather than the grid being the page. The band is
+	on both addresses (see it below): what stands on it is the game's own name and the two things
+	the game can be asked, none of which is a fact about the terrain, and a map with no way out of
+	it to the rest of the game is a page a reader is stranded on. What `/map` drops is the
+	furniture AROUND the map — the column at the side and the block naming the open place (see
+	`chrome`, and `townBlock`) — so the grid under this band is one cell there, and the terrain is
+	the whole of it.
 
 	`h-dvh` and not `h-screen`, which is the whole of why this page fits a phone. `100vh` is the
 	LARGE viewport — the height the window would have if the browser's own bars were gone — so on
@@ -3101,171 +3114,182 @@
 	session and the map is never re-framed by it (see WorldMap's ResizeObserver, and the side's
 	wrapper for what a moving map box costs). -->
 <div class="flex h-dvh flex-col overflow-hidden">
-	{#if chrome}
-		<!-- The page's first row, and it is the whole of what stands over the three columns: the
-			game's name at the near end, the radio in the middle, and what the game gets asked at the
-			far end.
+	<!-- The page's first row, and it is the whole of what stands over the three columns: the
+		game's name at the near end, the radio in the middle, and what the game gets asked at the
+		far end.
 
-			Where the map is standing filled the middle of it with the radio, and does not any more:
-			that row names the open place, the block under the map answers what is AT the open place,
-			and the two were saying one thing from two ends of the page. It is the row along the map's
-			own bottom edge now, with the way up out of the place (see the map column), so the place
-			and the ways of acting on it are read in one box, on the map they are about. The radio did
-			not go down with it and has come back here: a station is a show and the map tunes the dial,
-			but the sound carries across a walk from one town to the next and across every view opened
-			over the map, so it belongs on the row of things that are true at every tier and on every
-			screen rather than in a box about a town.
-			The two ends were the head of the *third* column, which is where they had landed after
-			coming off a band laid over the map's top edge; a name and two questions are about the game
-			and not about the furniture, so a column of furniture was only ever the nearest shelf. Both
-			ends are here because this row is the one thing on the page that belongs to none of the
-			three columns and to all of them.
+		It is on BOTH addresses and is no longer part of what `chrome` drops. What stands on it is
+		the game's name and the two things the game can be asked — the feed, and the menu with the
+		account, the settings and the credits in it — and not one of those is a fact about the
+		terrain, which is the whole of what `/map` is for. A map with none of them is a page a
+		reader is stranded on: no way to the roster, to their account or to what has happened
+		anywhere else, and nothing on screen even naming the game they are in. So the chrome that
+		address drops is the furniture AROUND the map — the column at the side, the block under it
+		— and the row over the top of it stands at both (see `chrome`, and `townBlock`).
+		It is drawn once, here, and not a second time on `/map`: both addresses mount this one
+		component (see `/` and `/map`, which differ by one prop), so the band a reader presses is
+		the same band on either, over the same stores, with the same menu built from the same
+		`bandMenuItems`. Two copies of a navbar is how a game comes to have two menus.
 
-			The whole width, and its own rule under it: what separates a row from what is under it
-			belongs to neither, and the rule stands at both widths because the fold below it changes
-			the columns' axis and not this band's.
+		Where the map is standing filled the middle of it with the radio, and does not any more:
+		that row names the open place, the block under the map answers what is AT the open place,
+		and the two were saying one thing from two ends of the page. It is the row along the map's
+		own bottom edge now, with the way up out of the place (see the map column), so the place
+		and the ways of acting on it are read in one box, on the map they are about. The radio did
+		not go down with it and has come back here: a station is a show and the map tunes the dial,
+		but the sound carries across a walk from one town to the next and across every view opened
+		over the map, so it belongs on the row of things that are true at every tier and on every
+		screen rather than in a box about a town.
+		The two ends were the head of the *third* column, which is where they had landed after
+		coming off a band laid over the map's top edge; a name and two questions are about the game
+		and not about the furniture, so a column of furniture was only ever the nearest shelf. Both
+		ends are here because this row is the one thing on the page that belongs to none of the
+		three columns and to all of them.
 
-			`items-stretch` is what makes them all one height: the marks at the far end are squares,
-			and stretching means they and the name's plate take whatever height the row comes to
-			rather than a number written here that would have to be kept in step with it. Which is
-			also why every one of them is a **direct child** of this row and none of them is wrapped:
-			a square that reads its width off its own stretched height needs that height to have been
-			resolved, and one box further in it has not been. The padding is the band's rather than
-			each child's, so they are spaced by one `gap-2` and inset by one `px-2`.
-			What holds the far end against the far edge is the **name plate's own `mr-auto`** — one
-			margin, at the near end, pushing everything after it over as a group. It used to be an
-			`ml-auto` on the last mark, which was right while there was one of them; a second mark
-			asking for the same slack shares it rather than queueing behind it, and what that drew was
-			two marks each holding a corner of nothing. Taking it once at the other end is the answer
-			that does not depend on how many marks the far end grows.
+		The whole width, and its own rule under it: what separates a row from what is under it
+		belongs to neither, and the rule stands at both widths because the fold below it changes
+		the columns' axis and not this band's.
 
-			It stands exactly as it is whatever else is on screen. A full view used to veil it — blur
-			it out and make it inert for as long as a sheet was up — which was a row of furniture going
-			quiet behind something already covering it, and it is gone with the rest of that machinery
-			(see CHROME_BLUR). -->
+		`items-stretch` is what makes them all one height: the marks at the far end are squares,
+		and stretching means they and the name's plate take whatever height the row comes to
+		rather than a number written here that would have to be kept in step with it. Which is
+		also why every one of them is a **direct child** of this row and none of them is wrapped:
+		a square that reads its width off its own stretched height needs that height to have been
+		resolved, and one box further in it has not been. The padding is the band's rather than
+		each child's, so they are spaced by one `gap-2` and inset by one `px-2`.
+		What holds the far end against the far edge is the **name plate's own `mr-auto`** — one
+		margin, at the near end, pushing everything after it over as a group. It used to be an
+		`ml-auto` on the last mark, which was right while there was one of them; a second mark
+		asking for the same slack shares it rather than queueing behind it, and what that drew was
+		two marks each holding a corner of nothing. Taking it once at the other end is the answer
+		that does not depend on how many marks the far end grows.
+
+		It stands exactly as it is whatever else is on screen. A full view used to veil it — blur
+		it out and make it inert for as long as a sheet was up — which was a row of furniture going
+		quiet behind something already covering it, and it is gone with the rest of that machinery
+		(see CHROME_BLUR). -->
+	<div
+		class="flex flex-none items-stretch gap-2 border-b-2 border-primary bg-base-100 px-2 py-2"
+	>
+		<!-- What it says and what size it is set at are two different things: the word is "6xl"
+			and the type is `2xl`, one flat size at every viewport rather than a ramp.
+			`items-center` centres it in whatever height the row hands this plate (see above);
+			`leading-none` so what is centred is the type's own height and not a line box built for
+			a paragraph. `font-display` is Bungee, the app's one departure from Genos, and it is the
+			token and not the family that is named here (see the `@theme` block in css/app.css).
+
+			The plate is the theme's primary at full strength. It was a bar in a row of bars with a
+			path of crumbs beside it, drawn at full strength precisely where that path was drawn at
+			80% — a path is a thing being looked through to the map under it; a name is not. The
+			path stood beside it as its folded dots for a while after that, and has gone down to the
+			row across the foot of the map to stand against the badge naming the open place: where
+			you are and the way out of it are one statement, and neither of them is a fixed thing
+			about the game. So nothing stands beside this plate now — the band is the game's name at
+			the near end and what can be asked about the game at the far one.
+
+			The same badge is the tab's mark (see static/favicon.ico and the link in app.html), and
+			it is drawn differently there on purpose: an icon is a square with room round the word,
+			because that is the box a browser gives it. This is a plate in a row of plates — as
+			tall as the row makes it, as wide as the word makes it. Neither shape should be made to
+			answer for the other.
+
+			It was the tab a column of views dropped from — the player's cards and the album, a row
+			each, up while the pointer was on it — and, on a phone, the handle that pulled the list
+			of places down over the map. It is neither now: the views are sheets raised from the
+			marks at the far end of this row, and the list of places is a tab over the terrain (see
+			RegionLocationList). So the plate is only the plate — nothing hangs off it and nothing
+			is asked about the pointer — and it is a `<div>` at every width. -->
 		<div
-			class="flex flex-none items-stretch gap-2 border-b-2 border-primary bg-base-100 px-2 py-2"
+			class="mr-auto flex flex-none items-center gap-3 rounded-lg bg-primary px-3 py-1.5 text-white shadow-xl"
 		>
-			<!-- What it says and what size it is set at are two different things: the word is "6xl"
-				and the type is `2xl`, one flat size at every viewport rather than a ramp.
-				`items-center` centres it in whatever height the row hands this plate (see above);
-				`leading-none` so what is centred is the type's own height and not a line box built for
-				a paragraph. `font-display` is Bungee, the app's one departure from Genos, and it is the
-				token and not the family that is named here (see the `@theme` block in css/app.css).
-
-				The plate is the theme's primary at full strength. It was a bar in a row of bars with a
-				path of crumbs beside it, drawn at full strength precisely where that path was drawn at
-				80% — a path is a thing being looked through to the map under it; a name is not. The
-				path stood beside it as its folded dots for a while after that, and has gone down to the
-				row across the foot of the map to stand against the badge naming the open place: where
-				you are and the way out of it are one statement, and neither of them is a fixed thing
-				about the game. So nothing stands beside this plate now — the band is the game's name at
-				the near end and what can be asked about the game at the far one.
-
-				The same badge is the tab's mark (see static/favicon.ico and the link in app.html), and
-				it is drawn differently there on purpose: an icon is a square with room round the word,
-				because that is the box a browser gives it. This is a plate in a row of plates — as
-				tall as the row makes it, as wide as the word makes it. Neither shape should be made to
-				answer for the other.
-
-				It was the tab a column of views dropped from — the player's cards and the album, a row
-				each, up while the pointer was on it — and, on a phone, the handle that pulled the list
-				of places down over the map. It is neither now: the views are sheets raised from the
-				marks at the far end of this row, and the list of places is a tab over the terrain (see
-				RegionLocationList). So the plate is only the plate — nothing hangs off it and nothing
-				is asked about the pointer — and it is a `<div>` at every width. -->
-			<div
-				class="mr-auto flex flex-none items-center gap-3 rounded-lg bg-primary px-3 py-1.5 text-white shadow-xl"
-			>
-				<!-- The word twice: the same lettering in the panel's surface colour, offset 3px down
-					and right, and the word itself over it. A shadow drawn as a copy rather than as a
-					`text-shadow`, because a shadow the thickness of this face wants to be the face — one
-					solid displaced impression of it, with no blur and no spread, which is what a second
-					copy of the glyphs is and what a shadow utility, spelling a colour and a radius, is
-					not.
-					Both copies are positioned, so the one later in the document paints over the other
-					without a z-index: an absolute box would otherwise sit above in-flow type whatever
-					order it is written in, and sending it under with a negative z-index would send it
-					under the plate's own fill as well, there being no stacking context between them. The
-					copy in flow is the one that gives the box its size; `aria-hidden` on the other, since
-					a reader hearing "6xl 6xl" is being told about a shadow. -->
-				<span class="relative font-display text-2xl leading-none">
-					<span class="absolute left-[3px] top-[3px] text-base-100" aria-hidden="true">6xl</span>
-					<span class="relative">6xl</span>
-				</span>
-			</div>
-
-			<!-- (The way up out of where the map is standing — the dots and the column of place names
-				they drop — stood here, against the game's name, on the reading that a path reads from
-				its root and that a control belongs on the row of the game's own furniture. It is the
-				first thing on the row laid along the foot of the terrain now (see the map column),
-				against the badge that names the open place: a cut belongs beside its place, and the way
-				OUT of somewhere and the name of where you are read as one statement rather than as two
-				marks a column apart. What is left on this band is fixed things about the game.) -->
-
-			<!-- (The radio stood here, in the middle of this row, and it is a row of its own along the
-				map's bottom edge again — half the width, directly over the band that names the open
-				place: see MusicBanner and the strip at the foot of the terrain. It was the one item on
-				this row that gave, so with it gone the two marks below are held against the far edge by
-				a margin of their own again.) -->
-
-			<!-- What the game can be asked, at the far end and folded into one square: the dots, and
-				under them a line each for the account, the settings, the questions and who drew the
-				fighters, closing on the row of marks saying where the author is (see BandMenu, and
-				`bandMenuItems` for the lines).
-				They stood open on this row, a square each carrying its glyph alone — and a glyph alone
-				is a thing a reader has to already know, a palette being no more obviously a table of
-				artists than any other mark. The column is where the names fit, and the marks go down
-				it unchanged at the head of their own names. What the row keeps is one square instead of
-				a mark per question, which is the far end holding still as more is asked of the game.
-				Both are the same kind of question — where all this came from — which is what makes them
-				one menu rather than two things that happen to share a corner, and they are on the
-				game's own top row rather than three screens in for the same reason they always were. -->
-			<!-- What is happening everywhere else, immediately before the dots at the far end (see
-				CombatFeedButton). It is on this row because this row is the fixed things about the
-				game and the feed is one of them — it is not about the place the map is open on,
-				which is what the band along the foot of the terrain says — and it is beside the dots
-				because both are the same kind of press: a way to look at something other than the
-				map. It is not folded *into* that menu because a line in a column nobody has dropped
-				cannot say that something has happened, which is the whole of what this mark is for.
-				It draws nothing at all until a fight has landed, and the dots then stand at the edge
-				alone, exactly as they did before there was a feed.
-				**Both squares are direct children of the band**, and that is not a detail: each reads
-				its width off the row's own height (`aspect-square self-stretch`, see BandMenu for
-				why the box is settled on the item the row lays out and not on the button inside it),
-				and a height a flex line has not resolved yet is no height at all. Held one box deeper
-				— the pair wrapped together to share one margin — that is exactly what they were
-				measured against, and both squares came out wide enough to carry themselves off the
-				end of the screen.
-				So the slack is taken at the OTHER end instead: the name plate carries `mr-auto` and
-				everything after it is pushed to the far edge, as a pair, by one margin. Two auto
-				margins would have shared the space between them — which is what put this square in
-				the middle of the row with the dots still at the end — and there is now exactly one on
-				the row. Surfaced as the band's own presses are: the name plate's fill, white artwork
-				on it. -->
-			<!-- The press itself carries the ratio too, and takes its height from the box rather than
-				its width: `aspect-square h-full`, where it filled the box in both directions
-				(`size-full`). A box whose width is transferred from a stretched height is one
-				calculation deep in flex layout; a press that is 1:1 off its own definite height is
-				nought deep, and the square is the same square whichever of the two settles first.
-				Every mark on this page that is meant to be square says so this way — see BandMenu, the
-				two over the terrain, and the radio's play/pause on the band below. -->
-			<CombatFeedButton
-				classes="aspect-square flex-none self-stretch"
-				buttonClasses="aspect-square h-full rounded-lg bg-primary text-white shadow-xl"
-			/>
-			<BandMenu items={bandMenuItems}>
-				<!-- Where the author is, closing the column the same way it closed the panel it came
-					from: the one row on the page that names something outside the game. It stood at the
-					foot of the player's own corner, under the plate saying who is playing — which put a
-					row about whoever made this among the things this player has, where it read as one
-					more of them. It belongs with the questions instead: what the game is, who drew the
-					fighters and where the person who built it can be found are the same question asked
-					three ways, and this menu is where the other two already were. -->
-				<SocialLinks slot="foot" />
-			</BandMenu>
+			<!-- The word twice: the same lettering in the panel's surface colour, offset 3px down
+				and right, and the word itself over it. A shadow drawn as a copy rather than as a
+				`text-shadow`, because a shadow the thickness of this face wants to be the face — one
+				solid displaced impression of it, with no blur and no spread, which is what a second
+				copy of the glyphs is and what a shadow utility, spelling a colour and a radius, is
+				not.
+				Both copies are positioned, so the one later in the document paints over the other
+				without a z-index: an absolute box would otherwise sit above in-flow type whatever
+				order it is written in, and sending it under with a negative z-index would send it
+				under the plate's own fill as well, there being no stacking context between them. The
+				copy in flow is the one that gives the box its size; `aria-hidden` on the other, since
+				a reader hearing "6xl 6xl" is being told about a shadow. -->
+			<span class="relative font-display text-2xl leading-none">
+				<span class="absolute left-[3px] top-[3px] text-base-100" aria-hidden="true">6xl</span>
+				<span class="relative">6xl</span>
+			</span>
 		</div>
-	{/if}
+
+		<!-- (The way up out of where the map is standing — the dots and the column of place names
+			they drop — stood here, against the game's name, on the reading that a path reads from
+			its root and that a control belongs on the row of the game's own furniture. It is the
+			first thing on the row laid along the foot of the terrain now (see the map column),
+			against the badge that names the open place: a cut belongs beside its place, and the way
+			OUT of somewhere and the name of where you are read as one statement rather than as two
+			marks a column apart. What is left on this band is fixed things about the game.) -->
+
+		<!-- (The radio stood here, in the middle of this row, and it is a row of its own along the
+			map's bottom edge again — half the width, directly over the band that names the open
+			place: see MusicBanner and the strip at the foot of the terrain. It was the one item on
+			this row that gave, so with it gone the two marks below are held against the far edge by
+			a margin of their own again.) -->
+
+		<!-- What the game can be asked, at the far end and folded into one square: the dots, and
+			under them a line each for the account, the settings, the questions and who drew the
+			fighters, closing on the row of marks saying where the author is (see BandMenu, and
+			`bandMenuItems` for the lines).
+			They stood open on this row, a square each carrying its glyph alone — and a glyph alone
+			is a thing a reader has to already know, a palette being no more obviously a table of
+			artists than any other mark. The column is where the names fit, and the marks go down
+			it unchanged at the head of their own names. What the row keeps is one square instead of
+			a mark per question, which is the far end holding still as more is asked of the game.
+			Both are the same kind of question — where all this came from — which is what makes them
+			one menu rather than two things that happen to share a corner, and they are on the
+			game's own top row rather than three screens in for the same reason they always were. -->
+		<!-- What is happening everywhere else, immediately before the dots at the far end (see
+			CombatFeedButton). It is on this row because this row is the fixed things about the
+			game and the feed is one of them — it is not about the place the map is open on,
+			which is what the band along the foot of the terrain says — and it is beside the dots
+			because both are the same kind of press: a way to look at something other than the
+			map. It is not folded *into* that menu because a line in a column nobody has dropped
+			cannot say that something has happened, which is the whole of what this mark is for.
+			It draws nothing at all until a fight has landed, and the dots then stand at the edge
+			alone, exactly as they did before there was a feed.
+			**Both squares are direct children of the band**, and that is not a detail: each reads
+			its width off the row's own height (`aspect-square self-stretch`, see BandMenu for
+			why the box is settled on the item the row lays out and not on the button inside it),
+			and a height a flex line has not resolved yet is no height at all. Held one box deeper
+			— the pair wrapped together to share one margin — that is exactly what they were
+			measured against, and both squares came out wide enough to carry themselves off the
+			end of the screen.
+			So the slack is taken at the OTHER end instead: the name plate carries `mr-auto` and
+			everything after it is pushed to the far edge, as a pair, by one margin. Two auto
+			margins would have shared the space between them — which is what put this square in
+			the middle of the row with the dots still at the end — and there is now exactly one on
+			the row. Surfaced as the band's own presses are: the name plate's fill, white artwork
+			on it. -->
+		<!-- The press itself carries the ratio too, and takes its height from the box rather than
+			its width: `aspect-square h-full`, where it filled the box in both directions
+			(`size-full`). A box whose width is transferred from a stretched height is one
+			calculation deep in flex layout; a press that is 1:1 off its own definite height is
+			nought deep, and the square is the same square whichever of the two settles first.
+			Every mark on this page that is meant to be square says so this way — see BandMenu, the
+			two over the terrain, and the radio's play/pause on the band below. -->
+		<CombatFeedButton
+			classes="aspect-square flex-none self-stretch"
+			buttonClasses="aspect-square h-full rounded-lg bg-primary text-white shadow-xl"
+		/>
+		<BandMenu items={bandMenuItems}>
+			<!-- Where the author is, closing the column the same way it closed the panel it came
+				from: the one row on the page that names something outside the game. It stood at the
+				foot of the player's own corner, under the plate saying who is playing — which put a
+				row about whoever made this among the things this player has, where it read as one
+				more of them. It belongs with the questions instead: what the game is, who drew the
+				fighters and where the person who built it can be found are the same question asked
+				three ways, and this menu is where the other two already were. -->
+			<SocialLinks slot="foot" />
+		</BandMenu>
+	</div>
 
 	<!-- The three columns, and the three are the three things this game is made of:
 		the terrain, the list of places, and the furniture. In that order, left to right, each an
@@ -3335,17 +3359,21 @@
 		the block's own bottom border, so it comes and goes with the block rather than being left
 		drawn across the top of a panel that is alone in its column.
 
-		The third row is the only thing the chrome changes about this grid, and it changes it for the
-		reason the row exists at all: it is the room the map is asked to leave clear at the foot of a
-		phone for the folded strip of the side, and with no side there is no strip to leave room for.
-		So `/map` is two rows on a phone — the terrain and the block under it — and the terrain takes
-		the whole of what the block does not. Above `md` nothing moves: two rows of `minmax(0,1fr)`
-		either way, and which of them the block stands in is the block's own business (see it below,
-		where it takes the column entire when there is no panel to share it with). -->
+		All of which is the chrome's grid, and with no chrome there is none of it: `/map` is the
+		terrain and nothing else — no block under it or beside it (see `townBlock`), no strip at the
+		foot to keep clear — so what is left is one cell, at every width, with the map filling it.
+		A single track and not the same three columns with two of them empty: an empty column is
+		width the map is not given, and a grid whose cells are all one cell has nothing left to
+		place anything by.
+		It was two rows on a phone at that address, the terrain and the block under it, with the
+		terrain taking whatever the 1:1 square left of the page — which on a small screen was rather
+		less than half of it, on the one address whose whole subject is the terrain. -->
 	<div
 		class={classNames(
-			'relative grid min-h-0 flex-1 grid-cols-1 md:grid-cols-3 md:grid-rows-2',
-			chrome ? 'grid-rows-[minmax(0,1fr)_auto_5.875rem]' : 'grid-rows-[minmax(0,1fr)_auto]'
+			'relative grid min-h-0 flex-1',
+			chrome
+				? 'grid-cols-1 grid-rows-[minmax(0,1fr)_auto_5.875rem] md:grid-cols-3 md:grid-rows-2'
+				: 'grid-cols-1 grid-rows-1'
 		)}
 	>
 		<!-- The map. Two thirds of the width from `md` up (`md:col-span-2`), and on a phone the whole
@@ -3370,6 +3398,10 @@
 			Placed by name at both widths (`row-start-1` / `md:col-start-1`) rather than left to the
 			order things are mounted in: the corner beside it comes and goes with the full-view
 			sheets, and a grid that filled the gap would walk the map into the hole.
+			The spans are the chrome's and are not carried without it: `/map` is one cell (see the
+			grid), and a box told to span two columns of a grid that has one is a box that RULES a
+			second column into being — the map would take half the width and hand the rest to
+			nothing.
 
 			Nothing here scrolls at either width, and below `md` that is a statement about the three
 			rows rather than about this one: the block under the map is a square of the page's width,
@@ -3385,7 +3417,10 @@
 			in the block under this column now, on that block's own tabs, because a list of names is
 			not a picture of the level but an answer to what is at the open place. -->
 		<div
-			class="relative row-start-1 flex min-h-0 min-w-0 flex-col md:col-span-2 md:col-start-1 md:row-span-2 md:row-start-1"
+			class={classNames(
+				'relative row-start-1 col-start-1 flex min-h-0 min-w-0 flex-col',
+				chrome && 'md:col-span-2 md:row-span-2 md:row-start-1 md:col-start-1'
+			)}
 		>
 			{#if ready}
 				<!-- The map's box, and there is nothing beside it in this column any more: no tab row
@@ -3623,10 +3658,10 @@
 									<div
 										class="pointer-events-auto flex w-fit flex-none items-center rounded-tr-lg bg-base-100/80 px-3 py-2 text-white shadow-xl"
 									>
-										<!-- The globe between the two marks goes to `/map`, and stands only
-											where it goes somewhere: this same map without the chrome, which is
-											what this page already is when there is none (see `chrome`, and
-											`/map` itself). -->
+										<!-- The globe between the two marks goes to `/map` — this same terrain
+											with the furniture around it dropped, the band over the top of it
+											kept — and stands only where it goes somewhere, which is not on
+											that address itself (see `chrome`, and `/map`). -->
 										<MapZoomControls
 											steps={zoomLadderSteps}
 											value={zoomLadderIndex}
@@ -3832,12 +3867,13 @@
 			would otherwise be left with a line ruled across the top of a column it has to itself.
 			`p-3` all round at both widths, there being no mark on either line to keep a head clear of.
 
-			With no chrome there is no second half: nothing stands under this in the third column, so
-			the block takes the column entire (`md:row-span-2`) rather than being stretched into the
-			top half of it with the bottom one left empty. And the rule under it comes off with the
-			panel it was drawn against — a line ruled across the foot of a column that ends there is a
-			line between the column and nothing. The one below `md` stays either way: what it separates
-			is this block from the terrain above it, which is there on both addresses.
+			With no chrome there is no block at all (see `townBlock`), which is what `/map` now is:
+			the terrain, at the whole of whatever size the screen is, and nothing under it or beside
+			it. It stood there too for a while — the second row of a phone and the third column of a
+			desktop, taking that column entire since there was no panel under it to share with — and
+			what that address is for is the map, which had rather less than half a phone left once
+			this block had taken its square out of it. So the two things this component draws are the
+			terrain everywhere and this reading of it at the front door.
 
 			The whole pin and not a copy of it less its standing: `townPin` comes out of
 			`buildMarkers`, the very function the map's own marks are built by, so this and the
@@ -3882,10 +3918,7 @@
 		{#if townBlock}
 			<div
 				transition:blur={CHROME_BLUR}
-				class={classNames(
-					'row-start-2 flex aspect-square w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:aspect-auto md:border-t-0',
-					chrome ? 'md:border-b-2' : 'md:row-span-2'
-				)}
+				class="row-start-2 flex aspect-square w-full min-h-0 min-w-0 flex-col items-center gap-2 border-t-2 border-primary p-3 md:col-start-3 md:row-start-1 md:aspect-auto md:border-t-0 md:border-b-2"
 			>
 				<!-- The panel, and the box in here that scrolls for one of the two things it holds:
 					what the block is given is a share of a track — a 1:1 of a phone's width,
