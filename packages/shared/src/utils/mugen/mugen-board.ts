@@ -2853,9 +2853,14 @@ export class MugenBoard {
 	 *
 	 * **A mark already up is left where it stands** and glides to the new lane on the tick
 	 * ({@link POINTER_GLIDE_MS}) — that slide is what says the two lanes are about the same
-	 * mark. **A mark coming back up starts where it is going**, placed on the spot: the
-	 * lane it was taken down in belongs to a turn that is over, and travelling out of it
-	 * would be the mark crossing the board for a reason nobody watched happen.
+	 * mark. **A mark that is not up yet starts where it is going**, placed on the spot and
+	 * shown there: it has no last lane to travel out of. That covers both the first raise of
+	 * a fight and every turn after one — the lane a mark was taken down in belongs to a turn
+	 * that is over, and sliding out of it would be the mark crossing the board for a reason
+	 * nobody watched happen.
+	 *
+	 * Whether it is up is the whole of the question, which is why the shape is built hidden
+	 * ({@link pointerArt}) rather than made and then placed.
 	 */
 	private aimPointer(id: string | null): void {
 		const actor = id ? this.findActor(id) : null;
@@ -2866,9 +2871,11 @@ export class MugenBoard {
 		}
 		const pointer = this.pointerArt();
 		if (!pointer) return;
-		const returning = !pointer.visible;
+		const raising = !pointer.visible;
+		// Placed before it is shown, so there is never a frame of it standing anywhere but
+		// in the lane it is about.
+		this.updatePointer(actor, 0, raising);
 		pointer.visible = true;
-		this.updatePointer(actor, 0, returning);
 	}
 
 	/**
@@ -2888,6 +2895,15 @@ export class MugenBoard {
 	 * retuned. The border is aligned to the inside of the shape, which is what keeps the
 	 * silhouette exactly the triangle described above however thick it is drawn: a centred
 	 * stroke would blunt all three corners outwards by half its width.
+	 *
+	 * **It is built hidden**, and that is not tidiness: a Pixi display object is visible the
+	 * moment it is made and stands at the stage's own origin until it is placed, which is
+	 * the top-left corner of the canvas. Hidden, it is nowhere until {@link aimPointer} has
+	 * a lane to put it in — and, because "was it up already?" is what that method reads to
+	 * decide between placing the mark and sliding it, being born hidden is also what makes
+	 * the very first raise a placement. Visible from birth, the first turn of every fight
+	 * opened with the triangle in the corner of the board, gliding down to the fighter it
+	 * was about.
 	 */
 	private pointerArt(): Graphics | null {
 		if (this.pointer) return this.pointer;
@@ -2902,6 +2918,7 @@ export class MugenBoard {
 			.closePath()
 			.fill({ color })
 			.stroke({ width: side * POINTER_BORDER_RATIO, color, alignment: 1 });
+		pointer.visible = false;
 		this.app.stage.addChild(pointer);
 		this.pointer = pointer;
 		return pointer;
