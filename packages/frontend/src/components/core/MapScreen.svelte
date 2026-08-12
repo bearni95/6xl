@@ -43,7 +43,7 @@
 	import { radarCooldownUntil, startRadarCooldown } from '$services/radarCooldown';
 	import { creditsModalOpen, openCredits } from '$services/creditsModal';
 	import { boosterModalOpen } from '$services/boosterModal';
-	import { openCombat, battleShown } from '$services/combat';
+	import { openCombat, battleShown, MAP_ROUTE } from '$services/combat';
 	import type { OpenerPack } from '$components/core/pack/scene/opener-view.type';
 	import { preloadPackArt } from '$components/core/pack/scene/preload-pack-art';
 	import { spawnService } from '$services/spawn.service';
@@ -1077,7 +1077,30 @@
 	// The land takes this press too, since a click on a polygon is answered by whatever the pin
 	// over it does (see pinByFeatureId) — which is the point: the terrain and the mark standing on
 	// it open the same place the same way.
+	//
+	// On `/map` a TOWN is pressed for something this page cannot give: that address draws the
+	// terrain and nothing else (see `chrome`), so opening a municipality there would set the
+	// `region` param, re-frame the map on the place — and then say nothing whatever about it, the
+	// block that reads a town being the front door's. So the press goes where the answer is: the
+	// front door, with that very town open (`MAP_ROUTE`, plus the same param this page would have
+	// set), which is the reading of the place the reader pressed for.
+	//
+	// The coarser tiers are unmoved by any of it. Pressing a territory, a province or a comarca is
+	// a walk DOWN the map — it opens that region and the terrain draws the tier under it — and
+	// that is a thing about the map, which is exactly what this address is for. A town is where
+	// walking down stops: there is nothing finer to draw, so the press is a question about the
+	// place rather than a move on the terrain, and the answer to it is a page away.
+	//
+	// The param is carried over rather than written fresh so that anything else the address holds
+	// travels with the reader, and it is a `goto` like any other, so the way back to this map is
+	// the browser's own — the same step the mark at the near end of the band takes.
 	function openFromPin(node: RegionNode) {
+		if (!chrome && node.type === 'Municipality') {
+			const params = new URLSearchParams($page.url.searchParams);
+			params.set('region', node.key);
+			goto(`${MAP_ROUTE}?${params.toString()}`);
+			return;
+		}
 		open(node.key);
 	}
 
