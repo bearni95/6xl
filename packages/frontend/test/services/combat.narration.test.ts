@@ -130,6 +130,33 @@ describe('what the fight says while it plays a turn out', () => {
 		// the player covered, and the line is written about those two roles.
 		expect(said[0].values).toEqual({ loader: 'R0', guard: 'P0' });
 		expect(said[1].values).toEqual({ one: 'P1', other: 'R1' });
+		// And the order each of them made rides along with its name, for the mark the line is
+		// drawn with: in a quiet row that is simply what the fighter was told to do.
+		expect(said[0].moves).toEqual({ loader: 'charge', guard: 'defend' });
+		expect(said[1].moves).toEqual({ one: 'charge', other: 'charge' });
+	});
+
+	it('names the order each fighter made, and names the gift where that is what it made', async () => {
+		// Both fighters were told to load, and neither of those is what the encounter was:
+		// red threw the shot its colour owes it out of the charge it had just banked, and
+		// blue turned it aside with the guard its own colour owes. The mark beside a name
+		// says what that fighter did, so what is named is the gift and not the order — which
+		// is also the one thing the words never say, a line about a blow turned aside reading
+		// the same either way.
+		const controller = new CombatController([
+			seed('r0', 'error', 'red'),
+			seed('p0', 'info', 'blue')
+		]);
+		controller.attachBoard(silentBoard());
+		const said = record(controller);
+		controller.setAction('p0', 'charge');
+		await playTurn(controller);
+
+		expect(events(said)).toEqual(['freeGuard']);
+		expect(said[0].moves).toEqual({ attacker: 'shoot', target: 'defend' });
+		// Named at the moment of the encounter and carried on the cue, rather than left to be
+		// read off the fighters later: the turn takes every order back when it is handed on.
+		expect(get(controller).fighters.every((fighter) => fighter.action === null)).toBe(true);
 	});
 
 	it('says nothing about a row that is already decided', async () => {

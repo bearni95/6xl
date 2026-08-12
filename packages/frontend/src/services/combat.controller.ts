@@ -384,9 +384,9 @@ export interface CombatState {
 	 * entirely (`public/combat-narration.json`, via the admin `/narration` screen) and
 	 * looked up by the page that draws them. So this is a cue, not a caption: nothing in
 	 * here is a sentence, and nothing in the rules ever reads a sentence back. Each name
-	 * carries the colour its fighter fights in, which is how the sentence letters the two of
-	 * them apart — a reading of the name, never anything a rule looks at. See
-	 * `$types/combat-narration.type`.
+	 * carries the colour its fighter fights in and the order it made in the encounter, which
+	 * is how the sentence letters the two of them apart and marks what each did — readings of
+	 * the name, never anything a rule looks at. See `$types/combat-narration.type`.
 	 */
 	cue: CombatNarrationCue | null;
 	/** True when every player fighter still standing has a complete order. */
@@ -985,7 +985,10 @@ export class CombatController {
 		this.announce(
 			'exchange',
 			{ attacker: one.shooter, target: two.shooter },
-			`${one.shooter.name} and ${two.shooter.name} go at each other at once.`
+			`${one.shooter.name} and ${two.shooter.name} go at each other at once.`,
+			// Both of them attacked, whoever paid for it: a free shot is a shot, and this is
+			// the one encounter where the fighter named as the target threw one too.
+			{ attacker: 'shoot', target: 'shoot' }
 		);
 		this.log.push(`${named(one)} and ${named(two)} meet in the lane — both come to nothing.`);
 		// Out to the middle together — neither is walked onto the other, because neither
@@ -1045,6 +1048,12 @@ export class CombatController {
 		// attacker set off would either say nothing yet or give the answer away before the
 		// picture had shown it.
 		const lane = { attacker: shooter, target };
+		// The orders the line's two marks are drawn from. The attacker shot — that is what an
+		// attacker is, and a free shot is a shot its `action` does not admit to — and where the
+		// blow is turned aside the target covered, ordered or owed. In the other two branches
+		// the target did whatever it was told, which the fighter itself says.
+		const struck = { attacker: 'shoot' } as const;
+		const turned = { attacker: 'shoot', target: 'defend' } as const;
 		this.setStatus(`${shooter.name} goes at ${target.name}.`);
 
 		// The fighter opposite braces first, if covering is what it chose.
@@ -1101,12 +1110,12 @@ export class CombatController {
 
 		if (target.down) {
 			this.log.push(`${from} — ${target.name} was already falling.`);
-			this.announce('spent', lane);
+			this.announce('spent', lane, undefined, struck);
 		} else if (covering) {
 			// The brace is already up, and it is the whole of what the board says: a fighter
 			// stood in its guard with the blow coming off it is the block, drawn.
 			this.log.push(`${from} at ${target.name}, who blocked it.`);
-			this.announce('blocked', lane);
+			this.announce('blocked', lane, undefined, turned);
 		} else if (this.passiveReady(target, 'defend')) {
 			// Blue's free guard. It is only had on a turn the fighter wasn't covering
 			// anyway (the branch above), and only spent on a shot it actually turns
@@ -1114,14 +1123,14 @@ export class CombatController {
 			// same reason an ordered one is: it went up when this blow was thrown.
 			this.spend(target, 'defend', true);
 			this.log.push(`${from} at ${target.name} — turned aside by its free guard.`);
-			this.announce('freeGuard', lane);
+			this.announce('freeGuard', lane, undefined, turned);
 		} else {
 			target.down = true;
 			this.log.push(`${from} — ${target.name} is down.`);
 			// The whole encounter in one line, said as the blow lands and left standing over
 			// the fall and the ground changing hands after it: those are this same event being
 			// shown to its end, not two more things to say (see {@link settleLane}).
-			this.announce('hit', lane);
+			this.announce('hit', lane, undefined, struck);
 			// Sparks come off it in the colour of whoever's blow got through, and are all that
 			// is said about it: the spray, the fighter reeling and then falling out of the lane
 			// are the hit — a word over the head of somebody visibly going down added nothing.
@@ -1509,8 +1518,11 @@ export class CombatController {
 	 * page draws it.
 	 *
 	 * What it is handed for each name is the **fighter**, not the name: the sentence letters
-	 * a fighter in the colour that fighter fights in, so the name and the colour come off the
-	 * one thing at the one moment and cannot be paired up wrongly at the far end.
+	 * a fighter in the colour that fighter fights in and puts the mark of the order it made
+	 * beside it, so the name, the colour and the order all come off the one thing at the one
+	 * moment and cannot be paired up wrongly at the far end. `moves` is for the two
+	 * encounters where what a fighter did is not what it was told — a free shot, a free
+	 * guard — and is otherwise the fighter's own order.
 	 *
 	 * `status` is the fight's own English record of the same moment, unchanged and
 	 * unrelated: it is passed here only so an encounter is one store write rather than two.
@@ -1519,18 +1531,29 @@ export class CombatController {
 	private announce(
 		event: CombatNarrationEvent,
 		who: Partial<Record<NarrationPlaceholder, Fighter>> = {},
-		status?: string
+		status?: string,
+		moves: Partial<Record<NarrationPlaceholder, CombatAction>> = {}
 	): void {
 		if (status !== undefined) this.status = status;
 		const values: Partial<Record<NarrationPlaceholder, string>> = {};
 		const colors: Partial<Record<NarrationPlaceholder, string>> = {};
+		const orders: Partial<Record<NarrationPlaceholder, string>> = {};
 		for (const [name, fighter] of Object.entries(who) as [NarrationPlaceholder, Fighter][]) {
 			values[name] = fighter.name;
 			colors[name] = fighter.color;
+			// What the fighter *did* in this encounter, which is the order it was given except
+			// where the encounter turned on the gift its colour owed it: a free shot is a shot
+			// thrown by a fighter that was told to load, and a free guard is a cover put up by
+			// one that was not covering. Those are the two the caller names, since they are the
+			// two the fighter's own order does not say. Read here and not where the line is
+			// drawn, because the turn takes the orders back at the end of it and the cue
+			// outlives them.
+			const move = moves[name] ?? fighter.action;
+			if (move) orders[name] = move;
 		}
 		const seq = (this.cues.get(event) ?? 0) + 1;
 		this.cues.set(event, seq);
-		this.cue = { event, values, colors, seq, fight: this.fight };
+		this.cue = { event, values, colors, moves: orders, seq, fight: this.fight };
 		this.emit();
 	}
 

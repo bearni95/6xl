@@ -174,6 +174,22 @@ export interface CombatNarrationCue {
 	 * and the colour is how they are drawn.
 	 */
 	colors?: Partial<Record<NarrationPlaceholder, string>>;
+	/**
+	 * The order each of those fighters made in this encounter, keyed the same way — one of
+	 * the three the game is played with, so the sentence can put that order's own mark
+	 * beside the name it belongs to.
+	 *
+	 * It is the fighter's order and not merely what it was told: a fighter whose blow was
+	 * turned aside by the guard its colour owed it covered, whatever it had been ordered to
+	 * do, and an encounter is what the two of them *did*. Which is why the fight names it
+	 * per encounter rather than leaving it to be read off the fighter afterwards — by the
+	 * time a line is drawn the turn has taken the orders back.
+	 *
+	 * A reading of the name beside it, exactly like {@link colors}: nothing is looked up by
+	 * it and no rule reads it, so a cue that carries none is narrated in words alone rather
+	 * than being wrong.
+	 */
+	moves?: Partial<Record<NarrationPlaceholder, string>>;
 	/** 1-based, counted over this event's own announcements within this fight. */
 	seq: number;
 	/**
@@ -236,7 +252,9 @@ export function fillNarration(
  *
  * A sentence is drawn in one ink except for the fighters in it, so what the screen needs
  * is not the finished string but the pieces it is made of: the words the author wrote, and
- * the names written into them, each carrying the colour that fighter fights in.
+ * the names written into them, each carrying the colour that fighter fights in and the
+ * order it made — the two things about a fighter a line is drawn with rather than written
+ * in.
  */
 export interface NarrationSegment {
 	text: string;
@@ -244,6 +262,9 @@ export interface NarrationSegment {
 	name?: NarrationPlaceholder;
 	/** The colour that fighter fights in, when the cue carried one. */
 	color?: string;
+	/** The order that fighter made in this encounter, when the cue carried one — what the
+	 * mark drawn beside the name is a picture of. */
+	move?: string;
 }
 
 /**
@@ -260,7 +281,8 @@ export interface NarrationSegment {
 export function narrationSegments(
 	line: string,
 	values: Partial<Record<NarrationPlaceholder, string>>,
-	colors: Partial<Record<NarrationPlaceholder, string>> = {}
+	colors: Partial<Record<NarrationPlaceholder, string>> = {},
+	moves: Partial<Record<NarrationPlaceholder, string>> = {}
 ): NarrationSegment[] {
 	const segments: NarrationSegment[] = [];
 	const push = (text: string, name?: NarrationPlaceholder): void => {
@@ -269,7 +291,7 @@ export function narrationSegments(
 		// between the author's own words is still the author's own words.
 		const last = segments[segments.length - 1];
 		if (!name && last && !last.name) last.text += text;
-		else segments.push(name ? { text, name, color: colors[name] } : { text });
+		else segments.push(name ? { text, name, color: colors[name], move: moves[name] } : { text });
 	};
 	let read = 0;
 	for (const match of line.matchAll(/\{([a-zA-Z]+)\}/g)) {
@@ -373,7 +395,9 @@ export function pickNarrationSegments(
 	cue: CombatNarrationCue | null
 ): NarrationSegment[] | null {
 	const dealt = dealNarration(collection, cue);
-	return dealt === null ? null : narrationSegments(dealt, cue!.values, cue!.colors ?? {});
+	return dealt === null
+		? null
+		: narrationSegments(dealt, cue!.values, cue!.colors ?? {}, cue!.moves ?? {});
 }
 
 /** The line this cue is dealt, before any name is written into it. Null when the event has

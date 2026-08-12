@@ -72,6 +72,22 @@ export const ORDER_ICONS = {
  */
 export type PassiveOrder = keyof typeof ORDER_ICONS;
 
+/**
+ * The same three marks, named the way a mark drawn **into the document** is named —
+ * `<folder>/<slug>`, which is what an inlined glyph is asked for by (see the icon note in
+ * CLAUDE.md). The narration over a fight puts one beside each fighter's name, and that is
+ * lettering rather than canvas.
+ *
+ * Derived off {@link ORDER_ICONS} rather than written out again, so the picture the board
+ * tints and the picture the sentence letters can never come apart. Null for anything that
+ * is not one of the three, which is how a cue carrying an order this doesn't know stays a
+ * sentence with no mark rather than a broken fetch.
+ */
+export function orderGlyph(order: string): string | null {
+	const url = ORDER_ICONS[order as PassiveOrder];
+	return url ? url.replace(/^\/assets\/icons\//, '').replace(/\.svg$/, '') : null;
+}
+
 /** Which order each primary hands over. A compound hands over its components'. */
 const PRIMARY_PASSIVE: Record<PrimaryColor, PassiveOrder> = {
 	red: 'shoot',

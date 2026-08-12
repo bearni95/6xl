@@ -35,6 +35,28 @@ describe('cutting a sentence up to type it', () => {
 		expect(typewriterWords(parts)).toBe(4);
 	});
 
+	it('carries whatever else a run was hung with, and says where the run began', () => {
+		// The narration hangs the order a fighter made on the run its name is, and draws that
+		// order's mark once for the name however many words the name runs to.
+		const parts = typewriterParts([
+			{ text: 'Son Goku', color: 'orange', move: 'shoot' },
+			{ text: ' no passa de ' },
+			{ text: 'Bulma', color: 'blue', move: 'defend' }
+		]);
+		expect(parts.filter((part) => part.lead).map((part) => [part.text, part.move])).toEqual([
+			['Son', 'shoot'],
+			['no', undefined],
+			['Bulma', 'defend']
+		]);
+		// The second word of a name is that name's word too — it just does not wear the mark.
+		expect(parts.find((part) => part.text === 'Goku')).toMatchObject({
+			move: 'shoot',
+			lead: false
+		});
+		// A gap is never a lead, so nothing is ever drawn on the space before a name.
+		expect(parts.filter((part) => !part.word).every((part) => !part.lead)).toBe(true);
+	});
+
 	it('hands back exactly what it was given, joined up', () => {
 		const runs = [{ text: '  Res ' }, { text: 'a', color: 'red' }, { text: ' per fer!  ' }];
 		expect(

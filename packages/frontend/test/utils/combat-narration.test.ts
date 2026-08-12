@@ -85,6 +85,24 @@ describe('cutting a line into its runs', () => {
 		]);
 	});
 
+	it('carries the order each fighter made, for the mark drawn beside its name', () => {
+		// The words say how the row went; the marks say what the two of them did to make it go
+		// that way, which a line about a blow turned aside never states.
+		expect(
+			narrationSegments(
+				'{attacker} no passa de {target}.',
+				{ attacker: 'Goku', target: 'Bulma' },
+				{},
+				{ attacker: 'shoot', target: 'defend' }
+			)
+		).toEqual([
+			{ text: 'Goku', name: 'attacker', color: undefined, move: 'shoot' },
+			{ text: ' no passa de ' },
+			{ text: 'Bulma', name: 'target', color: undefined, move: 'defend' },
+			{ text: '.' }
+		]);
+	});
+
 	it('is the filled sentence, read run by run', () => {
 		// Everything that only wants the words goes on using `fillNarration`, so the two must
 		// never be able to say different things about one line.
@@ -112,6 +130,7 @@ describe('cutting a line into its runs', () => {
 			event: 'hit',
 			values: { attacker: 'Goku', target: 'Bulma' },
 			colors: { attacker: 'green' },
+			moves: { attacker: 'shoot' },
 			seq: 2,
 			fight: 'p0|r0'
 		} as const;
@@ -123,6 +142,7 @@ describe('cutting a line into its runs', () => {
 			pickNarrationLine(collection, cue)
 		);
 		expect(segments?.find((segment) => segment.name === 'attacker')?.color).toBe('green');
+		expect(segments?.find((segment) => segment.name === 'attacker')?.move).toBe('shoot');
 		// And it stays quiet in exactly the same places.
 		expect(pickNarrationSegments({ lines: {} }, cue)).toBeNull();
 		expect(pickNarrationSegments(collection, null)).toBeNull();

@@ -5,7 +5,9 @@
 	import { narration } from '$services/narration.service';
 	import { pickNarrationSegments, type CombatNarrationCue } from '$types/combat-narration.type';
 	import { typewriterParts, typewriterWords } from '$utils/string/typewriter';
+	import { orderGlyph } from '$utils/color/traits';
 	import { SPAWN_INK_CLASSES } from '$components/core/spawn-colors';
+	import GameGlyph from '$components/core/GameGlyph.svelte';
 	import type { SpawnColor } from '$types/character-spawn.type';
 
 	/**
@@ -31,6 +33,17 @@
 	 * already said it, in the aura at that fighter's feet and the sparks off its blows. Same
 	 * six swatches as those (`SPAWN_INK_CLASSES`), so the name and the figure are the one
 	 * colour. A cue that carries none is lettered in the plate's own ink.
+	 *
+	 * **And each name wears the mark of the order that fighter made**, which the cue carries
+	 * too: the very glyph the order was given with on the board (`ORDER_ICONS` — a sword, a
+	 * shield, the gathering energy), inlined ahead of the name so it takes that name's own ink
+	 * and its own size. The sentence says how the row went and the marks say what the two of
+	 * them did to make it go that way — which is the one thing the words leave to be worked
+	 * out, a line about a blow turned aside never saying whether the fighter was covering or
+	 * was handed the guard by its colour. Drawn once per name however many words the name runs
+	 * to (the run's `lead`), and hidden with the word it stands on, so a mark never arrives
+	 * ahead of the fighter it belongs to. An order there is no glyph for draws nothing: the
+	 * name is simply unmarked, exactly as every name was before there were marks.
 	 *
 	 * **And it is typed out, a word at a time.** A sentence that arrived whole was read as one
 	 * shape and often not read at all, since it landed on the very beat the eye was on the
@@ -138,6 +151,11 @@
 				aria-live="polite"
 			>
 				{#each parts as part, index (index)}
+					<!-- The order's mark, on the first word of the name it belongs to and nowhere
+					     else. Inside that word's own span rather than beside it, so it is carried by
+					     the same ink and the same reveal — and so nothing can put a line break
+					     between a fighter and its mark. -->
+					{@const mark = part.lead && part.move ? orderGlyph(part.move) : null}
 					<!-- A word not yet typed is drawn and not inked, so it holds its own room: the
 					     box is the size of the finished sentence from the first word on. The gaps
 					     between words are never hidden — there is nothing to see either way, and a
@@ -147,7 +165,10 @@
 							'transition-opacity duration-100',
 							part.color ? SPAWN_INK_CLASSES[part.color as SpawnColor] : undefined,
 							{ 'opacity-0': part.word && part.index >= revealed }
-						)}>{part.text}</span
+						)}>{#if mark}<GameGlyph
+								name={mark}
+								classes="mr-1 [&>svg]:size-[0.85em]"
+							/>{/if}{part.text}</span
 					>
 				{/each}
 			</p>
