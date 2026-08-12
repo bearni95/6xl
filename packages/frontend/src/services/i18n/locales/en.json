@@ -27,6 +27,7 @@
 		"title": "Profile",
 		"close": "Close profile",
 		"access": "Access",
+		"accessClose": "Close access",
 		"continueWith": "Continue with {provider}",
 		"password": {
 			"haveAccount": "I have an account",

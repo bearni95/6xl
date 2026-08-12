@@ -5,6 +5,7 @@
 	import { closeSignIn, signInModalOpen } from '$services/signInModal';
 	import type { OAuthProvider } from '$types/profile.type';
 	import { CONSENT_DOCUMENTS, LEGAL_VERSIONS } from '$types/legal.type';
+	import FullScreenModal from '$components/core/FullScreenModal.svelte';
 	import LegalConsent from '$components/core/LegalConsent.svelte';
 	import EmailSignIn from '$components/core/EmailSignIn.svelte';
 	import SocialSignIn from '$components/core/SocialSignIn.svelte';
@@ -37,8 +38,18 @@
 	// Mounted once at the layout root, like the settings sheet and the avatar picker, so it
 	// is free of the map panel's stacking context — and free of the panel's own `{#if}`,
 	// which is what lets the legal documents be read without the ticks above them being
-	// lost: the document sheet is z-[1300] and stands over this box, this box stays mounted
-	// underneath, and the boxes are still ticked when the reader comes back.
+	// lost: this sheet stays mounted underneath while the document sheet is up, and the
+	// boxes are still ticked when the reader comes back. Both are the full-view sheet and
+	// both are z-[1300], so which is in front is the order they are mounted in at the
+	// layout root, where LegalModal comes after this one.
+	//
+	// And it is that sheet — `FullScreenModal`, the surround every other full-view modal in
+	// this app wears — rather than a daisyUI `modal-box` of its own. It was the one door
+	// drawn as a box over the map while the album, the boosters, the profile, the settings
+	// and the documents were all whole views; a sheet is what a modal looks like here, and
+	// the way in is not the exception. Which also takes the backdrop with it: there is
+	// nothing of the map left showing to click at, so the ✕ and Escape are the way out, and
+	// `closeDisabled` is what holds them while something is in flight.
 	//
 	// The state is the component's, so putting the sheet away un-ticks everything. That is
 	// the honest reading: an acceptance is an act, and somebody who closed the door without
@@ -65,8 +76,9 @@
 	$: consented = ageConfirmed && documentsAccepted;
 	$: busy = redirectingTo !== null || credentialsPending !== null;
 
+	// The sheet holds its own ways out shut while something is in flight (`closeDisabled`),
+	// so this is only ever reached when leaving is allowed.
 	function close(): void {
-		if (busy) return;
 		errorMessage = null;
 		confirmationSent = false;
 		consentAsked = false;
@@ -179,62 +191,63 @@
 <!-- Contents format i18n messages; wait for the locale to load, or the box would appear
 	empty and then fill. -->
 {#if $signInModalOpen && $locale}
-	<div class="modal modal-open" role="dialog" aria-modal="true">
-		<div class="modal-box flex flex-col gap-4">
-			{#if !authService.configured}
-				<div class="alert alert-warning">
-					<span>{$_('profile.notConfigured')}</span>
-				</div>
-			{:else}
-				<!-- The address and password first, Google under it: the game's own door before
-					the one that goes through somebody else's building. Neither is the main one —
-					the divider between them says "or" and means it.
-					The gate goes in with it, as the register tab's own last word before the button
-					that opens the account. The form is what knows which tab is forward, so it is
-					handed the gate to place rather than asked which one it is on. -->
-				<EmailSignIn
-					pending={credentialsPending}
-					disabled={redirectingTo !== null}
-					on:signin={handlePasswordSignIn}
-					on:signup={handlePasswordSignUp}
-				>
-					<LegalConsent
-						slot="consent"
-						bind:ageConfirmed
-						bind:accepted={documentsAccepted}
-						showRequired={consentAsked}
-						disabled={busy}
+	<FullScreenModal
+		title={$_('profile.access')}
+		closeLabel={$_('profile.accessClose')}
+		closeDisabled={busy}
+		on:close={close}
+	>
+		<div class="min-h-0 flex-1 overflow-y-auto">
+			<div class="mx-auto flex w-full max-w-xl flex-col gap-4">
+				{#if !authService.configured}
+					<div class="alert alert-warning">
+						<span>{$_('profile.notConfigured')}</span>
+					</div>
+				{:else}
+					<!-- The address and password first, Google under it: the game's own door before
+						the one that goes through somebody else's building. Neither is the main one —
+						the divider between them says "or" and means it.
+						The gate goes in with it, as the register tab's own last word before the button
+						that opens the account. The form is what knows which tab is forward, so it is
+						handed the gate to place rather than asked which one it is on. -->
+					<EmailSignIn
+						pending={credentialsPending}
+						disabled={redirectingTo !== null}
+						on:signin={handlePasswordSignIn}
+						on:signup={handlePasswordSignUp}
+					>
+						<LegalConsent
+							slot="consent"
+							bind:ageConfirmed
+							bind:accepted={documentsAccepted}
+							showRequired={consentAsked}
+							disabled={busy}
+						/>
+					</EmailSignIn>
+
+					<div class="divider my-0 text-xs text-base-content/50">
+						{$_('profile.password.or')}
+					</div>
+
+					<SocialSignIn
+						pending={redirectingTo}
+						disabled={credentialsPending !== null}
+						on:signin={handleProviderSignIn}
 					/>
-				</EmailSignIn>
+				{/if}
 
-				<div class="divider my-0 text-xs text-base-content/50">
-					{$_('profile.password.or')}
-				</div>
+				{#if confirmationSent}
+					<div class="alert alert-success">
+						<span>{$_('profile.password.confirmationSent')}</span>
+					</div>
+				{/if}
 
-				<SocialSignIn
-					pending={redirectingTo}
-					disabled={credentialsPending !== null}
-					on:signin={handleProviderSignIn}
-				/>
-			{/if}
-
-			{#if confirmationSent}
-				<div class="alert alert-success">
-					<span>{$_('profile.password.confirmationSent')}</span>
-				</div>
-			{/if}
-
-			{#if errorMessage}
-				<div class="alert alert-error">
-					<span>{errorMessage}</span>
-				</div>
-			{/if}
+				{#if errorMessage}
+					<div class="alert alert-error">
+						<span>{errorMessage}</span>
+					</div>
+				{/if}
+			</div>
 		</div>
-		<button
-			type="button"
-			class="modal-backdrop"
-			aria-label={$_('common.close')}
-			on:click={close}
-		></button>
-	</div>
+	</FullScreenModal>
 {/if}

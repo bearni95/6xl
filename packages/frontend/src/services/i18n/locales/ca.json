@@ -27,6 +27,7 @@
 		"title": "Perfil",
 		"close": "Tanca el perfil",
 		"access": "Accés",
+		"accessClose": "Tanca l'accés",
 		"continueWith": "Continua amb {provider}",
 		"password": {
 			"haveAccount": "Ja tinc compte",
