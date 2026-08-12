@@ -88,6 +88,7 @@
 		"radar": {
 			"nearest": "Ves al sobre sense obrir més proper"
 		},
+		"back": "Torna enrere",
 		"zoom": {
 			"label": "Nivell del mapa",
 			"step": "Nivell {number}: {divisions}",

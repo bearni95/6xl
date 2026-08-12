@@ -3171,6 +3171,53 @@
 	<div
 		class="flex flex-none items-stretch gap-2 border-b-2 border-primary bg-base-100 px-2 py-2"
 	>
+		<!-- The way back, and it is the browser's own: `history.back()`, whatever the last page
+			was. `/map` is an address a reader is SENT to — off the globe between the map's two
+			zoom presses, off a link, off the game's own front door — and what they want from it
+			is the page they came from rather than a route named here. So it is a step back
+			through the history and not a `goto`, which would be this page deciding that where
+			they came from was `/`. (Which also means it is only as good as the history: a tab
+			opened straight onto this address has nothing behind it, and the press then does what
+			the browser's own back button does on that tab, which is nothing.)
+			On `/map` alone. The front door is where the rest of the game is — its own column, its
+			own block, the sheets raised off this band — so there is nothing there to step back
+			OUT of, and a way back on the page every way back leads to is a press in a circle.
+			Before the name plate and so at the very near end of the row, because the plate's
+			`mr-auto` is what pushes the far end over: anything written before it stands at this
+			end, and a way out of a page belongs at the corner a reader reads from first.
+			The same square as every other mark on this band — a wrapper carrying the 1:1 off the
+			row's own stretched height and the press carrying it again off that box's definite
+			one (see the note above, and CombatFeedButton, which is built the same way) — and the
+			one that is not filled: `border-2 border-primary` with the mark in the same primary,
+			where the feed and the dots are white artwork on a primary plate. It is not one of the
+			things the game is asked, and a third solid plate in a row of three would read as one.
+			The `<` is drawn rather than lettered: a chevron path is the same mark at any size and
+			at any weight, where the character would be set in whatever the row inherits and would
+			have to be nudged onto the square's own centre. -->
+		{#if !chrome}
+			<div class="aspect-square flex-none self-stretch">
+				<button
+					type="button"
+					class="aspect-square h-full cursor-pointer rounded-lg border-2 border-primary text-primary shadow-xl"
+					aria-label={$_('map.back')}
+					on:click={() => history.back()}
+				>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="mx-auto size-5"
+						aria-hidden="true"
+					>
+						<path d="M15 5l-7 7 7 7" />
+					</svg>
+				</button>
+			</div>
+		{/if}
+
 		<!-- What it says and what size it is set at are two different things: the word is "6xl"
 			and the type is `2xl`, one flat size at every viewport rather than a ramp.
 			`items-center` centres it in whatever height the row hands this plate (see above);
@@ -3184,8 +3231,10 @@
 			path stood beside it as its folded dots for a while after that, and has gone down to the
 			row across the foot of the map to stand against the badge naming the open place: where
 			you are and the way out of it are one statement, and neither of them is a fixed thing
-			about the game. So nothing stands beside this plate now — the band is the game's name at
-			the near end and what can be asked about the game at the far one.
+			about the game. So nothing stands beside this plate at the front door — the band is the
+			game's name at the near end and what can be asked about the game at the far one — and
+			the one thing that ever stands before it is the way back, on `/map` only (see just
+			above), which is not a thing about the game but the way off the page.
 
 			The same badge is the tab's mark (see static/favicon.ico and the link in app.html), and
 			it is drawn differently there on purpose: an icon is a square with room round the word,
