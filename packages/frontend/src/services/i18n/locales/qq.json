@@ -88,9 +88,13 @@
 		"radar": {
 			"nearest": "QQQQQ"
 		},
+		"back": "QQQQQ",
 		"zoom": {
 			"label": "QQQQQ",
-			"step": "QQQQQ"
+			"step": "QQQQQ",
+			"out": "QQQQQ",
+			"in": "QQQQQ",
+			"alone": "QQQQQ"
 		},
 		"side": {
 			"expand": "QQQQQ",
@@ -338,6 +342,11 @@
 			}
 		},
 		"orders": {
+			"charge": "QQQQQ",
+			"defend": "QQQQQ",
+			"shoot": "QQQQQ"
+		},
+		"guide": {
 			"charge": "QQQQQ",
 			"defend": "QQQQQ",
 			"shoot": "QQQQQ"

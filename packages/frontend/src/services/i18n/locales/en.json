@@ -327,6 +327,11 @@
 			"charge": "Charge",
 			"defend": "Defend",
 			"shoot": "Shoot"
+		},
+		"guide": {
+			"charge": "you bank a charge, the only way to get one, and spend the turn wide open.",
+			"defend": "you turn aside every blow thrown at you this turn, but bank nothing.",
+			"shoot": "you spend the charge and go at the rival across from you: unturned, one blow puts it down."
 		}
 	},
 	"errors": {

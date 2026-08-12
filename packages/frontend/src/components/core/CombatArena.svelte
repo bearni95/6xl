@@ -10,7 +10,7 @@
 	import CombatNarration from '$components/core/CombatNarration.svelte';
 	import GameGlyph from '$components/core/GameGlyph.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
-	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
+	import CombatOrderGuide from '$components/core/CombatOrderGuide.svelte';
 	import { combatColorHex } from '$utils/color/combat-color';
 	import { ORDER_ICONS } from '$utils/color/traits';
 	// Types only, so nothing here reaches the renderer at load time: the arena letters a
@@ -61,7 +61,7 @@
 	import { spawnService } from '$services/spawn.service';
 	import { teamService, TEAM_SIZE } from '$services/team.service';
 	import { AuthStatus } from '$types/profile.type';
-	import { SpawnColor, type CharacterSpawn } from '$types/character-spawn.type';
+	import type { CharacterSpawn } from '$types/character-spawn.type';
 
 	// The opponent's team when this is a challenge: synthetic OG spawns (see
 	// `ogTeamSpawns`). When a full team (TEAM_SIZE) is supplied the red (CPU) side
@@ -459,19 +459,19 @@
 	}
 
 	/**
-	 * The column beside one of the player's fighters: the three orders it can be given, as the
-	 * panel's own three buttons are. Every one of the three is always drawn — an order out of
-	 * reach is greyed rather than dropped, so a fighter's column never changes shape — and all
-	 * of them lock while a turn is playing out. What its colour does for it of its own accord
-	 * is not a fourth button: it is passive, so it is not among the things that can be given,
-	 * and it is said as a border round the order it is a gift of ({@link giftedOrders}).
+	 * The column beside one of the player's fighters: the three orders it can be given. Every
+	 * one of the three is always drawn — an order out of reach is greyed rather than dropped,
+	 * so a fighter's column never changes shape — and all of them lock while a turn is playing
+	 * out. What its colour does for it of its own accord is not a fourth button: it is
+	 * passive, so it is not among the things that can be given, and it is said as a border
+	 * round the order it is a gift of ({@link giftedOrders}).
 	 *
-	 * The same list is what the panel beside the board draws ({@link orderRows}) and what the
-	 * lane column of the fighter being answered for is drawn from — three drawings of one
-	 * list, which is what keeps them from disagreeing about what may be pressed. Two of the
-	 * three are pressed: the panel's, and the lane's. This one, standing beside a fighter on
-	 * its own ground, is a reading — it says what that fighter has been told, on every row at
-	 * once, where the other two ask about the one row being answered.
+	 * The same list is drawn twice, and this call is the whole of both: here, beside the
+	 * fighter on the ground it holds, and again out in the lane of the fighter being answered
+	 * for, where it is pressed ({@link giveOrderFromPanel}). One list, so the two cannot
+	 * disagree about what may be pressed — the copy on the ground says what each of the three
+	 * has been told, all at once, and the copy in the lane asks about the one row being
+	 * answered.
 	 */
 	function orderButtons(
 		fighter: FighterView,
@@ -564,11 +564,12 @@
 	 * the board hangs beside it — the very same list, off the very same call, so the two are
 	 * one set of orders drawn twice and cannot come to disagree about what may be pressed.
 	 *
-	 * These are the buttons the plate carries. The board draws the same list twice more — a
-	 * reading beside each fighter, and, out in the lane of the one being answered for, a copy
-	 * that is pressed like these are and answered by the same function
-	 * ({@link giveOrderFromPanel}). Only the player's own fighters are in it: what a rival has
-	 * done is read where that rival is standing, and there is nothing to ask of it.
+	 * The plate carries none of them any more: the orders are drawn on the board, a reading
+	 * beside each fighter and, out in the lane of the one being answered for, a copy that is
+	 * pressed ({@link giveOrderFromPanel}). What this is still read for is the panel's own
+	 * business — which fighter it is turned to, which of them are still to answer, and
+	 * therefore where it steps to next. Only the player's own fighters are in it: what a
+	 * rival has done is read where that rival is standing, and there is nothing to ask of it.
 	 *
 	 * A fighter that is out of the turn — down, or holding the ground its lane was played for
 	 * — is left with no orders at all, exactly as the board clears its column: it keeps its
@@ -579,7 +580,8 @@
 	$: orderRows = state ? playerRows(state) : [];
 
 	/** One of the player's fighters as the phone's panel needs it: who it is, and the very
-	 * orders the board is handed for it. No art — the panel draws none. */
+	 * orders the board is handed for it — which the panel no longer draws and reads only to
+	 * know whether this fighter is still to answer. No art — the panel draws none. */
 	interface PlayerRow {
 		fighter: FighterView;
 		orders: BoardOrder[];
@@ -742,21 +744,9 @@
 		engine?.setPacing(!locked && row && row.orders.length > 0 ? row.fighter.id : null);
 	}
 
-	// What each of the three orders is called, for a button that is otherwise a picture. The
-	// board never needs them — a glyph on a canvas has nobody to say itself to — so they are
-	// the one part of an order that only the document asks for.
-	$: ORDER_LABELS = {
-		charge: $_('combat.orders.charge'),
-		defend: $_('combat.orders.defend'),
-		shoot: $_('combat.orders.shoot')
-	} satisfies Record<CombatAction, string>;
-
-	// The player's six colours as fills, for the one button that is drawn in the fighter's own
-	// colour: the chosen order. Every other state is the dark tile below, which is what white
-	// artwork needs under it (see the icon note in CLAUDE.md).
-	function orderFill(order: BoardOrder): string {
-		return order.selected ? SPAWN_FILL_CLASSES[order.color as SpawnColor] : 'bg-neutral';
-	}
+	// What each of the three orders is called and what it does are the document's alone — a
+	// glyph on a canvas has nobody to say itself to — and both are read where the orders are
+	// now explained rather than pressed (see CombatOrderGuide). Nothing here words them.
 
 	// The line-up the controller will be seeded with, as identities alone: both sides in
 	// seed order, which is the order a saved board's slots are numbered in. Built without
@@ -1551,7 +1541,6 @@
 					<CombatHead {location} classes="relative shrink-0" />
 				{/if}
 				{#if shownRow}
-					{@const row = shownRow}
 					<div
 						class={classNames('relative min-h-0 flex-1 rounded-box bg-base-100/80 p-2 shadow-xl', {
 							'pointer-events-none opacity-50': panelLocked
@@ -1695,73 +1684,25 @@
 							buttonClasses="btn btn-outline btn-square btn-sm"
 						/>
 						</div>
-						<!-- What the panel is worked by, at the foot of it: what may be asked of the
-						     fighter it is turned to, and nothing else. One row, at the end of the screen
-						     the thumb is at.
-						     There was a second row over this one — a back arrow and a forward one, at the
-						     two ends of a six-column ruling, which is what the panel used to be turned by
-						     by hand. They are gone. Which fighter is being answered for is decided by the
-						     fight now and not by the player: the turn opens on the first one with
-						     something still to answer and each order given moves the panel to the next
-						     such fighter (see {@link giveOrderFromPanel}), which is the whole of the
-						     three being answered once each. The board says which one it is at every
-						     moment — that fighter paces its own cell, and this very column of orders
-						     stands out in its lane, where it is pressed exactly as these are — so
-						     nothing is lost by the panel having no way round the line of its own.
-						     What *is* lost, and is worth saying plainly: an order once given cannot be
-						     taken back inside its turn, because there is no longer a way to turn the
-						     panel back to a fighter that has already answered.
-						     This fighter's three orders: the middle three of five columns, the two end
-						     ones left standing empty. Columns of a grid rather than a row of fixed sizes,
-						     so the whole of it fits the narrowest phone and every square is the same
-						     square.
-						     Five columns for three buttons because the width of an order is settled by the
-						     row and not by what happens to be in it: the ends are held open (`col-start-2`
-						     on the first order) so the three are one size on every panel, whatever is
-						     drawn beside them and whether or not anything is. Nothing is, and nothing has
-						     been since the arrows came off — the ends stay open for the reason they were
-						     opened rather than to leave room for anything.
-						     A plain button rather than a `btn` for the three: the glyphs are the canvas's
-						     own white artwork, so what they need is a dark tile under them in *every*
-						     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
-						     button's face. So the tile stays and the states are said over it — the chosen
-						     order in the fighter's own colour, the rest dark, and one out of reach faded
-						     rather than dropped, as the board's own column greys it. -->
-						<div class="pointer-events-auto absolute inset-x-2 bottom-2 grid grid-cols-5 gap-2">
-							{#each row.orders as order, index (order.id)}
-								<!-- An order the fighter's colour hands it free is edged in that colour, exactly
-								     as the board edges it: a border round the whole button, because what is
-								     being said is about the whole of that order. On the one button *filled*
-								     with that very colour — the order the fighter has been given — a white
-								     seam is laid inside the border, which is the whole of what keeps the two
-								     apart; it is an inset ring rather than a second border so it costs the
-								     glyph no room and the three buttons stay one size whatever they wear.
-								     It comes and goes with the board's own, both being drawn off the same
-								     `gift` flag on the same list of orders, so it is only ever on the opening
-								     turn — the turn a gift is in hand for. -->
-								<button
-									type="button"
-									class={classNames(
-										'relative flex aspect-square w-full items-center justify-center rounded-box border-2',
-										index === 0 && 'col-start-2',
-										orderFill(order),
-										order.gift
-											? SPAWN_BORDER_CLASSES[order.color as SpawnColor]
-											: 'border-transparent',
-										{
-											'opacity-40': order.disabled,
-											'ring-2 ring-white ring-inset': order.gift && order.selected
-										}
-									)}
-									disabled={order.disabled}
-									aria-label={ORDER_LABELS[order.id as CombatAction]}
-									aria-pressed={order.selected}
-									on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
-								>
-									<img src={order.icon} alt="" class="w-3/5" />
-								</button>
-							{/each}
-						</div>
+						<!-- What each of the three orders does, along the foot of the panel, one at a
+						     time (see CombatOrderGuide, which is the whole block).
+						     The three buttons stood here — the orders themselves, pressed to answer for
+						     the fighter the panel was turned to. They are given on the board now: the
+						     same three, off the same list, standing in that fighter's own lane where the
+						     question is being asked (see `onBoardReady`). Two plates carrying one set of
+						     buttons was the reader looking at the answer in one place and the fight in
+						     another, and the copy that had to go was the one furthest from the board.
+						     What the foot is for now is the one thing neither column of glyphs can say —
+						     what pressing one of them does — which is exactly what a player who has just
+						     arrived is short of, and exactly what the room the buttons left is the size
+						     of.
+						     Only while there is something to plan: it is an explanation of a choice, and
+						     while the turn is being carried out there is no choice on the panel to
+						     explain. The card is faded through all of that anyway, and what is read over
+						     it then is the narration, which stands in the middle of this same plate. -->
+						{#if !panelLocked}
+							<CombatOrderGuide classes="absolute inset-x-2 bottom-2" />
+						{/if}
 					</div>
 				{/if}
 				<!-- What the fight is saying about the encounter being played out, laid across the
