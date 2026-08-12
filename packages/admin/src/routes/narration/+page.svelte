@@ -12,6 +12,13 @@
 		type NarrationEventSpec,
 		type NarrationPlaceholder
 	} from '$types/combat-narration.type';
+	import {
+		NARRATION_CSV_FILENAME,
+		narrationFromCsv,
+		narrationToCsv,
+		type NarrationCsvProblem
+	} from '$utils/csv/narration-csv';
+	import { saveBlob } from '$utils/capture/save-blob';
 
 	// What the fight says over each encounter it plays out — one row of the board, one
 	// sentence. A section per way an encounter can go, and the section is the definition:
@@ -42,6 +49,19 @@
 	let savingEvent: CombatNarrationEvent | null = null;
 	// The last refusal per section, in the server's own words.
 	let errorByEvent = new Map<CombatNarrationEvent, string>();
+
+	// The whole collection being written at once — an import, or every hand-edited section
+	// saved together. Apart from `savingEvent` because it is a different button.
+	let savingAll = false;
+	let saveAllError = '';
+
+	// What the last import read, and what it refused. A note stands until something else is
+	// imported or everything is written, because reading a file is not writing one: the rows
+	// are staged into the sections and the author still has to save them.
+	let importNote = '';
+	let importProblems: NarrationCsvProblem[] = [];
+	// The file input, cleared after every pick so choosing the same file twice still fires.
+	let fileInput: HTMLInputElement | null = null;
 
 	/**
 	 * The lane a preview is drawn against. Made-up names rather than a real character's:
@@ -133,11 +153,27 @@
 		return lines.map((line) => line.trim()).filter(Boolean);
 	}
 
-	/** Whether a section says something the file does not. */
-	function dirty(event: CombatNarrationEvent, lines: string[]): boolean {
-		const saved = collection.lines[event] ?? [];
+	/**
+	 * Whether a section says something the file does not.
+	 *
+	 * Handed what the file says rather than reading it off `collection` itself, so the
+	 * reactive statement below can name both of the things this depends on — a `$:` only
+	 * re-runs for what its own text mentions, and a read that happens inside a function it
+	 * calls is not mentioned.
+	 */
+	function dirty(saved: string[], lines: string[]): boolean {
 		const draft = written(lines);
 		return draft.length !== saved.length || draft.some((line, at) => line !== saved[at]);
+	}
+
+	/** What every section would save, as the API takes the whole collection. */
+	function draftedCollection(): CombatNarrationCollection {
+		const lines: CombatNarrationCollection['lines'] = {};
+		for (const event of events) {
+			const authored = written(drafts.get(event.id) ?? []);
+			if (authored.length > 0) lines[event.id] = authored;
+		}
+		return { lines };
 	}
 
 	/**
@@ -194,9 +230,102 @@
 		}
 	}
 
+	/**
+	 * The whole collection as one CSV file, handed to the author.
+	 *
+	 * What is on **disk** and not what is on screen: the export is of the narration the game
+	 * reads, and a half-typed line going out to whoever the file is being sent to would be a
+	 * different document from the one the fight is playing. Unsaved sections say so beside
+	 * the button, and Save all is right there.
+	 */
+	function exportCsv(): void {
+		saveBlob(
+			new Blob([narrationToCsv(collection)], { type: 'text/csv;charset=utf-8' }),
+			NARRATION_CSV_FILENAME
+		);
+	}
+
+	/**
+	 * Read a CSV back in — the whole narration at once, staged into the sections.
+	 *
+	 * Staged and not written: what lands is exactly what the sections would have said had
+	 * somebody typed it, so it is previewed, checked and read on screen before a byte of it
+	 * reaches the git tree, and Save all is the same press it would have been anyway. A file
+	 * with anything wrong in it stages nothing at all — an import replaces the totality, and
+	 * a totality applied except for row 14 is a document nobody wrote.
+	 */
+	async function importCsv(picked: Event): Promise<void> {
+		const input = picked.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+
+		importNote = '';
+		importProblems = [];
+		saveAllError = '';
+
+		const read = narrationFromCsv(await file.text());
+		if (!read.collection) {
+			importProblems = read.problems;
+			importNote = `Nothing was read from ${file.name} — ${read.problems.length} ${
+				read.problems.length === 1 ? 'row is' : 'rows are'
+			} wrong.`;
+			return;
+		}
+
+		const imported = read.collection;
+		// Every event, not only the ones the file named: a section with no rows in the file is
+		// a section with no lines, which is the other half of exporting the whole collection.
+		drafts = new Map(events.map((event) => [event.id, [...(imported.lines[event.id] ?? []), '']]));
+		importNote = `Read ${read.lines} ${read.lines === 1 ? 'line' : 'lines'} across ${
+			read.events
+		} ${read.events === 1 ? 'event' : 'events'} from ${file.name}. Nothing is written yet.`;
+	}
+
+	/**
+	 * Write every section at once, as one replacement of the collection.
+	 *
+	 * The events only mean anything as a set — an imported file says what each of the eight
+	 * holds, including the ones it empties — so this is a single PUT rather than eight posts:
+	 * either the whole document lands or none of it does.
+	 */
+	async function saveAll(): Promise<void> {
+		savingAll = true;
+		saveAllError = '';
+		errorByEvent = new Map();
+		try {
+			const res = await fetch(`${API_BASE}/api/combat-narration`, {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(draftedCollection())
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({ message: res.statusText }));
+				throw new Error(body.message ?? 'Save failed');
+			}
+			collection = (await res.json()) as CombatNarrationCollection;
+			reseed();
+			importNote = '';
+			importProblems = [];
+		} catch (error) {
+			saveAllError = error instanceof Error ? error.message : String(error);
+		} finally {
+			savingAll = false;
+		}
+	}
+
 	// How much of the fight has words on it at all. An event with nothing authored is one
 	// the fight plays out in silence — legitimate, and worth being able to see at a glance.
 	$: authored = events.filter((event) => (collection.lines[event.id] ?? []).length > 0).length;
+
+	// Which sections say something the file does not — what Save all would write, and what
+	// the export would leave behind.
+	$: unsaved = events.filter((event) =>
+		dirty(collection.lines[event.id] ?? [], drafts.get(event.id) ?? [])
+	);
+
+	// A section with a fault in it cannot be written, and neither can the lot.
+	$: faultedAny = events.some((event) => faulted(event.id, drafts.get(event.id) ?? []));
 </script>
 
 <div class="flex-1 bg-base-200 p-6 md:p-10">
@@ -239,6 +368,89 @@
 				<span>Loading narration…</span>
 			</div>
 		{:else}
+			<!-- The whole narration as one file, out and back. The sections below are the way
+			     to write one line; this is the way to hand the lot to somebody — a proofreader,
+			     a translator, a spreadsheet — and take it back. One row per line, the event in
+			     a column of its own, which is what makes it a table rather than a dump of the
+			     grouped JSON. -->
+			<section class="card bg-base-100 shadow-xl">
+				<div class="card-body gap-3">
+					<div class="flex flex-wrap items-center gap-3">
+						<h2 class="card-title text-base">The whole collection as a file</h2>
+						<div class="ml-auto flex flex-wrap items-center gap-2">
+							<button type="button" class="btn btn-outline btn-sm" on:click={exportCsv}>
+								Export CSV
+							</button>
+							<button
+								type="button"
+								class="btn btn-outline btn-sm"
+								disabled={savingAll}
+								on:click={() => fileInput?.click()}
+							>
+								Import CSV
+							</button>
+							<input
+								bind:this={fileInput}
+								type="file"
+								class="hidden"
+								accept=".csv,text/csv"
+								on:change={importCsv}
+							/>
+							<button
+								type="button"
+								class="btn btn-primary btn-sm"
+								disabled={savingAll || unsaved.length === 0 || faultedAny}
+								on:click={saveAll}
+							>
+								{#if savingAll}
+									<span class="loading loading-spinner loading-xs"></span>
+								{/if}
+								Save all{unsaved.length > 0 ? ` (${unsaved.length})` : ''}
+							</button>
+						</div>
+					</div>
+					<p class="text-sm opacity-70">
+						<code class="font-mono">event,line</code> — one row per line, the event named in
+						its own column, so the grouping survives without the file being grouped. Commas,
+						quotes and newlines inside a sentence are carried as CSV quotes and come back
+						exactly as they went out. An import is a
+						<strong>replacement of the whole collection</strong>: an event with no rows in the
+						file ends up with no lines. It is read into the sections below and checked there
+						first — nothing is written until Save all — and a file with a bad row stages
+						nothing at all.
+					</p>
+					{#if unsaved.length > 0}
+						<p class="text-xs opacity-60">
+							{unsaved.length}
+							{unsaved.length === 1 ? 'section is' : 'sections are'} unsaved; the export is of what
+							is on disk.
+						</p>
+					{/if}
+					{#if importNote}
+						<div
+							class={classNames('alert text-sm', {
+								'alert-error': importProblems.length > 0,
+								'alert-info': importProblems.length === 0
+							})}
+						>
+							<span>{importNote}</span>
+						</div>
+					{/if}
+					{#if importProblems.length > 0}
+						<ul class="list-inside list-disc text-xs text-error">
+							{#each importProblems as problem, index (index)}
+								<li>Row {problem.row}: {problem.message}</li>
+							{/each}
+						</ul>
+					{/if}
+					{#if saveAllError}
+						<div class="alert alert-error text-sm">
+							<span>{saveAllError}</span>
+						</div>
+					{/if}
+				</div>
+			</section>
+
 			{#each events as event (event.id)}
 				{@const lines = drafts.get(event.id) ?? ['']}
 				{@const saved = collection.lines[event.id] ?? []}
@@ -315,14 +527,15 @@
 						{/if}
 
 						<div class="card-actions items-center justify-end gap-3">
-							{#if dirty(event.id, lines)}
+							{#if dirty(saved, lines)}
 								<span class="text-xs opacity-60">Unsaved</span>
 							{/if}
 							<button
 								type="button"
 								class="btn btn-primary btn-sm"
 								disabled={savingEvent !== null ||
-									!dirty(event.id, lines) ||
+									savingAll ||
+									!dirty(saved, lines) ||
 									faulted(event.id, lines)}
 								on:click={() => save(event.id)}
 							>

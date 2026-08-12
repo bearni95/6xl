@@ -69,25 +69,18 @@ interface NarrationSave {
 }
 
 /**
- * Narrow an unknown POST body to one event's lines. Everything not named here is dropped,
- * so a crafted body can't smuggle extra fields into the git tree.
+ * One event's lines, narrowed out of an unknown array. Everything the fight could not say
+ * is refused here rather than written: a line naming a `{placeholder}` the event never
+ * carries, and a line too long to be read in the middle of a turn.
  */
-function validate(body: unknown): NarrationSave {
-	const draft = body as Partial<NarrationSave>;
-	if (!draft || typeof draft !== 'object') httpError(400, 'Body must be an object');
-
-	const event = draft.event;
-	if (!isNarrationEvent(event)) {
-		httpError(400, `Unknown narration event "${String(event)}"`);
-	}
-
-	if (!Array.isArray(draft.lines)) httpError(400, 'lines must be an array');
-	if (draft.lines.length > NARRATION_LINES_PER_EVENT) {
+function validateLines(event: CombatNarrationEvent, entries: unknown): string[] {
+	if (!Array.isArray(entries)) httpError(400, `"${event}" lines must be an array`);
+	if (entries.length > NARRATION_LINES_PER_EVENT) {
 		httpError(400, `An event can hold at most ${NARRATION_LINES_PER_EVENT} lines`);
 	}
 
 	const lines: string[] = [];
-	for (const entry of draft.lines) {
+	for (const entry of entries) {
 		if (typeof entry !== 'string') httpError(400, 'Every line must be a string');
 		const line = entry.trim();
 		// A blank row is how the screen offers a new line, so it is dropped rather than
@@ -106,7 +99,47 @@ function validate(body: unknown): NarrationSave {
 		lines.push(line);
 	}
 
-	return { event, lines };
+	return lines;
+}
+
+/**
+ * Narrow an unknown POST body to one event's lines. Everything not named here is dropped,
+ * so a crafted body can't smuggle extra fields into the git tree.
+ */
+function validate(body: unknown): NarrationSave {
+	const draft = body as Partial<NarrationSave>;
+	if (!draft || typeof draft !== 'object') httpError(400, 'Body must be an object');
+
+	const event = draft.event;
+	if (!isNarrationEvent(event)) {
+		httpError(400, `Unknown narration event "${String(event)}"`);
+	}
+
+	return { event, lines: validateLines(event, draft.lines) };
+}
+
+/**
+ * Narrow an unknown PUT body to the whole collection — every event at once, which is what
+ * an import of the CSV is.
+ *
+ * A replacement rather than a merge: an event the body does not name is an event with
+ * nothing authored, because the document the author edited is the whole of the narration
+ * and a line deleted from it has to be a line deleted. Which is also why the whole body is
+ * validated before a byte is written — a half-applied replacement would leave the file
+ * saying something nobody wrote.
+ */
+function validateCollection(body: unknown): CombatNarrationCollection {
+	const draft = body as Partial<CombatNarrationCollection>;
+	if (!draft || typeof draft !== 'object') httpError(400, 'Body must be an object');
+	if (!draft.lines || typeof draft.lines !== 'object') httpError(400, 'lines must be an object');
+
+	const lines: CombatNarrationCollection['lines'] = {};
+	for (const [event, entries] of Object.entries(draft.lines)) {
+		if (!isNarrationEvent(event)) httpError(400, `Unknown narration event "${event}"`);
+		const authored = validateLines(event, entries);
+		if (authored.length > 0) lines[event] = authored;
+	}
+	return { lines };
 }
 
 export const combatNarrationRouter = Router();
@@ -139,5 +172,17 @@ combatNarrationRouter.post(
 		};
 		await writeCollection(updated);
 		res.json(updated);
+	})
+);
+
+// PUT /api/combat-narration — replace the whole collection in one write. What an import of
+// the CSV lands as, and what "save every section" on the admin screen is: the events only
+// mean anything as a set, so a file the author edited whole is written whole.
+combatNarrationRouter.put(
+	'/',
+	asyncHandler(async (req, res) => {
+		const collection = validateCollection(req.body);
+		await writeCollection(collection);
+		res.json(collection);
 	})
 );

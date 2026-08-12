@@ -507,7 +507,13 @@ whole roster —
 `/shows` (TMDB browser), `/music`
 (what each vendored song is called and which show it opens), `/narration` (what the game
 says over each encounter a fight plays out — one section per way a row can go, each line
-previewed against a made-up lane) and `/posters` — the whole
+previewed against a made-up lane, and the lot exported and re-imported as **one CSV**:
+`event,line`, one row per line with the grouping said in a column rather than by where the
+row sits, so the whole narration can be handed to a proofreader or a spreadsheet and taken
+back. Commas, quotes and newlines inside a sentence ride as RFC 4180 quoting
+(`@3xl/shared/utils/csv`), an import is a replacement of the totality — an event with no
+rows ends up with no lines — and it is staged into the sections and checked there before
+anything is written, a file with one bad row staging nothing at all) and `/posters` — the whole
 roster idling at once on one PixiJS canvas (`@3xl/shared`'s `mugen-poster-grid`), each
 character drawn at the size the **combat board** draws it. Not a resemblance: the wall
 calls the board's own `characterFitScale` over a box of `CHAR_HEIGHT_RATIO` cell widths,
@@ -621,7 +627,10 @@ to `http://localhost:2002`; CORS allows only the admin origin (`http://localhost
   or a `{placeholder}` — a save would be refused for. A line naming something its event
   cannot fill *is* that refusal, since what it would be on screen is a sentence with a hole
   in it, mid-fight. The file is rewritten whole in the catalogue's order, so it stays
-  readable however it was edited.
+  readable however it was edited. `PUT /api/combat-narration` replaces the **whole**
+  collection in one write — what an import of the CSV lands as, and what the screen's "Save
+  all" is: an event the body does not name ends up with no lines, so the whole body is
+  validated before a byte is written and a replacement is never half-applied.
 - `GET/POST /api/shows` + `POST /api/shows/refresh` — read/upsert the saved-show collection in
   `@3xl/data`'s `public/shows.json` (a show, every image TMDB holds for it, the author's
   enabled selection per section, and the **glyph** that stands for the show), and re-read
