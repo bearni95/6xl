@@ -695,8 +695,9 @@
 	/**
 	 * Mark the fighter the panel is turned to on the board itself
 	 * ({@link MugenBoardEngine.setPacing}), which says it twice over: that fighter walks on
-	 * the spot on its own cell, and a triangle stands over its head pointing down at it. One
-	 * call for the pair, off one id, so the two marks are never on different fighters.
+	 * the spot on its own cell, and a triangle stands in the middle of its lane — on the
+	 * ground between it and the rival across from it — aimed at it. One call for the pair,
+	 * off one id, so the two marks are never on different fighters.
 	 *
 	 * The panel and the board are two ways of reaching the same three orders, and the one
 	 * thing the panel could not say was *which* of the fighters on the canvas it was

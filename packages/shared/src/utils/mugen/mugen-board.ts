@@ -503,41 +503,52 @@ const PACE_SPEED = 140;
  */
 const PACE_FRAME_RATE = 2;
 
-// --- The pointer over the fighter being answered for --------------------------
+// --- The pointer in the lane of the fighter being answered for ----------------
 // The second half of the same mark, and the half that says it in one glance rather than
-// over a stride: a triangle standing over that fighter's head, pointing down at it. The
-// pace is a fighter *moving*, which is unmissable but takes a moment to notice and is a
-// thing about the whole board — the only one stirring — where this is a thing about one
-// fighter, read where that fighter stands. Neither is a caption: between them the canvas
-// answers "which of my three is the panel talking about" without a word on it.
+// over a stride: a triangle standing in the middle of that fighter's lane, aimed across at
+// it. The pace is a fighter *moving*, which is unmissable but takes a moment to notice and
+// is a thing about the whole board — the only one stirring — where this is a thing about
+// one lane, read on the very ground that lane is being fought over. Neither is a caption:
+// between them the canvas answers "which of my three is the panel talking about" without a
+// word on it.
 //
 // It is raised and taken down by the very call that starts and stops the pace
 // ({@link MugenBoard.setPacing}), off the very same id, so the two can never point at
 // different fighters or be up at different moments. That is also the whole of its
 // lifetime: it stands while the player may give an order and goes the instant the turn is
-// out of their hands, and comes back on whichever fighter the next turn opens on.
+// out of their hands, and comes back in whichever lane the next turn opens on.
 //
-// Hung off the head rather than the mark the fighter was placed on ({@link auraMark}, which
-// is where the head is): so it rides the pace across the cell and stays over the fighter
-// it is about, the way the fighter's own fire does. A pointer left standing on the ground
-// while the figure under it walked out from beneath would be pointing at a cell.
+// **Between the two fighters, and not over either of them.** It stands on the white column
+// ({@link LANE_COLUMN}) of that fighter's own row — the ground the lane is played for, which
+// is empty while a turn is being planned and is exactly the gap between the rival and the
+// fighter facing it. So the mark is in the one place on that row nobody is standing, level
+// with the pair either side of it and reading as the lane's own rather than as something
+// hung on a figure. It was over the fighter's head, riding its pace: a mark on a head is a
+// hat, and it moved with the very thing it was pointing at.
 //
-// It never shares the screen with a callout, which floats at very nearly the same height:
-// a callout says what a turn amounted to and is cleared before the next one is planned,
-// and this is only ever up while one is being planned.
+// Which way it points is the fighter's own half ({@link Actor.side}, the board's own answer
+// for which way a half faces): the tip aims across the white cell at the fighter being
+// answered for, and away from the one facing it. The player's line stands in the blue half,
+// so in practice it points right — but the direction is read off the actor rather than
+// assumed, so a mark asked for on either half is aimed at what it is about.
+//
+// Placed on the lane and not on the fighter, it holds still while the fighter paces across
+// its cell, which is the division of labour between the two marks: the pace is the fighter
+// moving, and this is the ground saying which fighter to watch.
 
+/** The board's own middle column — the white ground a lane is played for, between the two
+ * fighters holding that row. Empty for the whole of a planning phase, which is what makes
+ * it somewhere to stand a mark. */
+const LANE_COLUMN = 0;
 /** The triangle's side, as a share of a cell — it is equilateral, so this is the whole of
  * its size. Read against a cell's 219: about a fifth of the ground a fighter stands on,
- * which is a mark over a head rather than a hat on it. */
+ * which is a mark standing in a lane rather than a shape filling it. */
 const POINTER_SIDE_RATIO = 0.2;
 /** How thick its border is drawn, as a share of that side. Thick deliberately: the fill
  * and the border are the theme's two loudest colours and the point is to see both, which a
  * hairline would not give. Aligned to the inside of the shape, so the silhouette stays the
- * equilateral triangle the side describes and the tip is exactly where it is placed. */
+ * equilateral triangle the side describes. */
 const POINTER_BORDER_RATIO = 0.14;
-/** How far the tip stands clear of the top of the fighter's nominal box, in canvas px.
- * Close enough to be that fighter's and not the one behind it. */
-const POINTER_GAP = 10;
 /** The theme tokens it is drawn in, and what it falls back to where the theme cannot be
  * read at all ({@link themeColorHex}) — synthwave's own two, so a board with no document
  * over it still draws the mark the game draws. */
@@ -2304,8 +2315,10 @@ export class MugenBoard {
 			this.updateRing(actor, deltaMs);
 			this.updateOrders(actor);
 			this.updateLabel(actor);
-			// The one fighter being answered for, if it is this one: the triangle rides its
-			// pace, so it is placed on the frame the pace was advanced on.
+			// The one fighter being answered for, if it is this one. The mark stands on the
+			// lane rather than on the fighter, so it holds still through the pace — but a
+			// fighter still walking home as the next turn opens is changing rows under it,
+			// and the lane it is in is read afresh each frame for that.
 			if (actor.id === this.pointerAt) this.updatePointer(actor);
 		}
 		// After the guards, since this is the tick they were struck on: a spark drawn where
@@ -2761,12 +2774,12 @@ export class MugenBoard {
 	/**
 	 * Say which fighter is the one being answered for, in the two ways this board says it:
 	 * by walking it on the spot on its own cell — across it and back, in the two walk cycles
-	 * it already owns — and by standing a triangle over its head pointing down at it
-	 * ({@link POINTER_SIDE_RATIO}). Every other fighter stands still and wears nothing, so
-	 * exactly one of them is ever moving or marked on a board between turns, and `null` is
-	 * nobody: the board goes still and the triangle goes with it the moment the turn is out
-	 * of the player's hands (see {@link PACE_REACH_RATIO} for what the pace is and what it
-	 * deliberately is not).
+	 * it already owns — and by standing a triangle in the middle of its lane, on the ground
+	 * between it and the rival facing it, aimed across at it ({@link LANE_COLUMN}). Every
+	 * other lane is empty and every other fighter stands still, so exactly one of them is
+	 * ever moving or marked on a board between turns, and `null` is nobody: the board goes
+	 * still and the triangle goes with it the moment the turn is out of the player's hands
+	 * (see {@link PACE_REACH_RATIO} for what the pace is and what it deliberately is not).
 	 *
 	 * The two are raised off this one id together and can therefore never disagree — which
 	 * is the whole reason the pointer is put up here rather than asked for separately.
@@ -2820,18 +2833,20 @@ export class MugenBoard {
 	/**
 	 * The triangle itself, built on first use and kept for the life of the board.
 	 *
-	 * **Equilateral, and pointing straight down**: the tip is the graphics' own origin, so
-	 * placing it *is* placing the point of it, and the two upper corners stand a side's
-	 * width apart and √3/2 of that above — the one piece of arithmetic that makes it a
-	 * perfect triangle rather than a wedge that happens to look like one at this size.
+	 * **Equilateral, and lying on its side** — drawn pointing right, and turned to point
+	 * left by a mirror when it is aimed at the other half ({@link updatePointer}). Its tip
+	 * is half its height to one side of the graphics' own origin and its two other corners
+	 * half a height to the other, a side's width apart: so the origin is the middle of the
+	 * shape, and placing it *is* placing what the mark stands on. The √3/2 between the side
+	 * and the height is the one piece of arithmetic that makes it a perfect triangle rather
+	 * than a wedge that happens to look like one at this size.
 	 *
 	 * Filled in the theme's primary and bordered in its secondary, read off the live theme
 	 * ({@link themeColorHex}) rather than spelled here, so the mark is the same yellow and
 	 * the same pink as everything the *document* draws in those colours — and follows them
 	 * if they are ever retuned. The border is aligned to the inside of the shape, which is
 	 * what keeps the silhouette exactly the triangle described above however thick it is
-	 * drawn: a centred stroke would put the real tip half a border below the point it was
-	 * placed at, and blunt the two upper corners outwards.
+	 * drawn: a centred stroke would blunt all three corners outwards by half its width.
 	 */
 	private pointerArt(): Graphics | null {
 		if (this.pointer) return this.pointer;
@@ -2839,9 +2854,9 @@ export class MugenBoard {
 		const side = this.options.cellSize * POINTER_SIDE_RATIO;
 		const height = (side * Math.sqrt(3)) / 2;
 		const pointer = new Graphics()
-			.moveTo(0, 0)
-			.lineTo(-side / 2, -height)
-			.lineTo(side / 2, -height)
+			.moveTo(height / 2, 0)
+			.lineTo(-height / 2, -side / 2)
+			.lineTo(-height / 2, side / 2)
 			.closePath()
 			.fill({ color: themeColorHex(POINTER_FILL_TOKEN, POINTER_FILL_FALLBACK) })
 			.stroke({
@@ -2855,23 +2870,29 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Keep the pointer over its fighter's head as that fighter paces across its cell.
+	 * Stand the pointer in its fighter's lane, aimed across at that fighter.
 	 *
-	 * Over the **head** and not over the mark the fighter was placed on: {@link auraMark} is
-	 * where the crown is this instant, which is both the point of the placement and the one
-	 * x that rides the pace, so the triangle sits on the figure rather than on the ground it
-	 * is stepping off. The height is the top of the fighter's nominal box and a gap — the
-	 * same box the callouts are floated off, and they are never both up (see the note above
-	 * {@link POINTER_SIDE_RATIO}).
+	 * **On the white cell of the fighter's own row** ({@link LANE_COLUMN}) — the ground
+	 * between it and the rival facing it, taken at that cell's own standing mark so the
+	 * triangle stands where a fighter would and not at some point measured off one. Its
+	 * height is the middle of the fighter it is about, which is where a blow is aimed and
+	 * where a guard is centred ({@link angleTo}) — level with the body rather than with the
+	 * feet the cell is marked at.
 	 *
-	 * Over everything, as a mark about a fighter has to be: a triangle behind the fighter in
-	 * front of it would be pointing at a shoulder.
+	 * Mirrored to face the fighter's own half, which is the board's own way of asking which
+	 * direction a side lies in ({@link fallenDrift} asks it the same way). The scale is ±1,
+	 * so the border keeps its width whichever way the mark is turned.
+	 *
+	 * Over everything, as a mark about a fighter has to be: a good part of this roster is
+	 * drawn wider than the cell it stands on, and a triangle behind an overhanging shoulder
+	 * is a triangle nobody sees.
 	 */
 	private updatePointer(actor: Actor): void {
 		const pointer = this.pointer;
 		if (!pointer) return;
-		pointer.x = auraMark(actor);
-		pointer.y = actor.y - actor.displayHeight - POINTER_GAP;
+		pointer.x = this.cellMark(LANE_COLUMN, actor.row).x;
+		pointer.y = actor.y - actor.displayHeight / 2;
+		pointer.scale.x = actor.side === 'blue' ? 1 : -1;
 		pointer.zIndex = actor.y + 10000;
 	}
 
