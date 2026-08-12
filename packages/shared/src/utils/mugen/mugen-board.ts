@@ -564,20 +564,21 @@ const POINTER_BORDER_RATIO = 0.14;
  * The theme token the mark is drawn in — fill and line alike — and what it falls back to
  * where the theme cannot be read at all ({@link themeColorHex}).
  *
- * It is the very colour the three order buttons are drawn on in the document
- * (`CombatArena`'s `orderFill`, whose resting tile is `bg-neutral`), and that is the whole
- * point of it: the mark and the buttons are the two halves of one question — which fighter
- * is being answered for, and what it may be told — so they are one colour and read as one
- * piece of furniture. It was the theme's primary filled and its secondary outlined, which
- * is two of the loudest colours the game has and belonged to nothing else on the screen:
- * a mark shouting in colours the fight does not otherwise use reads as a thing that has
- * happened rather than as a thing to look at.
+ * The theme's **secondary**, which is the one colour on this board that belongs to no
+ * fighter: the six a card can roll are its own table ({@link combatColorHex}), the ground
+ * is grass and the guards and sparks wear whoever threw them, so a mark in any of those
+ * would be read as being about a side. Secondary is not in that vocabulary at all, which
+ * is what lets it say "look here" without also seeming to say whose.
  *
- * The fallback is synthwave's own neutral, so a board with no document over it still draws
- * the mark the game draws.
+ * Filled *and* lined in it, so what stands in the lane is one solid shape. The border is
+ * still drawn and still thick ({@link POINTER_BORDER_RATIO}) — the width is what would
+ * carry a second colour if the mark is ever given one.
+ *
+ * The fallback is synthwave's own secondary, so a board with no document over it still
+ * draws the mark the game draws.
  */
-const POINTER_TOKEN = '--color-neutral';
-const POINTER_FALLBACK = 0x422ad5;
+const POINTER_TOKEN = '--color-secondary';
+const POINTER_FALLBACK = 0xe81799;
 /**
  * How quickly the mark closes on the lane it has been sent to, as the time constant of an
  * exponential ease in ms: the share of the distance left that it covers is
@@ -2881,12 +2882,12 @@ export class MugenBoard {
 	 * and the height is the one piece of arithmetic that makes it a perfect triangle rather
 	 * than a wedge that happens to look like one at this size.
 	 *
-	 * Filled and lined in the one colour the document's own order buttons are drawn on,
-	 * read off the live theme ({@link POINTER_TOKEN}) rather than spelled here, so the mark
-	 * and the buttons are the same tile and follow each other if the theme is ever retuned.
-	 * The border is aligned to the inside of the shape, which is what keeps the silhouette
-	 * exactly the triangle described above however thick it is drawn: a centred stroke
-	 * would blunt all three corners outwards by half its width.
+	 * Filled and lined alike in the theme's secondary, read off the live theme
+	 * ({@link POINTER_TOKEN}) rather than spelled here, so the mark is the same pink as
+	 * everything the *document* draws in that colour and follows it if the theme is ever
+	 * retuned. The border is aligned to the inside of the shape, which is what keeps the
+	 * silhouette exactly the triangle described above however thick it is drawn: a centred
+	 * stroke would blunt all three corners outwards by half its width.
 	 */
 	private pointerArt(): Graphics | null {
 		if (this.pointer) return this.pointer;
