@@ -89,28 +89,30 @@
 			`defer` keeps it out of the critical path — nothing on screen waits on it,
 			and a host that is down costs the game nothing.
 
-			This is the tag umami itself hands out for the 6xl.bearni.io site, taken as it
-			comes and with nothing added to it.
+			This is the tag umami itself hands out for the 6xl.bearni.io site, plus the one
+			attribute below.
 
-			It carried a `data-domains="3xl.bearni.io"` for a while, which is the tracker's
-			own host filter — it sends only when `location.hostname` is in that list. That
-			spelling was left behind by the rename, and since the game now serves from
-			6xl.bearni.io it matched nothing: the tag loaded on every visit and reported
-			none of them. The attribute is gone rather than corrected, so the counts are
-			real again.
+			`data-domains` is the tracker's own host filter: it sends only when
+			`location.hostname` is in that list, and skips the send outright otherwise (in
+			the minified script, `O && !P.includes(h)` — the check is the *only* thing that
+			keeps a development machine out of the numbers, since nothing else in it treats
+			localhost specially). So this is what makes `pnpm dev` on localhost:2000,
+			`pnpm preview` and any local build of the bundle report nothing at all: the
+			script still loads there, and every pageview it would have sent is dropped
+			before it leaves the browser.
 
-			Know what that trades away: with no `data-domains` the tracker's host check is
-			skipped outright (in the minified script, `O && !P.includes(h)` — a falsy `O`
-			short-circuits the whole test), and nothing else in it treats localhost
-			specially. So `pnpm dev` on localhost:2000, `pnpm preview` and any local build
-			of the bundle now count as visits. Putting `data-domains="6xl.bearni.io"` back
-			is the one-attribute fix if that ever muddies the numbers — the thing to keep
-			it in step with is the live host, not static/CNAME, which still reads 3xl.
+			It must therefore name the **live** host and be kept in step with it. It read
+			`3xl.bearni.io` for a while — left behind by the rename — which matched nothing
+			once the game moved, so the tag loaded on every visit and reported none of them,
+			and it was dropped entirely to get the counts back. Dropping it is what let
+			localhost count. The host to check is the one Pages actually serves
+			(6xl.bearni.io), never static/CNAME, which still reads 3xl.
 		-->
 		<script
 			defer
 			src="https://umami.bearni.io/script.js"
 			data-website-id="3ffa72aa-6e9e-49e5-8940-0f53270b3236"
+			data-domains="6xl.bearni.io"
 		></script>
 		%sveltekit.head%
 	</head>
