@@ -11,7 +11,7 @@
 	import PlayerPanel from '$components/core/PlayerPanel.svelte';
 	import WorldMap from '$components/core/WorldMap.svelte';
 	import RegionCurrentBadge from '$components/core/RegionCurrentBadge.svelte';
-	import MapZoomSlider from '$components/core/MapZoomSlider.svelte';
+	import MapZoomControls from '$components/core/MapZoomControls.svelte';
 	import BoosterBox from '$components/core/pack/BoosterBox.svelte';
 	import MusicBanner from '$components/core/MusicBanner.svelte';
 	import MusicToggle from '$components/core/MusicToggle.svelte';
@@ -1078,7 +1078,8 @@
 	// the empty positions pressed to take the map to that tier's zoom, and the whole of it folded
 	// into the dots button that stood at the head of the band along the map's bottom edge. What
 	// replaces it is two things it was doing at once, each said by the thing that says it best:
-	// the levels of the map are the strip over that band (see zoomLadder and MapZoomSlider), and
+	// the levels of the map are the pair of presses over that band (see zoomLadder and
+	// MapZoomControls), and
 	// the places are the list under the map and the search over it. `MapBreadcrumb` itself lives
 	// on — it is how a place is lettered anywhere on this page — but nothing assembles a path out
 	// of them any more.
@@ -1086,7 +1087,7 @@
 	// The same four tiers said as what a map drawn in them is covered with, which is a
 	// different statement from the one above and is why it is a list of its own: the ladder
 	// names the tier a POSITION stands for, and this names the divisions a LEVEL draws. The
-	// slider is read in these (see zoomLadder) — a rung is the terrain cut into comarques, not
+	// ladder is read in these (see zoomLadder) — a rung is the terrain cut into comarques, not
 	// a comarca — and the plural is the whole of the difference on screen.
 	const TIER_DIVISIONS: Record<RegionType, string> = {
 		Territory: 'territoris',
@@ -2958,7 +2959,7 @@
 		? boundsForFeatures(municipalities, new Set(fillIndex.keys()))
 		: null;
 
-	// The levels of the map as a stepped control, on the row over the band (see MapZoomSlider):
+	// The levels of the map as a stepped control, on the row over the band (see MapZoomControls):
 	// one rung per tier of divisions the terrain can be drawn in, coarsest first.
 	//
 	// **A rung is a tier of divisions, and is therefore the CONTAINER of that tier and not one
@@ -2995,18 +2996,18 @@
 		}))
 	].filter((step) => step.bounds);
 
-	// Each rung said in full, for the reader who has no thumb to look at: the strip draws no
-	// figures and no words (see MapZoomSlider), so this is the whole of what it can be told —
-	// which number of how many, and the divisions the terrain is drawn in when the thumb is
-	// there.
+	// Each rung said in full, for the reader who is not looking at the terrain: the control draws
+	// no figures and no words (see MapZoomControls), so this is the whole of what it can be told
+	// — which number of how many, and the divisions the terrain is drawn in at that level.
 	$: zoomLadderSteps = zoomLadder.map((step, index) =>
 		$_('map.zoom.step', { values: { number: index + 1, divisions: step.divisions } })
 	);
 
 	// Which rung the map is standing on: the tier it is drawing right now, which is the very
 	// number WorldMap hands back as it re-culls its pins (see `activeLevel` and `effectiveDepth`
-	// — level 0 is the territories, one rung per tier down from there, exactly as here). So the
-	// thumb is not a guess at where a zoom landed: it is the map saying what it drew.
+	// — level 0 is the territories, one rung per tier down from there, exactly as here). So a
+	// press asking for the next level is asking off what the map drew and not off a guess at
+	// where the last zoom landed, and the two ends of the ladder are known ends.
 	//
 	// Clamped to the ladder, which can be shorter than the stack of levels is deep: a place that
 	// skips a tier has fewer rungs than the map has levels, and zoomed in past the finest
@@ -3014,7 +3015,7 @@
 	// level index has climbed to.
 	$: zoomLadderIndex = Math.min(effectiveDepth, Math.max(zoomLadder.length - 1, 0));
 
-	// A rung let go on: take the map to the zoom that rung's container stands whole at, leaving
+	// A rung asked for: take the map to the zoom that rung's container stands whole at, leaving
 	// the centre where it is. Only the scale moves — a level is a question about how finely the
 	// country is cut and not about which part of it you are over — and the tier the map then
 	// draws is the one that container holds, which is what the rung stands for.
@@ -3594,33 +3595,42 @@
 								middles. -->
 							<div class="flex w-full items-end gap-2">
 								<!-- The levels of the map — the terrain cut into territoris, províncies,
-									comarques, municipis — as one stepped strip (see MapZoomSlider, and
-									zoomLadder). At the left end of the row and against the map's left edge,
-									which is the end the coarsest cut belongs to: the dots on the band below
-									drop the path down to the open place as a column of names, and this is the
-									same walk read as a depth and dragged rather than pressed.
+									comarques, municipis — walked a rung at a time (see MapZoomControls, and
+									zoomLadder). At the left end of the row and against the map's left edge:
+									the dots on the band below drop the path down to the open place as a column
+									of names, and this is the same walk taken one step at a time, pressed rather
+									than named.
 									It is the only thing that zooms this map now — the wheel, the pinch, the
 									double click and the keyboard's +/- are all off (see WorldMap's mount), so
-									the terrain is never left between two levels and the thumb is never
-									standing at a rung the map is not actually drawing.
+									the terrain is never left between two levels and no press ever asks for a
+									rung the map is not actually drawing.
+									A stepped strip stood here before it: a notch per level, dragged, the depth
+									read off the thumb. What that asked of a reader who wanted the next level
+									was to pick a thumb up, carry it the right distance and let go on the right
+									notch, four pixels wide on a phone; what the pair asks is a press. The
+									squares are the band's own (see the play/pause at the far end of it) rather
+									than either button's, anything standing on this map's furniture being asked
+									for the same 32px outlined tile in white.
 									Rounded where it comes away from the terrain and square against the two edges
 									it is held to (`rounded-tr-lg`), the mirror of what the title's plate does at
-									the far end. The strip is the whole of what stands on it — the numbers that
-									were lettered under the notches are gone (see MapZoomSlider) — so the plate
-									is a strip's height and no more, and `items-center` inside it is what keeps
-									the range on the band's own line.
+									the far end, and as wide as the marks on it (`w-fit`) rather than the written
+									-down width the strip needed to be draggable at all.
 									Nothing at all while the ladder is one rung or none — the polygons have not
-									landed, so there are no levels to offer and nothing to measure them with.
+									landed, so there are no levels to offer and nothing to step between.
 									The row closes up around the title, exactly as the band below closes up
 									around the badge. -->
 								{#if zoomLadderSteps.length > 1}
 									<div
-										class="pointer-events-auto flex w-44 flex-none items-center rounded-tr-lg bg-base-100/80 px-3 py-2 text-white shadow-xl"
+										class="pointer-events-auto flex w-fit flex-none items-center rounded-tr-lg bg-base-100/80 px-3 py-2 text-white shadow-xl"
 									>
-										<MapZoomSlider
+										<!-- The globe between the two marks goes to `/map`, and stands only
+											where it goes somewhere: this same map without the chrome, which is
+											what this page already is when there is none (see `chrome`, and
+											`/map` itself). -->
+										<MapZoomControls
 											steps={zoomLadderSteps}
 											value={zoomLadderIndex}
-											label={$_('map.zoom.label')}
+											alone={chrome}
 											on:pick={(event) => zoomToLadderStep(event.detail.index)}
 										/>
 									</div>
@@ -3703,8 +3713,8 @@
 										plate.
 										The way UP stood at the head of this row until now — a dots button dropping the
 										path above the open place as a column of names, the last of several places it
-										had been kept. It is gone, path and column together: the strip over this row
-										walks the levels of the map (see MapZoomSlider), which is the coarser half of
+										had been kept. It is gone, path and column together: the control over this row
+										walks the levels of the map (see MapZoomControls), which is the coarser half of
 										what that column was for, and every place at every tier is in the list under
 										the map and in the search over it, which is the other half. A second way of
 										leaving a place, drawn as a mark that has to be pressed before it says what it

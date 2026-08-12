@@ -90,7 +90,10 @@
 		},
 		"zoom": {
 			"label": "Nivell del mapa",
-			"step": "Nivell {number}: {divisions}"
+			"step": "Nivell {number}: {divisions}",
+			"out": "Un nivell enrere",
+			"in": "Un nivell endins",
+			"alone": "Obre el mapa sol"
 		},
 		"side": {
 			"expand": "Mostra el teu equip",

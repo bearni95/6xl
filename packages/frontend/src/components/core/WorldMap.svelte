@@ -2360,7 +2360,7 @@
 	}
 
 	// The wheel does not zoom this map, and neither does anything else the reader might reach
-	// for: the levels are driven from one control and one only (see MapZoomSlider, on the row
+	// for: the levels are driven from one control and one only (see MapZoomControls, on the row
 	// along the map's bottom edge). Every gesture that used to change the scale is off at the
 	// map's own options below — Leaflet's wheel handler, the pinch, the double click, the
 	// shift-drag box and the keyboard's +/- — and the hand-driven wheel gesture that stood here
@@ -2371,12 +2371,13 @@
 	// sixth of a second in the shape Leaflet drives a pinch, anchored on the point under the
 	// pointer, with a trackpad's fractions of a notch added up until they were worth a step. What
 	// it was for was a spin that came to rest ON a tier instead of somewhere in the middle of one
-	// — and that is exactly what the slider is, said as a position rather than as a gesture: the
-	// same ladder, the same boxes, the same fits, and no way to land between two of them at all.
+	// — and that is exactly what the pair of presses is, said as a rung asked for rather than as a
+	// gesture: the same ladder, the same boxes, the same fits, and no way to land between two of
+	// them at all.
 	// Two ways of walking one ladder is two ways of disagreeing about where the map is standing.
 	//
 	// What still moves the map is what is asked of it in so many words: a place framed by a click
-	// (focusBounds), a level asked for by the slider (zoomBounds), and dragging, which pans and
+	// (focusBounds), a level asked for by the zoom controls (zoomBounds), and dragging, which pans and
 	// changes no scale.
 
 	onMount(async () => {
@@ -2399,7 +2400,7 @@
 			// to rest anywhere between filling the canvas and taking a quarter of it, and
 			// whether its children were pinned or it was pinned by itself came down to where
 			// that fell (see the focus effect and levelIndexForView). The same is true of a
-			// level asked for by the slider, which is that same fit asked for without the
+			// level asked for by the zoom controls, which is that same fit asked for without the
 			// framing (see the zoomBounds effect).
 			//
 			// It used to be here for the gestures as well — a wheel or a pinch moving the view
@@ -2408,8 +2409,8 @@
 			// (see just below), and nothing lands between two fits any more.
 			zoomSnap: 0,
 
-			// --- Nothing zooms this map but the slider ---------------------------------
-			// One control decides which divisions the terrain is drawn in (see MapZoomSlider,
+			// --- Nothing zooms this map but the two presses ----------------------------
+			// One control decides which divisions the terrain is drawn in (see MapZoomControls,
 			// and the note above this mount): the levels of this map are a ladder of four
 			// tiers, each read at the zoom its container stands whole at, and a gesture that
 			// moves the scale by an amount of its own is a reader put down between two rungs —
@@ -2429,9 +2430,12 @@
 			// walked without a mouse is a map some readers cannot walk at all — but its +/- are
 			// worth nothing, which is what a zoom step of zero is. (`zoomDelta` reaches nothing
 			// else here: the buttons that read it are off, and `zoomIn`/`zoomOut` are never
-			// called.) The slider is a range input, so the keyboard still has every rung.
+			// called.) The two presses over the band are buttons, so the keyboard still has every
+			// rung — a rung per press, which is what they are on a pointer too.
 			zoomDelta: 0,
-			// No +/- buttons either — the strip along the map's bottom edge is the whole of it.
+			// No +/- buttons of Leaflet's either — the pair along the map's bottom edge is the
+			// whole of it, and a second pair in the corner would be a second answer to the same
+			// question, moving the scale by a doubling where those move it by a tier.
 			zoomControl: false,
 			// The badge carries the Esri credit the imagery licence requires, so it
 			// stays on for as long as the satellite basemap is there.
@@ -2512,7 +2516,7 @@
 			currentCenter = [c.lat, c.lng];
 		};
 		syncView();
-		// A zoom begins: a region framed by a click, or a level asked for by the slider. Both
+		// A zoom begins: a region framed by a click, or a level asked for by the zoom controls. Both
 		// go through Leaflet and both say so, which is every zoom this map has now that no
 		// gesture moves the scale behind its back.
 		// A pan is not one of them and keeps its pins: a pin carried sideways is still the pin
