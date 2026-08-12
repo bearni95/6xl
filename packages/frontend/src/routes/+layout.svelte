@@ -11,8 +11,34 @@
 	import TeamGate from '$components/core/TeamGate.svelte';
 	import WelcomeBoosterModal from '$components/core/WelcomeBoosterModal.svelte';
 	import { combatFeedService } from '$services/combatFeed.service';
+	import { musicService } from '$services/music.service';
 
 	let { children } = $props();
+
+	/**
+	 * The radio, read into for as long as the app is open.
+	 *
+	 * The sound already survived a route change — the audio element belongs to
+	 * `music.service` rather than to whatever is drawing the player, precisely so that a
+	 * song does not stop because a panel closed or a page was left. What did not survive is
+	 * the *start*: the collection was read on the map's own mount, and on the mounts of the
+	 * two surfaces that draw the radio, all three of which are the map. So a page life that
+	 * began anywhere else — a reload inside a fight, the resume that hands a player straight
+	 * back into one, a linked profile, the roster reached from either — read nothing, tuned
+	 * nothing, and never acted on a radio left on; there was silence until the player
+	 * happened to walk back onto the map, and no gesture wait armed to end it.
+	 *
+	 * Out here it is read once for the session, on every route, so the radio is the app's and
+	 * not the map's: what was playing when a fight was walked into goes on playing through it,
+	 * and a visit that starts on any page starts the same station the last one was left on.
+	 * Which show the dial is turned to is still the map's business alone (`musicService.follow`)
+	 * — this only makes sure there is a dial to turn.
+	 *
+	 * A failed read leaves no song, and so no player drawn, rather than a button that would
+	 * play nothing; it is safe to call from the surfaces that still ask, since they all await
+	 * the one fetch.
+	 */
+	onMount(() => void musicService.load().catch(() => undefined));
 
 	/**
 	 * The game's own channel, open for as long as the app is.
