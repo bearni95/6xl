@@ -532,30 +532,65 @@ const PACE_FRAME_RATE = 2;
 // so in practice it points right — but the direction is read off the actor rather than
 // assumed, so a mark asked for on either half is aimed at what it is about.
 //
-// Placed on the lane and not on the fighter, it holds still while the fighter paces across
-// its cell, which is the division of labour between the two marks: the pace is the fighter
-// moving, and this is the ground saying which fighter to watch.
+// Placed on the lane and not on the fighter, it holds still: it takes nothing from the
+// pace, which is the division of labour between the two marks. The pace is the fighter
+// moving; this is the ground saying which fighter to watch, and a mark that stirred on its
+// own would be a third thing happening in a lane that already has two.
+//
+// **It slides between lanes rather than jumping.** The panel is stepped along the line by
+// its arrows and by every order given, and a mark that vanished from one lane and appeared
+// in another leaves the reader to work out that it was the same mark — where a mark that
+// travels there is plainly the one mark, still about one fighter, now about a different
+// one. It is the same reading a fighter's own walk gives: this board moves things from
+// where they were to where they are going, and never cuts.
 
 /** The board's own middle column — the white ground a lane is played for, between the two
  * fighters holding that row. Empty for the whole of a planning phase, which is what makes
  * it somewhere to stand a mark. */
 const LANE_COLUMN = 0;
 /** The triangle's side, as a share of a cell — it is equilateral, so this is the whole of
- * its size. Read against a cell's 219: about a fifth of the ground a fighter stands on,
- * which is a mark standing in a lane rather than a shape filling it. */
-const POINTER_SIDE_RATIO = 0.2;
-/** How thick its border is drawn, as a share of that side. Thick deliberately: the fill
- * and the border are the theme's two loudest colours and the point is to see both, which a
- * hairline would not give. Aligned to the inside of the shape, so the silhouette stays the
- * equilateral triangle the side describes. */
+ * its size. Read against a cell's 219: getting on for half the ground a fighter stands on,
+ * which is a mark read from across the board rather than one looked for. It lies on its
+ * side, so what it costs the lane is its *height* — √3/2 of this, against a white cell
+ * drawn two thirds of a cell wide ({@link closeCut}) — and it stands clear inside that. */
+const POINTER_SIDE_RATIO = 0.4;
+/** How thick its border is drawn, as a share of that side. Aligned to the inside of the
+ * shape, so the silhouette stays the equilateral triangle the side describes. It is drawn
+ * in the fill's own colour ({@link POINTER_TOKEN}), so what it amounts to on screen is a
+ * solid tile — the width is what would carry a second colour if the mark is ever given
+ * one, and is kept at a thickness that would show. */
 const POINTER_BORDER_RATIO = 0.14;
-/** The theme tokens it is drawn in, and what it falls back to where the theme cannot be
- * read at all ({@link themeColorHex}) — synthwave's own two, so a board with no document
- * over it still draws the mark the game draws. */
-const POINTER_FILL_TOKEN = '--color-primary';
-const POINTER_FILL_FALLBACK = 0xeab308;
-const POINTER_BORDER_TOKEN = '--color-secondary';
-const POINTER_BORDER_FALLBACK = 0xe81899;
+/**
+ * The theme token the mark is drawn in — fill and line alike — and what it falls back to
+ * where the theme cannot be read at all ({@link themeColorHex}).
+ *
+ * It is the very colour the three order buttons are drawn on in the document
+ * (`CombatArena`'s `orderFill`, whose resting tile is `bg-neutral`), and that is the whole
+ * point of it: the mark and the buttons are the two halves of one question — which fighter
+ * is being answered for, and what it may be told — so they are one colour and read as one
+ * piece of furniture. It was the theme's primary filled and its secondary outlined, which
+ * is two of the loudest colours the game has and belonged to nothing else on the screen:
+ * a mark shouting in colours the fight does not otherwise use reads as a thing that has
+ * happened rather than as a thing to look at.
+ *
+ * The fallback is synthwave's own neutral, so a board with no document over it still draws
+ * the mark the game draws.
+ */
+const POINTER_TOKEN = '--color-neutral';
+const POINTER_FALLBACK = 0x422ad5;
+/**
+ * How quickly the mark closes on the lane it has been sent to, as the time constant of an
+ * exponential ease in ms: the share of the distance left that it covers is
+ * `1 - e^(-Δt/this)`, so it leaves fast, arrives slowly and never overshoots or lands with
+ * a stop. Read against the ~219px between one lane and the next, this is a slide of a
+ * couple of tenths of a second — long enough to be seen travelling, short enough that a
+ * player stepping quickly along their three is never waiting for it.
+ *
+ * A time constant rather than a speed, so a board dropping frames slides at the same rate
+ * as one that is not: the ease is asked how far to go for the time that has actually
+ * passed, not once per frame.
+ */
+const POINTER_GLIDE_MS = 90;
 
 /** Frames of an aura animation (static/auras/<color>/1..N.png). */
 const AURA_FRAMES = 4;
@@ -2316,10 +2351,10 @@ export class MugenBoard {
 			this.updateOrders(actor);
 			this.updateLabel(actor);
 			// The one fighter being answered for, if it is this one. The mark stands on the
-			// lane rather than on the fighter, so it holds still through the pace — but a
-			// fighter still walking home as the next turn opens is changing rows under it,
-			// and the lane it is in is read afresh each frame for that.
-			if (actor.id === this.pointerAt) this.updatePointer(actor);
+			// lane rather than on the fighter, so it takes nothing from the pace — but it is
+			// eased towards the lane it has been sent to, and a fighter still walking home as
+			// the next turn opens moves that lane under it, so both are read afresh each frame.
+			if (actor.id === this.pointerAt) this.updatePointer(actor, deltaMs);
 		}
 		// After the guards, since this is the tick they were struck on: a spark drawn where
 		// it was struck and moved on the next frame is one frame of a dot sitting on the arc.
@@ -2814,8 +2849,12 @@ export class MugenBoard {
 	 *
 	 * It is hidden rather than destroyed between turns: the shape is the same shape every
 	 * turn, and a triangle rebuilt three times a turn is geometry uploaded for no reason.
-	 * Placed on the spot rather than waiting for the next tick, so it arrives over the
-	 * fighter instead of at the origin for a frame.
+	 *
+	 * **A mark already up is left where it stands** and glides to the new lane on the tick
+	 * ({@link POINTER_GLIDE_MS}) — that slide is what says the two lanes are about the same
+	 * mark. **A mark coming back up starts where it is going**, placed on the spot: the
+	 * lane it was taken down in belongs to a turn that is over, and travelling out of it
+	 * would be the mark crossing the board for a reason nobody watched happen.
 	 */
 	private aimPointer(id: string | null): void {
 		const actor = id ? this.findActor(id) : null;
@@ -2826,8 +2865,9 @@ export class MugenBoard {
 		}
 		const pointer = this.pointerArt();
 		if (!pointer) return;
+		const returning = !pointer.visible;
 		pointer.visible = true;
-		this.updatePointer(actor);
+		this.updatePointer(actor, 0, returning);
 	}
 
 	/**
@@ -2841,29 +2881,26 @@ export class MugenBoard {
 	 * and the height is the one piece of arithmetic that makes it a perfect triangle rather
 	 * than a wedge that happens to look like one at this size.
 	 *
-	 * Filled in the theme's primary and bordered in its secondary, read off the live theme
-	 * ({@link themeColorHex}) rather than spelled here, so the mark is the same yellow and
-	 * the same pink as everything the *document* draws in those colours — and follows them
-	 * if they are ever retuned. The border is aligned to the inside of the shape, which is
-	 * what keeps the silhouette exactly the triangle described above however thick it is
-	 * drawn: a centred stroke would blunt all three corners outwards by half its width.
+	 * Filled and lined in the one colour the document's own order buttons are drawn on,
+	 * read off the live theme ({@link POINTER_TOKEN}) rather than spelled here, so the mark
+	 * and the buttons are the same tile and follow each other if the theme is ever retuned.
+	 * The border is aligned to the inside of the shape, which is what keeps the silhouette
+	 * exactly the triangle described above however thick it is drawn: a centred stroke
+	 * would blunt all three corners outwards by half its width.
 	 */
 	private pointerArt(): Graphics | null {
 		if (this.pointer) return this.pointer;
 		if (!this.app) return null;
 		const side = this.options.cellSize * POINTER_SIDE_RATIO;
 		const height = (side * Math.sqrt(3)) / 2;
+		const color = themeColorHex(POINTER_TOKEN, POINTER_FALLBACK);
 		const pointer = new Graphics()
 			.moveTo(height / 2, 0)
 			.lineTo(-height / 2, -side / 2)
 			.lineTo(-height / 2, side / 2)
 			.closePath()
-			.fill({ color: themeColorHex(POINTER_FILL_TOKEN, POINTER_FILL_FALLBACK) })
-			.stroke({
-				width: side * POINTER_BORDER_RATIO,
-				color: themeColorHex(POINTER_BORDER_TOKEN, POINTER_BORDER_FALLBACK),
-				alignment: 1
-			});
+			.fill({ color })
+			.stroke({ width: side * POINTER_BORDER_RATIO, color, alignment: 1 });
 		this.app.stage.addChild(pointer);
 		this.pointer = pointer;
 		return pointer;
@@ -2879,19 +2916,33 @@ export class MugenBoard {
 	 * where a guard is centred ({@link angleTo}) — level with the body rather than with the
 	 * feet the cell is marked at.
 	 *
+	 * That place is a **target** rather than a position: the mark is eased towards it by the
+	 * share of the remaining distance that {@link POINTER_GLIDE_MS} allows for the time that
+	 * has actually passed, so a step along the line is a slide down the board and not a cut.
+	 * `snap` is what puts it there outright, for the one case that is not a step — a mark
+	 * coming back up after a turn (see {@link aimPointer}).
+	 *
+	 * The ease is over both axes though only one of them ever moves in practice: the three
+	 * lanes share the white column, so a step along the player's line is a slide down it.
+	 * The other axis costs nothing and is what a mark handed to the other half would need.
+	 *
 	 * Mirrored to face the fighter's own half, which is the board's own way of asking which
 	 * direction a side lies in ({@link fallenDrift} asks it the same way). The scale is ±1,
-	 * so the border keeps its width whichever way the mark is turned.
+	 * so the border keeps its width whichever way the mark is turned. Turned outright rather
+	 * than eased: which way a mark points is a fact about it and not a place it is at.
 	 *
 	 * Over everything, as a mark about a fighter has to be: a good part of this roster is
 	 * drawn wider than the cell it stands on, and a triangle behind an overhanging shoulder
 	 * is a triangle nobody sees.
 	 */
-	private updatePointer(actor: Actor): void {
+	private updatePointer(actor: Actor, deltaMs: number, snap = false): void {
 		const pointer = this.pointer;
 		if (!pointer) return;
-		pointer.x = this.cellMark(LANE_COLUMN, actor.row).x;
-		pointer.y = actor.y - actor.displayHeight / 2;
+		const x = this.cellMark(LANE_COLUMN, actor.row).x;
+		const y = actor.y - actor.displayHeight / 2;
+		const closed = snap ? 1 : 1 - Math.exp(-deltaMs / POINTER_GLIDE_MS);
+		pointer.x += (x - pointer.x) * closed;
+		pointer.y += (y - pointer.y) * closed;
 		pointer.scale.x = actor.side === 'blue' ? 1 : -1;
 		pointer.zIndex = actor.y + 10000;
 	}
