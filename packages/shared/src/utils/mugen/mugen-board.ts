@@ -11,6 +11,7 @@ import {
 } from 'pixi.js';
 import { destroyPixiApp } from '../pixi/release-context';
 import { combatColorHex } from '../color/combat-color';
+import { themeColorHex } from '../color/theme-color-hex';
 import {
 	GROUND_BOTTOM_EDGE_TILE,
 	GROUND_BROW_SQUARES,
@@ -501,6 +502,50 @@ const PACE_SPEED = 140;
  * the playback and nothing else — the same frames in the same order, twice as often.
  */
 const PACE_FRAME_RATE = 2;
+
+// --- The pointer over the fighter being answered for --------------------------
+// The second half of the same mark, and the half that says it in one glance rather than
+// over a stride: a triangle standing over that fighter's head, pointing down at it. The
+// pace is a fighter *moving*, which is unmissable but takes a moment to notice and is a
+// thing about the whole board — the only one stirring — where this is a thing about one
+// fighter, read where that fighter stands. Neither is a caption: between them the canvas
+// answers "which of my three is the panel talking about" without a word on it.
+//
+// It is raised and taken down by the very call that starts and stops the pace
+// ({@link MugenBoard.setPacing}), off the very same id, so the two can never point at
+// different fighters or be up at different moments. That is also the whole of its
+// lifetime: it stands while the player may give an order and goes the instant the turn is
+// out of their hands, and comes back on whichever fighter the next turn opens on.
+//
+// Hung off the head rather than the mark the fighter was placed on ({@link auraMark}, which
+// is where the head is): so it rides the pace across the cell and stays over the fighter
+// it is about, the way the fighter's own fire does. A pointer left standing on the ground
+// while the figure under it walked out from beneath would be pointing at a cell.
+//
+// It never shares the screen with a callout, which floats at very nearly the same height:
+// a callout says what a turn amounted to and is cleared before the next one is planned,
+// and this is only ever up while one is being planned.
+
+/** The triangle's side, as a share of a cell — it is equilateral, so this is the whole of
+ * its size. Read against a cell's 219: about a fifth of the ground a fighter stands on,
+ * which is a mark over a head rather than a hat on it. */
+const POINTER_SIDE_RATIO = 0.2;
+/** How thick its border is drawn, as a share of that side. Thick deliberately: the fill
+ * and the border are the theme's two loudest colours and the point is to see both, which a
+ * hairline would not give. Aligned to the inside of the shape, so the silhouette stays the
+ * equilateral triangle the side describes and the tip is exactly where it is placed. */
+const POINTER_BORDER_RATIO = 0.14;
+/** How far the tip stands clear of the top of the fighter's nominal box, in canvas px.
+ * Close enough to be that fighter's and not the one behind it. */
+const POINTER_GAP = 10;
+/** The theme tokens it is drawn in, and what it falls back to where the theme cannot be
+ * read at all ({@link themeColorHex}) — synthwave's own two, so a board with no document
+ * over it still draws the mark the game draws. */
+const POINTER_FILL_TOKEN = '--color-primary';
+const POINTER_FILL_FALLBACK = 0xeab308;
+const POINTER_BORDER_TOKEN = '--color-secondary';
+const POINTER_BORDER_FALLBACK = 0xe81899;
+
 /** Frames of an aura animation (static/auras/<color>/1..N.png). */
 const AURA_FRAMES = 4;
 /** How long each aura frame shows (ms). */
@@ -1205,6 +1250,16 @@ export class MugenBoard {
 	private sparks: Spark[] = [];
 	/** The dot every one of them is drawn from, built on first use (see {@link sparkArt}). */
 	private sparkContext: GraphicsContext | null = null;
+	/**
+	 * The triangle standing over the fighter the panel is turned to, and which fighter that
+	 * is — null on both counts when nobody is being answered for.
+	 *
+	 * One of them for the board rather than one per actor, because there is only ever one:
+	 * {@link setPacing} names a single fighter, and a mark that says "this one" cannot be in
+	 * two places. It is built once and moved, not raised and torn down each turn.
+	 */
+	private pointer: Graphics | null = null;
+	private pointerAt: string | null = null;
 	/** Callouts pinned to a cell rather than to a fighter (see {@link showCellCallout}).
 	 * A fighter's own is held on the actor, which is what takes it down; these have
 	 * nobody, so the board keeps them until the turn's callouts are cleared. */
@@ -1523,6 +1578,10 @@ export class MugenBoard {
 		// board built again builds its own.
 		this.sparkContext?.destroy();
 		this.sparkContext = null;
+		// The pointer went with the stage; what is dropped here is this board's hold on it and
+		// on whoever it was standing over, so a board built again builds its own.
+		this.pointer = null;
+		this.pointerAt = null;
 		// The grass goes the same way, sources and all: the sprites that drew it went with the
 		// stage, and this board cut its tiles for itself out of the sheet.
 		const { fills, topEdge, bottomEdge, earth } = this.groundTiles;
@@ -2245,6 +2304,9 @@ export class MugenBoard {
 			this.updateRing(actor, deltaMs);
 			this.updateOrders(actor);
 			this.updateLabel(actor);
+			// The one fighter being answered for, if it is this one: the triangle rides its
+			// pace, so it is placed on the frame the pace was advanced on.
+			if (actor.id === this.pointerAt) this.updatePointer(actor);
 		}
 		// After the guards, since this is the tick they were struck on: a spark drawn where
 		// it was struck and moved on the next frame is one frame of a dot sitting on the arc.
@@ -2697,12 +2759,17 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Say which fighter is the one being answered for, by walking it on the spot on its own
-	 * cell — across it and back, in the two walk cycles it already owns. Every other fighter
-	 * stands still, so exactly one of them is ever moving on a board between turns, and
-	 * `null` is nobody: the board goes still the moment the turn is out of the player's
-	 * hands (see {@link PACE_REACH_RATIO} for what the pace is and what it deliberately is
-	 * not).
+	 * Say which fighter is the one being answered for, in the two ways this board says it:
+	 * by walking it on the spot on its own cell — across it and back, in the two walk cycles
+	 * it already owns — and by standing a triangle over its head pointing down at it
+	 * ({@link POINTER_SIDE_RATIO}). Every other fighter stands still and wears nothing, so
+	 * exactly one of them is ever moving or marked on a board between turns, and `null` is
+	 * nobody: the board goes still and the triangle goes with it the moment the turn is out
+	 * of the player's hands (see {@link PACE_REACH_RATIO} for what the pace is and what it
+	 * deliberately is not).
+	 *
+	 * The two are raised off this one id together and can therefore never disagree — which
+	 * is the whole reason the pointer is put up here rather than asked for separately.
 	 *
 	 * Idempotent per fighter — asking again for the one already pacing leaves it mid-stride
 	 * rather than snapping it back to its mark, which is what makes this safe to push from a
@@ -2724,6 +2791,88 @@ export class MugenBoard {
 				actor.sprite.x = actor.x;
 			}
 		}
+		this.aimPointer(id);
+	}
+
+	/**
+	 * Stand the pointer over the named fighter, or take it off the board when there is
+	 * nobody to point at — an id nothing on this board answers to counts as nobody, so a
+	 * fighter that has left cannot be left marked.
+	 *
+	 * It is hidden rather than destroyed between turns: the shape is the same shape every
+	 * turn, and a triangle rebuilt three times a turn is geometry uploaded for no reason.
+	 * Placed on the spot rather than waiting for the next tick, so it arrives over the
+	 * fighter instead of at the origin for a frame.
+	 */
+	private aimPointer(id: string | null): void {
+		const actor = id ? this.findActor(id) : null;
+		this.pointerAt = actor?.id ?? null;
+		if (!actor) {
+			if (this.pointer) this.pointer.visible = false;
+			return;
+		}
+		const pointer = this.pointerArt();
+		if (!pointer) return;
+		pointer.visible = true;
+		this.updatePointer(actor);
+	}
+
+	/**
+	 * The triangle itself, built on first use and kept for the life of the board.
+	 *
+	 * **Equilateral, and pointing straight down**: the tip is the graphics' own origin, so
+	 * placing it *is* placing the point of it, and the two upper corners stand a side's
+	 * width apart and √3/2 of that above — the one piece of arithmetic that makes it a
+	 * perfect triangle rather than a wedge that happens to look like one at this size.
+	 *
+	 * Filled in the theme's primary and bordered in its secondary, read off the live theme
+	 * ({@link themeColorHex}) rather than spelled here, so the mark is the same yellow and
+	 * the same pink as everything the *document* draws in those colours — and follows them
+	 * if they are ever retuned. The border is aligned to the inside of the shape, which is
+	 * what keeps the silhouette exactly the triangle described above however thick it is
+	 * drawn: a centred stroke would put the real tip half a border below the point it was
+	 * placed at, and blunt the two upper corners outwards.
+	 */
+	private pointerArt(): Graphics | null {
+		if (this.pointer) return this.pointer;
+		if (!this.app) return null;
+		const side = this.options.cellSize * POINTER_SIDE_RATIO;
+		const height = (side * Math.sqrt(3)) / 2;
+		const pointer = new Graphics()
+			.moveTo(0, 0)
+			.lineTo(-side / 2, -height)
+			.lineTo(side / 2, -height)
+			.closePath()
+			.fill({ color: themeColorHex(POINTER_FILL_TOKEN, POINTER_FILL_FALLBACK) })
+			.stroke({
+				width: side * POINTER_BORDER_RATIO,
+				color: themeColorHex(POINTER_BORDER_TOKEN, POINTER_BORDER_FALLBACK),
+				alignment: 1
+			});
+		this.app.stage.addChild(pointer);
+		this.pointer = pointer;
+		return pointer;
+	}
+
+	/**
+	 * Keep the pointer over its fighter's head as that fighter paces across its cell.
+	 *
+	 * Over the **head** and not over the mark the fighter was placed on: {@link auraMark} is
+	 * where the crown is this instant, which is both the point of the placement and the one
+	 * x that rides the pace, so the triangle sits on the figure rather than on the ground it
+	 * is stepping off. The height is the top of the fighter's nominal box and a gap — the
+	 * same box the callouts are floated off, and they are never both up (see the note above
+	 * {@link POINTER_SIDE_RATIO}).
+	 *
+	 * Over everything, as a mark about a fighter has to be: a triangle behind the fighter in
+	 * front of it would be pointing at a shoulder.
+	 */
+	private updatePointer(actor: Actor): void {
+		const pointer = this.pointer;
+		if (!pointer) return;
+		pointer.x = auraMark(actor);
+		pointer.y = actor.y - actor.displayHeight - POINTER_GAP;
+		pointer.zIndex = actor.y + 10000;
 	}
 
 	/** Walk an actor back to the cell it started on — the ground it holds, which a

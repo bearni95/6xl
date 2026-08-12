@@ -693,21 +693,24 @@
 	$: if (state?.outcome) conceding = false;
 
 	/**
-	 * Mark the fighter the panel is turned to on the board itself, by walking it on the spot
-	 * on its own cell ({@link MugenBoardEngine.setPacing}).
+	 * Mark the fighter the panel is turned to on the board itself
+	 * ({@link MugenBoardEngine.setPacing}), which says it twice over: that fighter walks on
+	 * the spot on its own cell, and a triangle stands over its head pointing down at it. One
+	 * call for the pair, off one id, so the two marks are never on different fighters.
 	 *
 	 * The panel and the board are two ways of reaching the same three orders, and the one
 	 * thing the panel could not say was *which* of the fighters on the canvas it was
 	 * speaking for. Now the canvas says it: whichever fighter is showing in the panel is the
-	 * only one moving on a board that is otherwise standing still, so the answer is on the
-	 * picture and not in a caption under it.
+	 * only one moving on a board that is otherwise standing still and the only one wearing a
+	 * mark, so the answer is on the picture and not in a caption under it.
 	 *
-	 * It is off exactly when the panel is ({@link panelLocked}): the moment the last order is
-	 * given the turn is taken out of the player's hands and played out, and a fighter still
-	 * pacing through it would be saying it is waiting to be told something. The board goes
-	 * still, the turn happens, and the pace comes back on the fighter the next turn opens on.
+	 * Both are off exactly when the panel is ({@link panelLocked}): the moment the last order
+	 * is given the turn is taken out of the player's hands and played out, and a fighter
+	 * still pacing through it — or still pointed at — would be saying it is waiting to be
+	 * told something. The board goes still, the turn happens, and the pace and the pointer
+	 * come back together on the fighter the next turn opens on.
 	 * A fighter with nothing left to be asked — down, or holding the ground its lane was
-	 * played for — is never paced either: it keeps its row in the panel because it is still
+	 * played for — is never marked either: it keeps its row in the panel because it is still
 	 * one of the player's three, and there is nothing to answer for it.
 	 *
 	 * Every name is spelled out so Svelte's legacy reactive tracking sees all three.
