@@ -71,6 +71,25 @@ export const REGION_BAND_CLASSES: Record<RegionColor, string> = {
 	[ArtificialColor.Gray]: 'bg-gray-500/90 text-white'
 };
 
+/**
+ * The colour as ink — lettering drawn in it, rather than a panel painted in it.
+ *
+ * The one place this is read is the narration over a fight, where each fighter's name is
+ * written in the colour that fighter fights in: a sentence about two of them is read in one
+ * glance that way, where two names in the plate's own ink have to be matched to the board.
+ * Yellow keeps the 400 the fills use — it is the same swatch as the aura and the sparks the
+ * board draws for that fighter, and a name that did not match them would be a seventh
+ * colour.
+ */
+export const SPAWN_INK_CLASSES: Record<SpawnColor, string> = {
+	[SpawnColor.Red]: 'text-red-500',
+	[SpawnColor.Yellow]: 'text-yellow-400',
+	[SpawnColor.Blue]: 'text-blue-500',
+	[SpawnColor.Orange]: 'text-orange-500',
+	[SpawnColor.Green]: 'text-green-500',
+	[SpawnColor.Purple]: 'text-purple-500'
+};
+
 /** The colour as a border. */
 export const SPAWN_BORDER_CLASSES: Record<SpawnColor, string> = {
 	[SpawnColor.Red]: 'border-red-500',

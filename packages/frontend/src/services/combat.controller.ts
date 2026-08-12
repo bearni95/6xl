@@ -383,7 +383,9 @@ export interface CombatState {
 	 * The fight names the *event* and the fighters; the words for it are authored elsewhere
 	 * entirely (`public/combat-narration.json`, via the admin `/narration` screen) and
 	 * looked up by the page that draws them. So this is a cue, not a caption: nothing in
-	 * here is a sentence, and nothing in the rules ever reads a sentence back. See
+	 * here is a sentence, and nothing in the rules ever reads a sentence back. Each name
+	 * carries the colour its fighter fights in, which is how the sentence letters the two of
+	 * them apart — a reading of the name, never anything a rule looks at. See
 	 * `$types/combat-narration.type`.
 	 */
 	cue: CombatNarrationCue | null;
@@ -853,7 +855,7 @@ export class CombatController {
 	private async playQuietLane(player: Fighter, rival: Fighter): Promise<void> {
 		const both = (event: CombatNarrationEvent, said: string): void => {
 			this.log.push(said);
-			this.announce(event, { one: player.name, other: rival.name }, said);
+			this.announce(event, { one: player, other: rival }, said);
 		};
 		if (player.action === 'charge' && rival.action === 'charge') {
 			both('bothLoad', `${player.name} and ${rival.name} both spend the turn loading.`);
@@ -866,7 +868,7 @@ export class CombatController {
 			const guard = loader === player ? rival : player;
 			const said = `${loader.name} loads while ${guard.name} covers.`;
 			this.log.push(said);
-			this.announce('loadAgainstCover', { loader: loader.name, guard: guard.name }, said);
+			this.announce('loadAgainstCover', { loader, guard }, said);
 		}
 		await pause(QUIET_LANE_MS);
 	}
@@ -925,7 +927,7 @@ export class CombatController {
 			shot.extra ? `${shot.shooter.name}'s free shot` : `${shot.shooter.name}'s shot`;
 		this.announce(
 			'exchange',
-			{ attacker: one.shooter.name, target: two.shooter.name },
+			{ attacker: one.shooter, target: two.shooter },
 			`${one.shooter.name} and ${two.shooter.name} go at each other at once.`
 		);
 		this.log.push(`${named(one)} and ${named(two)} meet in the lane — both come to nothing.`);
@@ -977,12 +979,13 @@ export class CombatController {
 	private async playShot(shot: Shot): Promise<void> {
 		const { shooter, target, extra } = shot;
 		const from = extra ? `${shooter.name}'s free shot` : `${shooter.name} shoots`;
-		// The two names this encounter's one sentence is written about. Nothing is announced
+		// The two fighters this encounter's one sentence is written about — the fighters and
+		// not their names, since the sentence letters each in its own colour. Nothing is announced
 		// yet: what is said about a row is how it went, and how it went is settled by the
 		// blow at the end of the walk out (see the branches below). A line put up as the
 		// attacker set off would either say nothing yet or give the answer away before the
 		// picture had shown it.
-		const lane = { attacker: shooter.name, target: target.name };
+		const lane = { attacker: shooter, target };
 		this.setStatus(`${shooter.name} goes at ${target.name}.`);
 
 		// The fighter opposite braces first, if covering is what it chose.
@@ -1440,19 +1443,29 @@ export class CombatController {
 	 * two fighters, and the sentence is looked up against the authored collection where the
 	 * page draws it.
 	 *
+	 * What it is handed for each name is the **fighter**, not the name: the sentence letters
+	 * a fighter in the colour that fighter fights in, so the name and the colour come off the
+	 * one thing at the one moment and cannot be paired up wrongly at the far end.
+	 *
 	 * `status` is the fight's own English record of the same moment, unchanged and
 	 * unrelated: it is passed here only so an encounter is one store write rather than two.
 	 * A call with nothing to add to it leaves it standing.
 	 */
 	private announce(
 		event: CombatNarrationEvent,
-		values: Partial<Record<NarrationPlaceholder, string>> = {},
+		who: Partial<Record<NarrationPlaceholder, Fighter>> = {},
 		status?: string
 	): void {
 		if (status !== undefined) this.status = status;
+		const values: Partial<Record<NarrationPlaceholder, string>> = {};
+		const colors: Partial<Record<NarrationPlaceholder, string>> = {};
+		for (const [name, fighter] of Object.entries(who) as [NarrationPlaceholder, Fighter][]) {
+			values[name] = fighter.name;
+			colors[name] = fighter.color;
+		}
 		const seq = (this.cues.get(event) ?? 0) + 1;
 		this.cues.set(event, seq);
-		this.cue = { event, values, seq, fight: this.fight };
+		this.cue = { event, values, colors, seq, fight: this.fight };
 		this.emit();
 	}
 

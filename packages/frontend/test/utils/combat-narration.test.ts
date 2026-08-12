@@ -7,8 +7,10 @@ import {
 	fillNarration,
 	isNarrationEvent,
 	narrationPlaceholders,
+	narrationSegments,
 	narrationTokens,
 	pickNarrationLine,
+	pickNarrationSegments,
 	unknownNarrationTokens,
 	type CombatNarrationCollection
 } from '$types/combat-narration.type';
@@ -64,6 +66,66 @@ describe('narration lines', () => {
 		// Two names, because an encounter is two fighters.
 		expect(narrationPlaceholders('hit')).toEqual(['attacker', 'target']);
 		expect(narrationPlaceholders('nothing-like-this')).toEqual([]);
+	});
+});
+
+describe('cutting a line into its runs', () => {
+	it('marks the names, and carries the colour each fighter fights in', () => {
+		expect(
+			narrationSegments(
+				'{attacker} va a per {target}.',
+				{ attacker: 'Goku', target: 'Bulma' },
+				{ attacker: 'orange', target: 'blue' }
+			)
+		).toEqual([
+			{ text: 'Goku', name: 'attacker', color: 'orange' },
+			{ text: ' va a per ' },
+			{ text: 'Bulma', name: 'target', color: 'blue' },
+			{ text: '.' }
+		]);
+	});
+
+	it('is the filled sentence, read run by run', () => {
+		// Everything that only wants the words goes on using `fillNarration`, so the two must
+		// never be able to say different things about one line.
+		const values = { attacker: 'Goku', target: 'Bulma' };
+		for (const line of ['{attacker} tomba {target}', 'Res: {attacker}{target}!', 'sense noms']) {
+			expect(
+				narrationSegments(line, values)
+					.map((segment) => segment.text)
+					.join('')
+			).toBe(fillNarration(line, values));
+		}
+	});
+
+	it('leaves a token nothing was handed for standing, and does not dress it as a name', () => {
+		// It is a bug in the line, and a `{target}` lettered in somebody's colour would read
+		// as a fighter called that.
+		expect(narrationSegments('{attacker} va a per {target}.', { attacker: 'Goku' })).toEqual([
+			{ text: 'Goku', name: 'attacker', color: undefined },
+			{ text: ' va a per {target}.' }
+		]);
+	});
+
+	it('deals the same words to a cue whether they are asked for whole or in runs', () => {
+		const cue = {
+			event: 'hit',
+			values: { attacker: 'Goku', target: 'Bulma' },
+			colors: { attacker: 'green' },
+			seq: 2,
+			fight: 'p0|r0'
+		} as const;
+		const collection: CombatNarrationCollection = {
+			lines: { hit: ['{attacker} tomba {target}', '{target} cau davant {attacker}'] }
+		};
+		const segments = pickNarrationSegments(collection, cue);
+		expect(segments?.map((segment) => segment.text).join('')).toBe(
+			pickNarrationLine(collection, cue)
+		);
+		expect(segments?.find((segment) => segment.name === 'attacker')?.color).toBe('green');
+		// And it stays quiet in exactly the same places.
+		expect(pickNarrationSegments({ lines: {} }, cue)).toBeNull();
+		expect(pickNarrationSegments(collection, null)).toBeNull();
 	});
 });
 

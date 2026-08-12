@@ -163,6 +163,17 @@ export interface CombatNarrationCollection {
 export interface CombatNarrationCue {
 	event: CombatNarrationEvent;
 	values: Partial<Record<NarrationPlaceholder, string>>;
+	/**
+	 * The combat colour each of those names fights in, keyed the same way — so the sentence
+	 * can letter a fighter's name in that fighter's own colour, which is the one thing that
+	 * tells two names apart at a glance in the middle of a turn.
+	 *
+	 * A colour here is only ever a *reading* of the name beside it: nothing is looked up by
+	 * it and no rule reads it, so a cue that carries none is narrated in the plate's own ink
+	 * rather than being wrong. That is what keeps this optional — the words are the contract
+	 * and the colour is how they are drawn.
+	 */
+	colors?: Partial<Record<NarrationPlaceholder, string>>;
 	/** 1-based, counted over this event's own announcements within this fight. */
 	seq: number;
 	/**
@@ -218,6 +229,59 @@ export function fillNarration(
 		const value = values[name as NarrationPlaceholder];
 		return value === undefined ? token : value;
 	});
+}
+
+/**
+ * A run of a filled line, and whether it is a name.
+ *
+ * A sentence is drawn in one ink except for the fighters in it, so what the screen needs
+ * is not the finished string but the pieces it is made of: the words the author wrote, and
+ * the names written into them, each carrying the colour that fighter fights in.
+ */
+export interface NarrationSegment {
+	text: string;
+	/** The placeholder this run was written in for; absent on the author's own words. */
+	name?: NarrationPlaceholder;
+	/** The colour that fighter fights in, when the cue carried one. */
+	color?: string;
+}
+
+/**
+ * A line cut into its runs: the author's words, and the names filled into them.
+ *
+ * Same rule as {@link fillNarration} on a token nothing was handed for — it is left
+ * standing, as text, so it reads as a bug in the line rather than a gap in the game. A run
+ * left standing is deliberately *not* a name: colouring `{target}` would dress the mistake
+ * up as a fighter.
+ *
+ * Joining the `text` of these back together is exactly what `fillNarration` returns, which
+ * is what lets the two be used interchangeably by anything that only wants the sentence.
+ */
+export function narrationSegments(
+	line: string,
+	values: Partial<Record<NarrationPlaceholder, string>>,
+	colors: Partial<Record<NarrationPlaceholder, string>> = {}
+): NarrationSegment[] {
+	const segments: NarrationSegment[] = [];
+	const push = (text: string, name?: NarrationPlaceholder): void => {
+		if (!text) return;
+		// Two plain runs in a row would be one run written twice — a `{token}` left standing
+		// between the author's own words is still the author's own words.
+		const last = segments[segments.length - 1];
+		if (!name && last && !last.name) last.text += text;
+		else segments.push(name ? { text, name, color: colors[name] } : { text });
+	};
+	let read = 0;
+	for (const match of line.matchAll(/\{([a-zA-Z]+)\}/g)) {
+		const name = match[1] as NarrationPlaceholder;
+		const value = values[name];
+		push(line.slice(read, match.index));
+		if (value === undefined) push(match[0]);
+		else push(value, name);
+		read = (match.index ?? 0) + match[0].length;
+	}
+	push(line.slice(read));
+	return segments;
 }
 
 /**
@@ -292,6 +356,32 @@ export function pickNarrationLine(
 	collection: CombatNarrationCollection | null,
 	cue: CombatNarrationCue | null
 ): string | null {
+	const dealt = dealNarration(collection, cue);
+	return dealt === null ? null : fillNarration(dealt, cue!.values);
+}
+
+/**
+ * The same words, cut into their runs — the author's own, and the names written into them,
+ * each carrying that fighter's colour ({@link narrationSegments}).
+ *
+ * This is what the arena draws, because a name is lettered in the colour its fighter fights
+ * in; {@link pickNarrationLine} is the same deal read as one string, for everything that
+ * only wants the sentence.
+ */
+export function pickNarrationSegments(
+	collection: CombatNarrationCollection | null,
+	cue: CombatNarrationCue | null
+): NarrationSegment[] | null {
+	const dealt = dealNarration(collection, cue);
+	return dealt === null ? null : narrationSegments(dealt, cue!.values, cue!.colors ?? {});
+}
+
+/** The line this cue is dealt, before any name is written into it. Null when the event has
+ * nothing authored, which is how a fight stays quiet rather than guessing. */
+function dealNarration(
+	collection: CombatNarrationCollection | null,
+	cue: CombatNarrationCue | null
+): string | null {
 	if (!collection || !cue) return null;
 	const lines = collection.lines?.[cue.event] ?? [];
 	if (lines.length === 0) return null;
@@ -299,5 +389,5 @@ export function pickNarrationLine(
 	const dealt = Math.max(0, cue.seq - 1);
 	const round = Math.floor(dealt / lines.length);
 	const place = dealt % lines.length;
-	return fillNarration(dealOrder(lines, `${cue.fight}:${cue.event}`, round)[place], cue.values);
+	return dealOrder(lines, `${cue.fight}:${cue.event}`, round)[place];
 }

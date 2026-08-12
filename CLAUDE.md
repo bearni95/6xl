@@ -300,6 +300,22 @@ panel instead — `CombatNarration.svelte`, laid across the middle of it, over t
 outside the fade the card wears while a turn runs. The line goes up as the blow settles the
 row and stands until the next row has something of its own to say.
 
+**A name is lettered in the colour its fighter fights in, and the line is typed out a word at
+a time.** A sentence names two fighters a few words apart, and in one ink the reader has to
+work out which of the two on the board each name is — where the board has already said it, in
+the aura at that fighter's feet and the sparks off its blows, so the names take those same six
+swatches (`SPAWN_INK_CLASSES`, the document's half of the palette `combatColorHex` is the
+canvas's). Which means the cue carries a colour beside each name (`CombatNarrationCue.colors`,
+written by `announce`, which is handed the **fighters** rather than their names so the two can
+never be paired up wrongly), and the line reaches the plate as runs rather than as one string
+(`pickNarrationSegments`; `pickNarrationLine` is the same deal read whole, for anything that
+only wants the words). A colour is only ever a reading of the name beside it — nothing is
+looked up by one — so a cue carrying none is narrated in the plate's own ink. The typing is
+`WORD_MS` per word over `typewriterParts` (`@3xl/shared/utils/string/typewriter`), and **every
+word is drawn from the first frame**, the ones not yet reached merely invisible: a centred,
+balanced box that grew as the words landed would re-wrap under the eye on every one of them,
+and the screen reader is given the whole sentence rather than a word at a time.
+
 What the controller emits is a **cue** and never a sentence: `CombatState.cue`, carrying one
 of the eight ways an encounter can go (the fixed catalogue in
 `@3xl/shared/types/combat-narration.type`) and the two fighters it was between. Five of them
