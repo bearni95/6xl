@@ -25,7 +25,9 @@
 	},
 	"profile": {
 		"title": "QQQQQ",
+		"close": "QQQQQ",
 		"access": "QQQQQ",
+		"accessClose": "QQQQQ",
 		"continueWith": "QQQQQ",
 		"password": {
 			"haveAccount": "QQQQQ",
@@ -86,6 +88,10 @@
 		"radar": {
 			"nearest": "QQQQQ"
 		},
+		"zoom": {
+			"label": "QQQQQ",
+			"step": "QQQQQ"
+		},
 		"side": {
 			"expand": "QQQQQ",
 			"collapse": "QQQQQ"
@@ -131,7 +137,9 @@
 		"label": "QQQQQ"
 	},
 	"settings": {
-		"title": "QQQQQ"
+		"title": "QQQQQ",
+		"open": "QQQQQ",
+		"close": "QQQQQ"
 	},
 	"collection": {
 		"title": "QQQQQ",
@@ -286,6 +294,7 @@
 			"intro": "QQQQQ"
 		},
 		"level": {
+			"header": "QQQQQ",
 			"title": "QQQQQ",
 			"intro": "QQQQQ",
 			"button": "QQQQQ"
@@ -320,15 +329,13 @@
 			"close": "QQQQQ",
 			"empty": "QQQQQ",
 			"anonymous": "QQQQQ",
-			"captured": "QQQQQ",
-			"outcome": {
-				"win": "QQQQQ",
-				"lose": "QQQQQ",
-				"draw": "QQQQQ"
+			"house": "QQQQQ",
+			"said": {
+				"beat": "QQQQQ",
+				"captured": "QQQQQ",
+				"drew": "QQQQQ"
 			}
 		},
-		"previousFighter": "QQQQQ",
-		"nextFighter": "QQQQQ",
 		"orders": {
 			"charge": "QQQQQ",
 			"defend": "QQQQQ",

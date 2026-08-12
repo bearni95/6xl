@@ -322,8 +322,6 @@
 				"drew": "{winner} and {loser} drew at {town}."
 			}
 		},
-		"previousFighter": "Previous fighter",
-		"nextFighter": "Next fighter",
 		"orders": {
 			"charge": "Charge",
 			"defend": "Defend",

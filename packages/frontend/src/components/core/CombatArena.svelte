@@ -591,7 +591,7 @@
 	/**
 	 * Which of the player's three the phone's panel is turned to. An index into
 	 * `orderRows` rather than an id: the list is the same three in the same order for the
-	 * whole fight, and what the arrows do is move along it.
+	 * whole fight, and turning the panel is moving along it.
 	 */
 	let shownIndex = 0;
 	/** The turn the panel was last turned to the front of, so it is done once a turn. */
@@ -606,8 +606,9 @@
 	/**
 	 * Turn the panel to the first fighter with an order still to give, which on a fresh turn
 	 * is the leader: the rows are in the board's own top-to-bottom order and the lead fills
-	 * the top row. Only on a change of turn — inside a turn the panel is where the player
-	 * left it, and being carried back to the top mid-plan would undo the arrows.
+	 * the top row. Only on a change of turn — inside a turn the panel is wherever the orders
+	 * given have carried it, and being pulled back to the top mid-plan would put it on a
+	 * fighter that has already answered.
 	 */
 	function openPanel(current: CombatState | null, rows: PlayerRow[]): void {
 		if (!current || current.turn === openedTurn) return;
@@ -618,18 +619,9 @@
 		);
 	}
 
-	// The row on show, whatever the arrows have been doing: the index is taken modulo the
-	// line, which is what makes the slider endless in both directions and also what keeps it
-	// pointing at somebody if the line is ever shorter than it was.
+	// The row on show, wherever the turn has carried the panel: the index is taken modulo the
+	// line, which keeps it pointing at somebody if the line is ever shorter than it was.
 	$: shownRow = orderRows.length > 0 ? orderRows[shownIndex % orderRows.length] : null;
-
-	/** Turn the panel one fighter along, wrapping at either end — there is no first or last
-	 * fighter here, only the next one round. */
-	function stepFighter(delta: number): void {
-		const count = orderRows.length;
-		if (count === 0) return;
-		shownIndex = (((shownIndex + delta) % count) + count) % count;
-	}
 
 	/**
 	 * An order given on the panel, which is where every order in this fight is given: the
@@ -1446,12 +1438,11 @@
 			     are both there now on every screen, which is what they were always meant to be —
 			     one order given on either is drawn on both.
 			     One fighter at a time, whichever way up: this fighter's three orders squared off
-			     at the foot of the plate, and an arrow at either edge of the row above them — so
-			     everything the panel can be pressed for is one square of the same size, ruled by
-			     one grid of five columns whether it is drawn on the row or over it. A phone is a
-			     screen with room for one thing, so it is given one thing, at the size a thing that
-			     has to be hit wants to be — where laying all three fighters out at once meant nine
-			     buttons over the width of a phone, each a third of a third of it.
+			     at the foot of the plate, and nothing else — so everything the panel can be
+			     pressed for is one square of the same size on one grid of five columns. A phone
+			     is a screen with room for one thing, so it is given one thing, at the size a
+			     thing that has to be hit wants to be — where laying all three fighters out at
+			     once meant nine buttons over the width of a phone, each a third of a third of it.
 			     The fighter itself is not drawn here. It stood on this plate, idling at the full
 			     height of it, with the orders laid over its feet; the board is where the fight is
 			     looked at, and a second copy of the same character standing still beside it was
@@ -1462,14 +1453,17 @@
 			     with no buttons under it exactly as its strip on the board is cleared. So the
 			     board is still the fight; this is a second way of reaching the same three orders,
 			     and both are live at once — an order given on either is drawn on both.
-			     It is turned by both of its controls. The arrows step it one fighter along and
-			     wrap at either end — there is no first or last here, only the next one round —
-			     and giving an order turns it to the next fighter still waiting for one, because
-			     planning a turn is answering for each of the three once and the panel's job is to
-			     put the next unanswered one in front of the player. Answer the last and there is
-			     nowhere to go: the turn commits itself and the panel closes to input, faded but
-			     still showing the orders it was left on, since the plan is the thing being
-			     played out and taking it off the screen at that moment is exactly wrong.
+			     It is turned by the one thing that happens on it: giving an order turns it to the
+			     next fighter still waiting for one, because planning a turn is answering for each
+			     of the three once and the panel's job is to put the next unanswered one in front
+			     of the player. Answer the last and there is nowhere to go: the turn commits
+			     itself and the panel closes to input, faded but still showing the orders it was
+			     left on, since the plan is the thing being played out and taking it off the
+			     screen at that moment is exactly wrong.
+			     There is no way round the line by hand any more — a back arrow and a forward one
+			     stood on a row of their own above the orders (see the markup, where what they
+			     were and why they went is written out). The consequence is that an order given
+			     stands for the turn it was given in.
 			     Standing up it takes whatever the board leaves and not a fixed height of its own:
 			     the canvas is `min(100vw, 100dvh × aspect)` and on a phone the width is what runs
 			     out, so what is under the board is however much of the view a board that shape did
@@ -1481,12 +1475,13 @@
 			     view's.
 			     Which fighter it is turned to is said on the board rather than here — that
 			     fighter, and no other, walks on the spot on its own cell while it is waiting to be
-			     told something (see `syncPacing`). So the panel is turned to one of the three and
-			     the board is what points at the same one, which is the whole reason this plate
-			     need not name them again.
-			     The orders are laid along the foot of the plate and the arrows on the row above
-			     them: the buttons are what has to be reached, so they take the end of the screen
-			     the thumb is at.
+			     told something, with a triangle standing in its lane (see `syncPacing`). So the
+			     panel is turned to one of the three and the board is what points at the same one,
+			     which is the whole reason this plate need not name them again — and, now that
+			     nothing here steps the line, the only thing that says which fighter the buttons
+			     are about.
+			     The orders are laid along the foot of the plate: they are what has to be reached,
+			     so they take the end of the screen the thumb is at.
 			     On its own fill: it is the foot of the sheet, where the page is graded down to
 			     nine tenths and the town is faintly through it, so the orders read off their own
 			     ground rather than off whatever is under there.
@@ -1676,112 +1671,71 @@
 							buttonClasses="btn btn-outline btn-square btn-sm"
 						/>
 						</div>
-						<!-- What the panel is worked by, at the foot of it: the way round the line, and
-						     then what may be asked of the fighter it is turned to. Two rows of one stack
-						     rather than two layers at opposite ends of the card — the arrows stood along
-						     the top edge for a while, which put the control that changes what the buttons
-						     are about at the far end of the panel from the buttons. They are read
-						     together, so they are drawn together, and the pair is what the thumb reaches
-						     the whole of without moving.
-						     The rows are not ruled the same, and that is what keeps the two apart: the
-						     orders are three of five columns and the arrows are two of six, so an arrow
-						     is a smaller square than an order and stands further out than one ever
-						     reaches. A row of five under a row of five had the arrows exactly the size
-						     of the buttons beside them and exactly in line with the ends of that row,
-						     which reads as five orders of which two do something else. The stack takes
-						     no pointer of its own — the gap between the rows would otherwise be a strip
-						     laid over the plate — and each row turns them back on for itself. -->
-						<div class="pointer-events-none absolute inset-x-2 bottom-2 flex flex-col gap-2">
-							<!-- The way back round the line and the way on round it, at the two ends of the
-							     row immediately above the orders. They are not orders — they are what the
-							     panel is turned by — so they keep a row of their own, their own outline
-							     rather than the orders' filled tile, and their own ruling: six columns to
-							     the orders' five, with the pair at the first and the last of them and four
-							     standing empty between. The extra column is what pulls them apart and cuts
-							     them down — a cell of six is smaller than a cell of five, and the ends of
-							     the row are further out than the row below ever reaches — so the two
-							     controls are never read as more of the same buttons.
-							     Only the two buttons take the pointer, not the row: its four empty middle
-							     cells would otherwise be a sheet laid over the plate. -->
-							<div class="grid grid-cols-6 gap-2">
+						<!-- What the panel is worked by, at the foot of it: what may be asked of the
+						     fighter it is turned to, and nothing else. One row, at the end of the screen
+						     the thumb is at.
+						     There was a second row over this one — a back arrow and a forward one, at the
+						     two ends of a six-column ruling, which is what the panel used to be turned by
+						     by hand. They are gone. Which fighter is being answered for is decided by the
+						     fight now and not by the player: the turn opens on the first one with
+						     something still to answer and each order given moves the panel to the next
+						     such fighter (see {@link giveOrderFromPanel}), which is the whole of the
+						     three being answered once each. The board says which one it is at every
+						     moment — that fighter paces its own cell, and a triangle stands in its lane —
+						     so nothing is lost by the panel having no way round the line of its own.
+						     What *is* lost, and is worth saying plainly: an order once given cannot be
+						     taken back inside its turn, because there is no longer a way to turn the
+						     panel back to a fighter that has already answered.
+						     This fighter's three orders: the middle three of five columns, the two end
+						     ones left standing empty. Columns of a grid rather than a row of fixed sizes,
+						     so the whole of it fits the narrowest phone and every square is the same
+						     square.
+						     Five columns for three buttons because the width of an order is settled by the
+						     row and not by what happens to be in it: the ends are held open (`col-start-2`
+						     on the first order) so the three are one size on every panel, whatever is
+						     drawn beside them and whether or not anything is. Nothing is, and nothing has
+						     been since the arrows came off — the ends stay open for the reason they were
+						     opened rather than to leave room for anything.
+						     A plain button rather than a `btn` for the three: the glyphs are the canvas's
+						     own white artwork, so what they need is a dark tile under them in *every*
+						     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
+						     button's face. So the tile stays and the states are said over it — the chosen
+						     order in the fighter's own colour, the rest dark, and one out of reach faded
+						     rather than dropped, as the board's own column greys it. -->
+						<div class="pointer-events-auto absolute inset-x-2 bottom-2 grid grid-cols-5 gap-2">
+							{#each row.orders as order, index (order.id)}
+								<!-- An order the fighter's colour hands it free is edged in that colour, exactly
+								     as the board edges it: a border round the whole button, because what is
+								     being said is about the whole of that order. On the one button *filled*
+								     with that very colour — the order the fighter has been given — a white
+								     seam is laid inside the border, which is the whole of what keeps the two
+								     apart; it is an inset ring rather than a second border so it costs the
+								     glyph no room and the three buttons stay one size whatever they wear.
+								     It comes and goes with the board's own, both being drawn off the same
+								     `gift` flag on the same list of orders, so it is only ever on the opening
+								     turn — the turn a gift is in hand for. -->
 								<button
 									type="button"
-									class="pointer-events-auto col-start-1 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
-									disabled={panelLocked}
-									aria-label={$_('combat.previousFighter')}
-									on:click={() => stepFighter(-1)}
+									class={classNames(
+										'relative flex aspect-square w-full items-center justify-center rounded-box border-2',
+										index === 0 && 'col-start-2',
+										orderFill(order),
+										order.gift
+											? SPAWN_BORDER_CLASSES[order.color as SpawnColor]
+											: 'border-transparent',
+										{
+											'opacity-40': order.disabled,
+											'ring-2 ring-white ring-inset': order.gift && order.selected
+										}
+									)}
+									disabled={order.disabled}
+									aria-label={ORDER_LABELS[order.id as CombatAction]}
+									aria-pressed={order.selected}
+									on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
 								>
-									<!-- An inline triangle: this one is drawn in the document rather than onto
-									     the canvas, so it takes its colour from the text around it like every
-									     other mark in a page. -->
-									<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
-										<path d="M14 7l-5 5 5 5z" />
-									</svg>
+									<img src={order.icon} alt="" class="w-3/5" />
 								</button>
-								<button
-									type="button"
-									class="pointer-events-auto col-start-6 flex aspect-square w-full items-center justify-center rounded-box border border-base-content/25"
-									disabled={panelLocked}
-									aria-label={$_('combat.nextFighter')}
-									on:click={() => stepFighter(1)}
-								>
-									<svg viewBox="0 0 24 24" fill="currentColor" class="w-1/2" aria-hidden="true">
-										<path d="M10 7l5 5-5 5z" />
-									</svg>
-								</button>
-							</div>
-							<!-- This fighter's three orders: the middle three of five columns, the two end
-							     ones left standing empty. Columns of a grid rather than a row of fixed sizes,
-							     so the whole of it fits the narrowest phone and every square is the same
-							     square.
-							     Five columns for three buttons because the width of an order is settled by the
-							     row and not by what happens to be in it: the ends are held open (`col-start-2`
-							     on the first order) so the three are one size on every panel, whatever is
-							     drawn beside them and whether or not anything is. Nothing is, now — the
-							     arrows are a row of their own above this and ruled in six (see there), so
-							     the two ends stay open for the reason they were opened rather than to leave
-							     room for anything.
-							     A plain button rather than a `btn` for the three: the glyphs are the canvas's
-							     own white artwork, so what they need is a dark tile under them in *every*
-							     state (see the icon note in CLAUDE.md), and daisyUI repaints a disabled
-							     button's face. So the tile stays and the states are said over it — the chosen
-							     order in the fighter's own colour, the rest dark, and one out of reach faded
-							     rather than dropped, as the board's own column greys it. -->
-							<div class="pointer-events-auto grid grid-cols-5 gap-2">
-								{#each row.orders as order, index (order.id)}
-									<!-- An order the fighter's colour hands it free is edged in that colour, exactly
-									     as the board edges it: a border round the whole button, because what is
-									     being said is about the whole of that order. On the one button *filled*
-									     with that very colour — the order the fighter has been given — a white
-									     seam is laid inside the border, which is the whole of what keeps the two
-									     apart; it is an inset ring rather than a second border so it costs the
-									     glyph no room and the three buttons stay one size whatever they wear.
-									     It comes and goes with the board's own, both being drawn off the same
-									     `gift` flag on the same list of orders, so it is only ever on the opening
-									     turn — the turn a gift is in hand for. -->
-									<button
-										type="button"
-										class={classNames(
-											'relative flex aspect-square w-full items-center justify-center rounded-box border-2',
-											index === 0 && 'col-start-2',
-											orderFill(order),
-											order.gift
-												? SPAWN_BORDER_CLASSES[order.color as SpawnColor]
-												: 'border-transparent',
-											{
-												'opacity-40': order.disabled,
-												'ring-2 ring-white ring-inset': order.gift && order.selected
-											}
-										)}
-										disabled={order.disabled}
-										aria-label={ORDER_LABELS[order.id as CombatAction]}
-										aria-pressed={order.selected}
-										on:click={() => giveOrderFromPanel(row.fighter.id, order.id)}
-									>
-										<img src={order.icon} alt="" class="w-3/5" />
-									</button>
-								{/each}
-							</div>
+							{/each}
 						</div>
 					</div>
 				{/if}

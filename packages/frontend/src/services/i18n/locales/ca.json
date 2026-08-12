@@ -336,8 +336,6 @@
 				"drew": "{winner} i {loser} han empatat a {town}."
 			}
 		},
-		"previousFighter": "Lluitador anterior",
-		"nextFighter": "Lluitador següent",
 		"orders": {
 			"charge": "Carrega",
 			"defend": "Defensa",
