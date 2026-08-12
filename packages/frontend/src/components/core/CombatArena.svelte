@@ -9,7 +9,6 @@
 	import CombatHost from '$components/core/CombatHost.svelte';
 	import CombatNarration from '$components/core/CombatNarration.svelte';
 	import GameGlyph from '$components/core/GameGlyph.svelte';
-	import IdleSprite from '$components/core/IdleSprite.svelte';
 	import MugenBoard, { loadBoardEngine } from '$components/core/MugenBoard.svelte';
 	import { SPAWN_BORDER_CLASSES, SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
 	import { combatColorHex } from '$utils/color/combat-color';
@@ -563,26 +562,23 @@
 	 * A fighter that is out of the turn — down, or holding the ground its lane was played for
 	 * — is left with no orders at all, exactly as the board clears its column: it keeps its
 	 * row, because it is still one of the player's three, and there is nothing left to ask of
-	 * it. Every name is spelled out so Svelte's legacy reactive tracking sees `state` and
-	 * `badges` both.
+	 * it. `state` is the whole of what it is read off, and is named here so Svelte's legacy
+	 * reactive tracking sees it.
 	 */
-	$: orderRows = state ? playerRows(state, badges) : [];
+	$: orderRows = state ? playerRows(state) : [];
 
-	/** One of the player's fighters as the phone's panel needs it: who it is, the art it is
-	 * drawn from, and the very orders the board is handed for it. */
+	/** One of the player's fighters as the phone's panel needs it: who it is, and the very
+	 * orders the board is handed for it. No art — the panel draws none. */
 	interface PlayerRow {
 		fighter: FighterView;
-		basePath: string | null;
 		orders: BoardOrder[];
 	}
 
-	function playerRows(current: CombatState, roster: Badge[]): PlayerRow[] {
-		const art = new Map(roster.map((badge) => [badge.id, badge.basePath]));
+	function playerRows(current: CombatState): PlayerRow[] {
 		return current.fighters
 			.filter((fighter) => fighter.side === 'info')
 			.map((fighter) => ({
 				fighter,
-				basePath: art.get(fighter.id) ?? null,
 				orders:
 					fighter.down || fighter.holdsGround
 						? []
@@ -1432,8 +1428,8 @@
 			     the panel takes the whole of the rest, out of the flow entirely (`absolute`, so the
 			     board is never sized against it) and the full height of the view. That is room
 			     enough for more than the orders, so lying down this is the whole side of the fight
-			     that is not the fight: a column of the head and then the fighter, the head at the
-			     size it reads at and the fighter taking everything under it. It is anchored to
+			     that is not the fight: a column of the head and then the orders, the head at the
+			     size it reads at and the plate under it taking everything left. It is anchored to
 			     the canvas's right edge and runs to the screen's — `left` is the canvas's own eight
 			     squares and `right` is nothing, with no width of its own to keep the two in step,
 			     the figures spelled again in CSS as `CombatFlanks` and `CombatGround` spell them,
@@ -1445,14 +1441,17 @@
 			     screen the panel was simply gone and the only orders were the canvas's own. The two
 			     are both there now on every screen, which is what they were always meant to be —
 			     one order given on either is drawn on both.
-			     One fighter at a time, whichever way up: the character on
-			     show, this fighter's three orders squared off at the foot of it, and an arrow at
-			     either edge of the picture — so everything the panel can be pressed for is one
-			     square of the same size, ruled by one grid of five columns whether it is drawn on
-			     the row or over it. A phone is a screen with room for one thing, so it is given one
-			     thing, at the size a thing that has to be hit wants to be — where laying all
-			     three fighters out at once meant nine buttons over the width of a phone, each a
-			     third of a third of it.
+			     One fighter at a time, whichever way up: this fighter's three orders squared off
+			     at the foot of the plate, and an arrow at either edge of the row above them — so
+			     everything the panel can be pressed for is one square of the same size, ruled by
+			     one grid of five columns whether it is drawn on the row or over it. A phone is a
+			     screen with room for one thing, so it is given one thing, at the size a thing that
+			     has to be hit wants to be — where laying all three fighters out at once meant nine
+			     buttons over the width of a phone, each a third of a third of it.
+			     The fighter itself is not drawn here. It stood on this plate, idling at the full
+			     height of it, with the orders laid over its feet; the board is where the fight is
+			     looked at, and a second copy of the same character standing still beside it was
+			     one picture of them too many.
 			     Nothing about the fight is decided here that is not decided there. The panel
 			     carries the very list the board is handed (`orderRows`), presses the very handler
 			     a tap on the canvas presses, and a fighter with nothing left to be asked shows
@@ -1465,26 +1464,25 @@
 			     planning a turn is answering for each of the three once and the panel's job is to
 			     put the next unanswered one in front of the player. Answer the last and there is
 			     nowhere to go: the turn commits itself and the panel closes to input, faded but
-			     still showing the fighter it was left on, since the plan is the thing being
+			     still showing the orders it was left on, since the plan is the thing being
 			     played out and taking it off the screen at that moment is exactly wrong.
 			     Standing up it takes whatever the board leaves and not a fixed height of its own:
 			     the canvas is `min(100vw, 100dvh × aspect)` and on a phone the width is what runs
 			     out, so what is under the board is however much of the view a board that shape did
 			     not need. The panel is the flex item that grows into it, the head and the board
-			     being sized by what is in them, and the character is drawn at the full height of
-			     what is left — so a tall phone gives the fighter a tall picture and a short one
-			     gives it a short one, with nothing between the foot of the board and the foot of
-			     the screen going spare. `min-h-0` so that on a view with nothing left over the
-			     panel yields rather than pushing the board off the bottom. Lying down none of that
-			     applies: the panel is out of the flow, and the height it is drawn at is the view's.
-			     Which fighter it is turned to is said on the board as well as here — that fighter,
-			     and no other, walks on the spot on its own cell while it is waiting to be told
-			     something (see `syncPacing`). So the panel names one of the three and the picture
-			     points at the same one, and neither has to describe the other.
-			     The orders are then laid *over* the foot of that picture rather than under it,
-			     which is what lets the picture have the whole band: the buttons are what has to
-			     be reached, so they take the end of the screen the thumb is at, and the character
-			     stands behind them. The arrows are over the picture too, at its own middle height.
+			     being sized by what is in them, so nothing between the foot of the board and the
+			     foot of the screen goes spare. `min-h-0` so that on a view with nothing left over
+			     the panel yields rather than pushing the board off the bottom. Lying down none of
+			     that applies: the panel is out of the flow, and the height it is drawn at is the
+			     view's.
+			     Which fighter it is turned to is said on the board rather than here — that
+			     fighter, and no other, walks on the spot on its own cell while it is waiting to be
+			     told something (see `syncPacing`). So the panel is turned to one of the three and
+			     the board is what points at the same one, which is the whole reason this plate
+			     need not name them again.
+			     The orders are laid along the foot of the plate and the arrows on the row above
+			     them: the buttons are what has to be reached, so they take the end of the screen
+			     the thumb is at.
 			     On its own fill: it is the foot of the sheet, where the page is graded down to
 			     nine tenths and the town is faintly through it, so the orders read off their own
 			     ground rather than off whatever is under there.
@@ -1536,13 +1534,6 @@
 							'pointer-events-none opacity-50': panelLocked
 						})}
 					>
-						<!-- Who the panel is turned to, told the way the fight tells it: the character
-						     standing there, idling, as they are on the board. No veil — the reveal is a
-						     thing a card does when a player first meets it, and by here they are three
-						     fighters in a battle already under way. -->
-						<div class="h-full w-full">
-							<IdleSprite basePath={row.basePath} label={row.fighter.name} veiled={false} />
-						</div>
 						<!-- Whose side this is, at the corner of the panel that fields it: the same three
 						     facts the head says about the player holding the town, said about the player
 						     playing — the face they wear, the name they chose and the level they have
@@ -1556,10 +1547,10 @@
 						     nameless account is worded, never stored, as the catalogue words it
 						     everywhere else.
 						     No plate: this is inside one already, and a plate on a plate is a second edge
-						     round a thing that has one. The picture leads the reading, since the corner
+						     round a thing that has one. The face leads the reading, since the corner
 						     it stands in is the near one. Laid over the panel rather than standing in it
-						     (`absolute`), so the fighter behind keeps the whole of the card's height —
-						     the same reason the orders are laid over the foot of it.
+						     (`absolute`), so it holds its own corner whatever height the card is drawn
+						     at — the same reason the orders are laid along the foot of it.
 						     The row is three columns wide, the account in the first of them and the way
 						     into the feed in the last (below), the middle one standing empty. It is not
 						     a shrink-to-fit block any
@@ -1695,7 +1686,7 @@
 						     of the buttons beside them and exactly in line with the ends of that row,
 						     which reads as five orders of which two do something else. The stack takes
 						     no pointer of its own — the gap between the rows would otherwise be a strip
-						     laid over the fighter — and each row turns them back on for itself. -->
+						     laid over the plate — and each row turns them back on for itself. -->
 						<div class="pointer-events-none absolute inset-x-2 bottom-2 flex flex-col gap-2">
 							<!-- The way back round the line and the way on round it, at the two ends of the
 							     row immediately above the orders. They are not orders — they are what the
@@ -1707,7 +1698,7 @@
 							     the row are further out than the row below ever reaches — so the two
 							     controls are never read as more of the same buttons.
 							     Only the two buttons take the pointer, not the row: its four empty middle
-							     cells would otherwise be a sheet laid over the fighter's picture. -->
+							     cells would otherwise be a sheet laid over the plate. -->
 							<div class="grid grid-cols-6 gap-2">
 								<button
 									type="button"
@@ -1796,15 +1787,15 @@
 				     over the one plate the player is already reading, **one sentence per row of the
 				     board**, each standing for as long as that row is being played and replaced by
 				     the next row's.
-				     A sibling of the fighter's card rather than something inside it, for one
+				     A sibling of the orders' card rather than something inside it, for one
 				     reason: the card is faded out for as long as the turn is being played
 				     (`panelLocked`), and the narration is the thing to read at exactly that moment.
 				     It is laid over the card and takes nothing from it — no room, no pointer and
 				     none of its opacity. Written after it, so it stands on it.
 				     The middle of the panel is the one band of it that is never anything else: the
 				     account is at the top corner and the orders are along the foot, so a line here
-				     covers the fighter's own picture and nothing that is read or pressed. It is
-				     gone between turns, since the cue is (see the controller's `finishTurn`). -->
+				     covers nothing that is read or pressed. It is gone between turns, since the cue
+				     is (see the controller's `finishTurn`). -->
 				<CombatNarration
 					cue={state?.cue ?? null}
 					classes="absolute inset-x-3 top-1/2 -translate-y-1/2"
