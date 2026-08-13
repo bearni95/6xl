@@ -42,14 +42,18 @@
      the same kind of thing about the same board — what a row is doing while a turn plays
      out, and what an order does while one is being planned. The two never stand at once:
      the narration is up only while a turn is being carried out, and this only while one is
-     being thought about. Smaller than the narration, that being one sentence and this
-     three.
+     being thought about. At the narration's own size too, being read at the same distance
+     from the same plate.
      Two columns rather than a mark inline with each sentence: the marks are one width and
      stand in a column of their own, so the three sentences begin on the same edge and a
-     line that has to wrap wraps under itself rather than under the glyph. -->
+     line that has to wrap wraps under itself rather than under the glyph. Both columns are
+     as wide as what stands in them and the pair of them is centred in the plate, so the
+     block sits in the middle of the panel while the sentences still share an edge — a
+     centred *line* would put three different lengths on three different left edges, which
+     is a list that no longer reads down. -->
 <ul
 	class={classNames(
-		'grid grid-cols-[auto_1fr] items-baseline gap-x-2 gap-y-1 rounded-box bg-base-100/90 px-3 py-2 text-sm leading-snug shadow-lg',
+		'grid grid-cols-[auto_auto] items-baseline justify-center gap-x-2 gap-y-1 rounded-box bg-base-100/90 px-3 py-2 text-xl leading-snug shadow-lg',
 		classes
 	)}
 >
