@@ -17,8 +17,8 @@
 	 * fight itself is showing.
 	 *
 	 * It is drawn in two entirely different places and that is why it is its own file. Standing
-	 * up, it is laid over the board's top edge (or at the head of the column on a phone), where
-	 * the board has the whole of the view and anything the head took would come off the fight.
+	 * up, it is laid over the board's own top edge, on every screen, where the board has the
+	 * whole of the view and anything the head took would come off the fight.
 	 * Lying down, the board is against the left edge of the view and the orders have all the
 	 * width past it, so the head goes into that panel instead — a block across the top of the
 	 * sidebar, above the fighter, at the full width of it, standing in room the fight is not
@@ -29,12 +29,20 @@
 	 *
 	 * Where it stands is therefore never settled here. The component is the block; the caller
 	 * gives it its place, and `classes` is how (see both call sites).
+	 *
+	 * **The bar is half a surface**, and it is the only one: the row is printed at `base-100/50`
+	 * and every cell in it carries no paint of its own (`surface={false}` on the plate,
+	 * `PLATE_FLUSH_BARE_CLASSES` on the empty one, and CombatHost never had any). Which is what
+	 * lets the board read through the head laid over it — the fight is what is being looked at,
+	 * and a reading of it standing on an opaque band is a strip of the picture taken away. Two
+	 * backgrounds could not do it: a plate at eight tenths on a row at five leaves nine tenths,
+	 * whatever the row says.
 	 */
 	import classNames from 'classnames';
 	import { _ } from 'svelte-i18n';
 	import CombatHost from '$components/core/CombatHost.svelte';
 	import SiegeBar from '$components/core/SiegeBar.svelte';
-	import TownPlate, { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
+	import TownPlate, { PLATE_FLUSH_BARE_CLASSES } from '$components/core/TownPlate.svelte';
 	import type { TownPlateCard } from '$types/map.type';
 
 	// The town the fight is over, drawn on the very plate its pin carries on the map, and the
@@ -91,7 +99,7 @@
 	     should have held it open was the thing that was missing. Named columns, it cannot: each of
 	     the three is drawn where it belongs or not at all, and the row keeps its shape through
 	     every state the fight can hand it. -->
-	<div class="grid grid-cols-[1fr_auto_1fr] items-stretch bg-base-100">
+	<div class="grid grid-cols-[1fr_auto_1fr] items-stretch bg-base-100/50">
 		<!-- The town, on the very plate its pin carries on the map: the same mark, drawn the same
 		     way, showing what was pressed to get here. Only the challenge button is missing, and
 		     the caller is what leaves it out — a fight already under way has nothing left to
@@ -109,7 +117,14 @@
 		     the same reading given the room it wants. The challenge is still the caller's to leave
 		     out, a fight already under way not being a fight to be started. -->
 		{#if location}
-			<TownPlate {...location} challenge={null} flush mirrored classes="col-start-1" />
+			<TownPlate
+				{...location}
+				challenge={null}
+				flush
+				mirrored
+				surface={false}
+				classes="col-start-1"
+			/>
 		{/if}
 		<!-- How far the town itself has been taken, upright on the seam between the two cells: the
 		     count this one fight is one of, standing between the place it is about and the account
@@ -147,7 +162,7 @@
 			     the cell beside it is printed on. What it says is that the line-up on the other side
 			     of the board is the town's own and not a player's, and an empty plate is how a head
 			     with two halves says it. -->
-			<div class={classNames(PLATE_FLUSH_CLASSES, 'col-start-3')}></div>
+			<div class={classNames(PLATE_FLUSH_BARE_CLASSES, 'col-start-3')}></div>
 		{/if}
 	</div>
 	<!-- Nothing under the row. The standing has stood in three places — a cell across the foot of

@@ -1294,6 +1294,36 @@
 					     itself, so the saving is banked and there is nothing spare left to spend. -->
 					<MugenBoard {grids} on:ready={(event) => onBoardReady(event.detail)} />
 				{/key}
+				<!-- The head of the fight: what it is over, who it is with, and how it stands (see
+				     CombatHead, which is the whole block). It is drawn here on a screen taller than
+				     it is wide, and in the sidebar with the orders on one lying down — a real
+				     conditional either way, because the two are not one box moved but one block put
+				     in one of two places, and mounting both would put two of every plate and avatar
+				     on the screen for one fight.
+				     Standing up it is the **canvas's** own top edge and is laid over it: this box
+				     hugs the canvas, so `inset-x-0 top-0` in here is the board's top corners and
+				     nothing else. It hung off the sheet before — the top of the *view*, which on a
+				     screen the board does not fill the height of is a band of sky above the fight
+				     with a bar of chrome floating in it — and on a phone it stood in the flow
+				     entirely, taking a strip of screen off a board that is fitted to whatever it is
+				     given. Over the board on every screen now: the head reads against the thing it
+				     is a reading of, and the fight is drawn at the full size of the room.
+				     It is written after the board so that it stands on it — both are positioned and
+				     neither carries a layer of its own, so it is the order they are written in that
+				     decides — and before the panels below, which are the fight stopped on something
+				     to be answered and stand over everything.
+				     It takes no pointer: laid over the board, it is a reading, and the board
+				     underneath is what is played.
+				     It runs the whole width of the board, since that is the width it is laid across
+				     — a bar over the top of the fight, the town at one end and whoever holds it at
+				     the other, with the standing on the seam where the two meet. Shrunk to its own
+				     contents it would be a block of chrome floated in the middle of an edge it
+				     could have spanned, and the seam would no longer be the middle of anything. -->
+				{#if !lyingDown}
+					<div class="pointer-events-none absolute inset-x-0 top-0">
+						<CombatHead {location} />
+					</div>
+				{/if}
 				{#if state?.outcome}
 					<!-- The fight is over, and everything there is left to say about it is said
 					     on one panel in the middle of the board it happened on. The board itself
@@ -1734,41 +1764,6 @@
 					classes="absolute inset-x-3 top-1/2 -translate-y-1/2"
 				/>
 			</div>
-			<!-- The head of the fight: what it is over, who it is with, the way out of it, and how
-			     it stands (see CombatHead, which is the whole block). It is drawn here on a screen
-			     taller than it is wide, and in the sidebar with the orders on one lying down — a
-			     real conditional either way, because the two are not one box moved but one block
-			     put in one of two places, and mounting both would put two of every plate, avatar
-			     and flag on the screen for one fight.
-			     Standing up it is hung off the sheet and not off the canvas, which is why it is not
-			     in the box above: the board is centred in the viewport and is only as tall as it
-			     is, so a head taking the canvas's own top edge floated somewhere down the middle of
-			     the screen with a band of live map above it. The top of the fight is the top of the
-			     view.
-			     From `sm:` up it is laid *on* the board's top edge — the board has the whole box and
-			     is drawn as large as the viewport allows, so anything the head took would come off
-			     the fight — and it is written after the board so that it stands over it: both are
-			     positioned and neither carries a layer of its own, so it is the order they are
-			     written in that decides. On a phone it stays in the flow instead, and `order-first`
-			     is what puts it back at the head of the column it is written at the foot of. The
-			     board follows it there rather than under it, out of the room a width-limited canvas
-			     leaves standing empty.
-			     It takes no pointer except where it has to (the banner and the flag ask for their
-			     own): laid over the board, it is a reading, and the board underneath is what is
-			     played.
-			     Centred by the row it sits in rather than by centring its own contents, which is
-			     what leaves the score's stretching to it: the head settles its own width only from
-			     `sm:` up, where the wrapper stops being the viewport. A phone gets a head that runs
-			     the full width of the screen — the two cells and the seam between them — rather
-			     than a block of chrome shrunk to its longest word and floated in the middle of a
-			     view it could have spanned. -->
-			{#if !lyingDown}
-				<div
-					class="pointer-events-none order-first flex w-full justify-center sm:absolute sm:inset-x-0 sm:top-0 sm:w-auto"
-				>
-					<CombatHead {location} classes="sm:w-auto" />
-				</div>
-			{/if}
 		</div>
 	{/if}
 </div>

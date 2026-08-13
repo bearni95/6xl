@@ -15,9 +15,18 @@
 	// else — which is why the two are written as one list and a variation on it, rather than
 	// as one list overridden from outside: two utilities for one property leave which of them
 	// wins to the order they happen to come out in the stylesheet.
-	const PLATE_SURFACE = 'flex flex-col gap-1.5 bg-base-100/80 p-1.5 text-white shadow-lg';
+	//
+	// A plate laid into something that is *itself* a surface is the third case, and it is the
+	// same list with the surface taken out rather than painted over from outside: two
+	// backgrounds, one at eight tenths on top of the other, is a bar that cannot be made
+	// translucent by the thing that owns it (the head of the fight, which is one plate across
+	// the top of the board — see CombatHead). Only the paint goes; the padding, the gap and
+	// the ink stay, because those are the plate and not the surface it is printed on.
+	const PLATE_BARE = 'flex flex-col gap-1.5 p-1.5 text-white';
+	const PLATE_SURFACE = `${PLATE_BARE} bg-base-100/80 shadow-lg`;
 	export const PLATE_CLASSES = `${PLATE_SURFACE} min-w-[200px] max-w-[15rem] rounded-lg`;
 	export const PLATE_FLUSH_CLASSES = `${PLATE_SURFACE} w-full`;
+	export const PLATE_FLUSH_BARE_CLASSES = `${PLATE_BARE} w-full`;
 	export const TILE_CLASSES = 'flex size-10 flex-none items-center justify-center rounded-lg';
 </script>
 
@@ -73,10 +82,22 @@
 	// where the tile faces the account's own portrait across the seam). Nothing else about the
 	// plate turns round with it — the rows under the head are blocks of their own width.
 	export let mirrored: boolean = false;
+	// Whether the plate paints a surface of its own. False is for a plate laid into one that is
+	// already printed on something — the head of the fight, where three cells are one bar — and
+	// it is a variation on the list rather than an override from outside, for the reason the
+	// module comment gives. Flush only: a plate that settles its own width is standing on
+	// terrain, which is nobody's surface.
+	export let surface: boolean = true;
 	export let classes: string = '';
+
+	$: plateClasses = flush
+		? surface
+			? PLATE_FLUSH_CLASSES
+			: PLATE_FLUSH_BARE_CLASSES
+		: PLATE_CLASSES;
 </script>
 
-<div class={classNames(flush ? PLATE_FLUSH_CLASSES : PLATE_CLASSES, classes)}>
+<div class={classNames(plateClasses, classes)}>
 	<!-- The head row: the tile at the left end, the two lines beside it — or, mirrored, the two
 		lines first and the tile at the right end. `min-w-0` is what lets a line longer than the
 		plate's own width truncate rather than push the plate wider — a flex item's floor is its
