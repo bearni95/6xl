@@ -347,9 +347,9 @@
 			"shoot": "Ataca"
 		},
 		"guide": {
-			"charge": "guanyes una càrrega i acabes el torn descobert.",
-			"defend": "atures qualsevol atac, però no carregues res.",
-			"shoot": "gastes una càrrega i tombes el rival del davant."
+			"charge": "Guanyes una càrrega.",
+			"defend": "Atures qualsevol atac.",
+			"shoot": "Gastes una càrrega i tombes el rival del davant."
 		}
 	},
 	"legal": {
