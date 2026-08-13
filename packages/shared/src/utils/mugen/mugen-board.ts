@@ -511,14 +511,15 @@ const PACE_FRAME_RATE = 2;
 // a caption: between them the canvas answers "which of my three is the panel talking
 // about" without a word on it.
 //
-// **It is that fighter's own column, drawn a second time.** Not a mark that stands for the
-// column but the column itself — the same three glyphs in the same order, chosen and greyed
-// and edged exactly as the one beside the fighter is, because it is drawn off the very list
-// that one is ({@link Actor.orderList}). Which is the whole reason the board mirrors the
-// list rather than being handed a second one: two drawings of one list cannot come to
-// disagree about what a fighter has been told, what it may be told, or what its colour
-// hands it free. A triangle stood here before it, in the theme's secondary, and said only
-// "this one" — where a column says which one *and* what is being answered.
+// **It is the whole of what the board draws of a fighter's orders.** Every fighter wore a
+// column of its own for a while — the player's three flush inside their own cells, the
+// rival's three inside theirs — so eighteen buttons stood on the field to make three of
+// them pressable, and what a rival had turned out to do was said twice over, once by the
+// figure doing it. They are gone; this one is drawn off the list each fighter carries
+// ({@link Actor.orderList}), which is why the board mirrors that list rather than being
+// handed one at the moment of the raise. A triangle stood here before any of it, in the
+// theme's secondary, and said only "this one" — where a column says which one *and* what
+// is being answered.
 //
 // It is raised and taken down by the very call that starts and stops the pace
 // ({@link MugenBoard.setPacing}), off the very same id, so the two can never point at
@@ -533,9 +534,9 @@ const PACE_FRAME_RATE = 2;
 // is empty while a turn is being planned and is exactly the gap between the rival and the
 // fighter facing it. So it is in the one place on that row nobody is standing, level with
 // the pair either side of it and reading as the lane's own rather than as something hung on
-// a figure. Centred in that cell rather than flush inside one of its ruled sides, which is
-// what every other column on this board is: the two ends of a lane are somebody's, and the
-// middle of it is the one place that is nobody's.
+// a figure. Centred in that cell rather than flush inside one of its ruled sides, as the
+// columns beside the fighters were: the two ends of a lane are somebody's, and the middle of
+// it is the one place that is nobody's.
 //
 // Placed on the lane and not on the fighter, it holds still: it takes nothing from the
 // pace, which is the division of labour between the two marks. The pace is the fighter
@@ -677,12 +678,11 @@ const ORDER_SPACING_RATIO = 0.12;
  * Room left around a whole column of orders, as a fraction of a cell's side — taken off
  * every side of it, so the buttons stand *inside* their cell rather than on its lines.
  *
- * A column drawn flush to its cell's edges reads as part of the board, and the two lanes
- * a fighter is not in are a button's width away from the one it is: what a group of three
- * needs to be is plainly one group, told from the grid it stands on and from the group
- * above and below. Taken out of the buttons rather than added around them, since the cell
- * is what there is — so padding a column makes its buttons smaller and never makes it
- * spill into a neighbour's.
+ * A column drawn flush to its cell's edges reads as part of the board, and the lanes it is
+ * not standing in are a button's width above and below the one it is: what a group of three
+ * needs to be is plainly one group, told from the grid it stands on. Taken out of the
+ * buttons rather than added around them, since the cell is what there is — so padding a
+ * column makes its buttons smaller and never makes it spill into a neighbour's.
  */
 const ORDER_PAD_RATIO = 0.07;
 /** A button's height as a fraction of a cell's side: the count and the gaps above,
@@ -898,15 +898,10 @@ interface Spark {
 }
 
 /**
- * One order a fighter can be given, drawn as a button beside it. The board knows nothing
- * about what an order *means*: it draws what it is handed, and where it is pressed it says
- * which fighter and which order and no more ({@link MugenBoard.onOrder}).
- *
- * Most of them are never pressed at all. A column beside a fighter is a reading — what that
- * fighter has been told, and what its colour hands it free — and only the copy standing out
- * in the lane of the fighter being answered for takes a tap, that being the one column on
- * the board asking a question. Everything else is given on the panel beside it, which draws
- * these same three orders off the same list.
+ * One order a fighter can be given, drawn as a button in the column standing out in that
+ * fighter's lane. The board knows nothing about what an order *means*: it draws what it is
+ * handed, and where it is pressed it says which fighter and which order and no more
+ * ({@link MugenBoard.onOrder}).
  */
 export interface BoardOrder {
 	/** The caller's id for this order. */
@@ -984,52 +979,19 @@ interface MarkSize {
 	gap: number;
 }
 
-/** Which of a cell's two ruled sides a column of orders stands flush inside. */
-export type OrderSide = 'left' | 'right';
-
-/**
- * Which cell of the board a column of orders stands in — always on its fighter's own row,
- * so a lane's orders are read across the lane, but not necessarily in its fighter's own
- * ground:
- *
- * - `center` — the middle column, the ground neither side holds and both are playing for.
- * - `fighter` — the fighter's **own** cell, the ground it holds, so its orders are *on* it.
- *
- * Either way the column stands on a cell and not on a sprite: it is put where that cell is
- * and it stays there ({@link MugenBoard.updateOrders}). A strike run only ever borrows a
- * fighter away from the ground it holds, and orders that walked off with it would be a
- * column of buttons sliding across the board through the one part of a turn nobody is being
- * asked anything.
- */
-export type OrderCell = 'center' | 'fighter';
-
-/** Where a fighter's column of orders is put: which cell, and which side of it. */
-export interface OrderPlacement {
-	cell: OrderCell;
-	side: OrderSide;
-}
-
-/** The column of order buttons standing for one fighter. */
+/** The column of order buttons standing for one fighter. There is one on the board at a
+ * time: the copy out in the lane of the fighter being answered for, centred on the white
+ * column and eased along it ({@link MugenBoard.updateLane}). */
 interface OrderStrip {
 	container: Container;
 	buttons: BoardMark[];
 	/**
-	 * Which cell of the board it stands in and which of that cell's sides it is flush
-	 * inside — **null on the one column that is not stood on a cell by rule**: the copy out
-	 * in the lane of the fighter being answered for, which is centred on the white column
-	 * and eased along it ({@link MugenBoard.updateLane}) rather than put anywhere by
-	 * {@link MugenBoard.updateOrders}.
-	 */
-	placement: OrderPlacement | null;
-	/**
-	 * What to call when one of these buttons is pressed — **null on every column that is a
-	 * reading**, which is all of them but the lane's.
+	 * What to call when one of these buttons is pressed.
 	 *
-	 * A column beside a fighter says what that fighter has been told and what its colour
-	 * hands it; it is not asking anything, and a rival's least of all. The one column that
-	 * is a question is the one standing in the lane of the fighter the panel is turned to,
-	 * because that is the fighter being answered for at that moment — so it takes the press,
-	 * and it is the only thing on this canvas that takes one.
+	 * Null on a column that is a reading rather than a question — which nothing on this
+	 * board is today, every fighter but the one being answered for having no column at all.
+	 * The one that stands is the lane's, and it is the only thing on this canvas that takes
+	 * a press.
 	 */
 	press: ((orderId: string) => void) | null;
 }
@@ -1134,17 +1096,14 @@ interface Actor {
 	/** Floating callout (what its turn amounted to) above the actor, so a turn every
 	 * fighter acts in at once can be read one fighter at a time. Null when clear. */
 	label: Text | null;
-	/** The column of order buttons drawn beside this fighter, or null when it commands
-	 * nothing (every rival, and the player's side once the fight is over). */
-	orders: OrderStrip | null;
 	/**
-	 * The very list that column was last drawn from, kept so it can be drawn **twice**:
-	 * the fighter being answered for has this same column standing out in its lane as
-	 * well ({@link MugenBoard.aimLane}), and the two are one list rather than two so they
-	 * cannot come to disagree about what the fighter has been told or what it may be told.
+	 * The three orders this fighter can be given, held on the fighter rather than on the
+	 * column that draws them: there is one column on the board and it stands for whichever
+	 * fighter is being answered for ({@link MugenBoard.aimLane}), so what it draws has to be
+	 * on hand for every fighter before it is sent to any one of them.
 	 *
-	 * Empty for a fighter that commands nothing, which is what takes the lane column down
-	 * with it.
+	 * Empty for a fighter that commands nothing — a rival, or one whose lane is settled —
+	 * which is what takes the lane column down when it is turned to one.
 	 */
 	orderList: BoardOrder[];
 	/** Nominal on-screen size (px) of the character at its fit scale, measured
@@ -2155,7 +2114,6 @@ export class MugenBoard {
 			aura: null,
 			ring: null,
 			label: null,
-			orders: null,
 			orderList: [],
 			displayWidth,
 			displayHeight,
@@ -2379,7 +2337,6 @@ export class MugenBoard {
 			this.applyFrame(actor);
 			this.updateAura(actor, deltaMs);
 			this.updateRing(actor, deltaMs);
-			this.updateOrders(actor);
 			this.updateLabel(actor);
 		}
 		// The orders standing in the lane of the one fighter being answered for. Outside the
@@ -3533,49 +3490,25 @@ export class MugenBoard {
 	// --- Order buttons --------------------------------------------------------
 
 	/**
-	 * Give a fighter the orders it can be given, drawn as a column of square buttons that
-	 * fills one cell of the board ({@link ORDER_COLUMN_COUNT}), on the fighter's own row
-	 * and flush inside one of that cell's two ruled sides.
+	 * Say what a fighter can be given, which is what the column standing in its lane draws
+	 * whenever the board is turned to it ({@link aimLane}). Nothing is drawn *beside* the
+	 * fighter: the board carried a column on every one of its six for a while — three
+	 * buttons each, only three of the eighteen ever pressable — and a field of glyphs the
+	 * reader has to sort by side and by row is the fight asking to be read where the lane
+	 * column simply says which fighter and which three.
 	 *
-	 * `placement` says which cell and which side ({@link OrderPlacement}), and is the
-	 * caller's to decide because it is about the fight and not about the board: whose
-	 * orders these are, whether they belong on the ground being played for or on the
-	 * fighter's own, and which border they are read against are all things about the game.
-	 *
-	 * Called on every change of the fight's state, so it rebuilds only when the *set*
-	 * of orders changes and otherwise just repaints the buttons it already has: a
-	 * strip torn down and rebuilt each time would drop the pointer state mid-tap and
-	 * flicker its glyphs while their textures reloaded. An empty list clears the strip.
+	 * Held on the fighter rather than drawn on the spot, because the column is somewhere
+	 * else and may not be turned to this fighter yet: an order given to one that is not
+	 * being answered for is a repaint the reader never sees, and the push is what makes it
+	 * ready for the moment the lane comes round. An empty list is a fighter that commands
+	 * nothing, and takes the column down when it is the one standing.
 	 */
-	setOrders(
-		actorId: string,
-		orders: BoardOrder[],
-		placement: OrderPlacement = { cell: 'center', side: 'right' }
-	): void {
+	setOrders(actorId: string, orders: BoardOrder[]): void {
 		const actor = this.findActor(actorId);
 		if (!actor || !this.app) return;
-		// Held whether or not there is a column to draw it in, since it is also what the lane
-		// column is drawn from: an empty list is what takes *both* of them down.
 		actor.orderList = orders;
-		if (orders.length === 0) {
-			this.clearOrders(actor);
-			this.syncLane();
-			return;
-		}
-
-		if (!this.sameOrders(actor.orders, orders)) {
-			this.clearOrders(actor);
-			actor.orders = this.buildStrip(orders, placement);
-		}
-
-		const strip = actor.orders;
-		if (!strip) return;
-		strip.placement = placement;
-		this.paintStrip(strip, orders);
-		this.updateOrders(actor);
-		// The same list again, out on this fighter's own lane, when this is the fighter being
-		// answered for. Pushed from here rather than watched for, so the two columns are
-		// repainted on the one call and can never be a frame apart.
+		// Pushed from here rather than watched for, so a change of orders and the column
+		// drawing them can never be a frame apart.
 		this.syncLane();
 	}
 
@@ -3641,12 +3574,10 @@ export class MugenBoard {
 	}
 
 	/** Build a strip: one button per order, glyphs loaded as they arrive. Placed by whoever
-	 * asked for it — a fighter's own column stands on a cell ({@link updateOrders}), the lane
-	 * column is eased along the white one ({@link updateLane}) — and pressed only if that
-	 * caller hands over something to tell ({@link OrderStrip.press}). */
+	 * asked for it — the lane column is eased along the white one ({@link updateLane}) — and
+	 * pressed only if that caller hands over something to tell ({@link OrderStrip.press}). */
 	private buildStrip(
 		orders: BoardOrder[],
-		placement: OrderPlacement | null,
 		press: ((orderId: string) => void) | null = null
 	): OrderStrip {
 		let strip: OrderStrip | null = null;
@@ -3672,10 +3603,9 @@ export class MugenBoard {
 				gift: order.gift ?? false
 			};
 			button.container.addChild(face, glyph);
-			// A column beside a fighter takes no pointer, on either half of the field: it says
-			// what that fighter has been told and what its colour hands it, and it is asking
-			// nothing — a rival's least of all. The one that is asking is the column standing
-			// in the lane of the fighter being answered for, and it is given the tap here.
+			// The column standing in the lane of the fighter being answered for is the one thing
+			// on this canvas that asks anything, and it is given the tap here. A strip built
+			// with nothing to tell takes no pointer at all.
 			//
 			// The press is refused by a button that is out of reach even though such a button
 			// is not hit-tested at all ({@link armMark}): what may be given is the fight's to
@@ -3706,7 +3636,7 @@ export class MugenBoard {
 		// as each picture lands, and assigned after, since there is nothing to lay out until
 		// there are buttons. Nothing reads it in between: a fetch cannot resolve inside the
 		// synchronous run that starts it.
-		strip = { container, buttons, placement, press };
+		strip = { container, buttons, press };
 		for (const button of buttons) this.armMark(strip, button);
 		this.layOutOrders(strip);
 		return strip;
@@ -3820,9 +3750,8 @@ export class MugenBoard {
 	 * fight, whatever else comes and goes from the column.
 	 *
 	 * A square this size is close to a quarter of a cell wide, so a column and the padding
-	 * that frames it take about a third of the cell it stands in and the rest of that
-	 * ground — the middle of the white column, a rival's own standing room — is still
-	 * plainly there beside it.
+	 * that frames it take about a third of the white cell it is centred in and the ground
+	 * either side of it — the lane the two fighters walk into — is still plainly there.
 	 */
 	private orderSize(): MarkSize {
 		const height = this.cellWidth() * ORDER_HEIGHT_RATIO;
@@ -3845,7 +3774,7 @@ export class MugenBoard {
 	/**
 	 * Stack the buttons in a column and size their glyphs to fit. The column is laid out
 	 * upward from its own origin — the floor of the cell it stands in
-	 * ({@link updateOrders}) — so the bottom button sits on the line under that cell and
+	 * ({@link updateLane}) — so the bottom button sits on the line under that cell and
 	 * the rest rise from it, while the list still reads top to bottom in the order it was
 	 * handed in. Three buttons and their gaps are a cell tall ({@link ORDER_COLUMN_COUNT}),
 	 * so the top one finishes on the line over it and the column is the cell.
@@ -3862,67 +3791,6 @@ export class MugenBoard {
 			this.paintMark(button, size);
 			this.fitGlyph(button, height);
 		});
-	}
-
-	/** Keep a fighter's column of orders standing in the cell it was placed in
-	 * ({@link OrderPlacement}) — the middle column or the fighter's own — on the fighter's
-	 * own row, inside that cell's left or right ruled side by {@link ORDER_PAD_RATIO}.
-	 *
-	 * **The cell is the ground the fighter holds, not wherever it has got to.** Both are read
-	 * off `homeColumn`/`homeRow` — the cell it was placed on, and the only thing that ever
-	 * moves them is a fighter taking new ground for good ({@link regroup}), which is a
-	 * fighter whose lane has been settled and whose column has therefore already been
-	 * cleared. So a column is put up where the fight opened it and stands there for the whole
-	 * of it: a fighter that walks out to strike, is knocked back a cell or paces its own
-	 * square leaves its orders behind, because a column sliding about the board is the last
-	 * thing a player should be following while a turn plays itself out.
-	 *
-	 * A column is a whole cell tall ({@link ORDER_COLUMN_COUNT}, its padding included), so it
-	 * is stood on the cell's **floor** and not on the foot line a fighter stands on: a figure
-	 * plants itself a quarter of a cell up from that floor ({@link cellFoot}), and a full
-	 * cell anchored there would hang the same quarter over the line into the row above. The
-	 * drop from the one to the other is measured off the grid itself — a cell's bottom corner
-	 * against its own foot line — so nothing here has to know what fraction of a cell a
-	 * figure stands at.
-	 */
-	private updateOrders(actor: Actor): void {
-		const strip = actor.orders;
-		// A strip with no placement is not stood on a cell by any rule of this method's —
-		// the lane column places itself ({@link updateLane}) — and no actor holds one.
-		if (!strip?.placement) return;
-		const { width } = this.orderSize();
-		const { cell, side } = strip.placement;
-		const edges = this.columnEdges(cell === 'fighter' ? actor.homeColumn : 0);
-		const pad = this.cellWidth() * ORDER_PAD_RATIO;
-		const mark = this.cellMark(actor.homeColumn, actor.homeRow);
-		const reach = pad + width / 2;
-		strip.container.x = side === 'left' ? edges.left + reach : edges.right - reach;
-		strip.container.y = mark.y + footToFloor() * this.cellWidth() - pad;
-		// Above the board, below the callouts and the sparks, and behind its own fighter —
-		// over the charge aura under it, under the figure itself — whether it is a thing to
-		// tap or only a thing to read. The character is what the reader is looking at and
-		// the column is what is being said about it, on both halves of the field alike; a
-		// player's own column used to go over everything on the board so that no sprite
-		// could stand in front of a button, but a column stands in the padded side of a cell
-		// and a figure plants itself in the middle of one, so what it was buying was a
-		// fighter cut into by its own orders. Passing behind costs the buttons nothing they
-		// are pressed by: a sprite takes no pointer, so the taps still reach the column
-		// under it.
-		//
-		// Measured against where the fighter stands when it is home rather than where it is
-		// now, so the depth is settled by the same cell the column's place is, and a fighter
-		// away on a strike run does not drag its own column through the row behind it.
-		const stand = mark.y + actor.footDrop;
-		strip.container.zIndex = stand - 0.25;
-	}
-
-	/** Take a fighter's strip off the board. */
-	private clearOrders(actor: Actor): void {
-		const strip = actor.orders;
-		if (!strip) return;
-		actor.orders = null;
-		strip.container.parent?.removeChild(strip.container);
-		strip.container.destroy({ children: true });
 	}
 
 	// --- The column standing in the lane being answered for -------------------
@@ -3948,9 +3816,9 @@ export class MugenBoard {
 	}
 
 	/**
-	 * Draw the lane column off the very list the answered-for fighter's own column is drawn
-	 * off ({@link Actor.orderList}) — the same three orders, chosen and greyed and edged
-	 * alike, because they are one list drawn twice and not two lists kept in step.
+	 * Draw the lane column off the list the answered-for fighter carries
+	 * ({@link Actor.orderList}) — its three orders, chosen and greyed and edged as that
+	 * fighter's state has them.
 	 *
 	 * Called from both ends of that: when the orders change ({@link setOrders}) and when the
 	 * fighter being answered for changes ({@link aimLane}). Being up is therefore a pure
@@ -3980,12 +3848,10 @@ export class MugenBoard {
 			// of orders changing under a column is not the column going anywhere.
 			const { x, y } = this.lane?.container ?? { x: 0, y: 0 };
 			this.clearLane();
-			// No placement: this one is not stood inside a cell's ruled side like every other
-			// column on the board, it is centred on the lane and eased along it. And it is the
-			// one column that is pressed — the fighter it stands for is read off `laneAt` at
-			// the moment of the press rather than closed over here, so a column that has slid
-			// on to the next fighter answers for the one it is standing with.
-			const strip = this.buildStrip(orders, null, (orderId) => {
+			// The fighter it stands for is read off `laneAt` at the moment of the press rather
+			// than closed over here, so a column that has slid on to the next fighter answers
+			// for the one it is standing with.
+			const strip = this.buildStrip(orders, (orderId) => {
 				if (this.laneAt) this.onOrder?.(this.laneAt, orderId);
 			});
 			strip.container.visible = false;
@@ -4007,11 +3873,15 @@ export class MugenBoard {
 	 * Keep the lane column standing in the white cell of the row being answered for
 	 * ({@link LANE_COLUMN}) — the ground between that fighter and the rival facing it.
 	 *
-	 * **Centred in the cell**, where every other column on this board stands flush inside one
-	 * of its ruled sides: the two ends of a lane belong to the fighters holding it, and the
-	 * middle is the one part of the row that is nobody's. Stood on the cell's floor by the
-	 * same measure its siblings are ({@link updateOrders}), so the three of them are level
-	 * across the row.
+	 * **Centred in the cell**, where the columns that once stood beside each fighter were
+	 * flush inside one of its ruled sides: the two ends of a lane belong to the fighters
+	 * holding it, and the middle is the one part of the row that is nobody's. Stood on the
+	 * cell's **floor** and not on the foot line a fighter stands on — a column is a whole cell
+	 * tall ({@link ORDER_COLUMN_COUNT}, its padding included), and a figure plants itself a
+	 * quarter of a cell up from that floor ({@link cellFoot}), so a full cell anchored there
+	 * would hang the same quarter into the row above. The drop from the one to the other is
+	 * measured off the grid itself, so nothing here has to know what fraction of a cell a
+	 * figure stands at.
 	 *
 	 * That place is a **target** rather than a position: the column is eased towards it by
 	 * the share of the remaining distance that {@link LANE_GLIDE_MS} allows for the time that
@@ -4022,9 +3892,10 @@ export class MugenBoard {
 	 * The ease is over both axes though only one of them ever moves in practice: the three
 	 * lanes share the white column, so a step along the player's line is a slide down it.
 	 *
-	 * Read off the cell the fighter **holds** rather than wherever it has got to, exactly as
-	 * its own column is: the two are the one column drawn twice, and a lane that moved under
-	 * a fighter walking home would slide the copy while the original stood still.
+	 * Read off the cell the fighter **holds** rather than wherever it has got to: a fighter
+	 * that walks out to strike, is knocked back a cell or paces its own square would otherwise
+	 * drag the column about the board through the one part of a turn nobody is being asked
+	 * anything, which is the last thing a player should be following.
 	 */
 	private updateLane(deltaMs: number, snap = false): void {
 		const strip = this.lane;
@@ -4036,16 +3907,16 @@ export class MugenBoard {
 		const closed = snap ? 1 : 1 - Math.exp(-deltaMs / LANE_GLIDE_MS);
 		strip.container.x += (mark.x - strip.container.x) * closed;
 		strip.container.y += (y - strip.container.y) * closed;
-		// Behind whatever stands on this row, as a fighter's own column is behind its own
-		// fighter: nothing stands in a lane while it is being answered for, but the column
-		// comes down before the lane is played out and never has to be in front of anybody.
+		// Behind whatever stands on this row: nothing stands in a lane while it is being
+		// answered for, and the column comes down before the lane is played out, so it never
+		// has to be in front of anybody.
 		// It costs the presses nothing either way — a sprite is not a target, so a figure
 		// drawn over these buttons does not catch the tap meant for them.
 		strip.container.zIndex = mark.y + actor.footDrop - 0.25;
 	}
 
-	/** Take the lane column off the board altogether — for a rebuild, the one thing that is
-	 * not a fighter's column changing hands. Between turns it is hidden and kept. */
+	/** Take the lane column off the board altogether — for a rebuild, which is the set of
+	 * orders changing and not the column moving on. Between turns it is hidden and kept. */
 	private clearLane(): void {
 		const strip = this.lane;
 		if (!strip) return;

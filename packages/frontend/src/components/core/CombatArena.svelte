@@ -426,12 +426,11 @@
 	function onBoardReady(engine: MugenBoardEngine): void {
 		board = engine;
 		controller?.attachBoard(engine);
-		// The one thing on the canvas that is pressed rather than read: the column of orders
-		// standing in the lane of the fighter being answered for. It is the same three orders
-		// the panel draws, off the same list, so the press is answered by the same function —
-		// the board says which fighter and which order, and everything after that (telling the
-		// controller, moving the panel on to the next fighter still to answer) happens exactly
-		// as it does when the press came from the plate.
+		// The one thing on the canvas that is pressed rather than read, and now the only place
+		// the three orders are drawn at all: the column standing in the lane of the fighter
+		// being answered for. The board says which fighter and which order, and everything
+		// after that — telling the controller, moving the panel on to the next fighter still
+		// to answer — happens here.
 		engine.onOrder = giveOrderFromPanel;
 	}
 
@@ -459,19 +458,18 @@
 	}
 
 	/**
-	 * The column beside one of the player's fighters: the three orders it can be given. Every
-	 * one of the three is always drawn — an order out of reach is greyed rather than dropped,
-	 * so a fighter's column never changes shape — and all of them lock while a turn is playing
-	 * out. What its colour does for it of its own accord is not a fourth button: it is
+	 * One of the player's fighters' three orders, as the column standing in its lane draws
+	 * them. Every one of the three is always drawn — an order out of reach is greyed rather
+	 * than dropped, so the column never changes shape — and all of them lock while a turn is
+	 * playing out. What its colour does for it of its own accord is not a fourth button: it is
 	 * passive, so it is not among the things that can be given, and it is said as a border
 	 * round the order it is a gift of ({@link giftedOrders}).
 	 *
-	 * The same list is drawn twice, and this call is the whole of both: here, beside the
-	 * fighter on the ground it holds, and again out in the lane of the fighter being answered
-	 * for, where it is pressed ({@link giveOrderFromPanel}). One list, so the two cannot
-	 * disagree about what may be pressed — the copy on the ground says what each of the three
-	 * has been told, all at once, and the copy in the lane asks about the one row being
-	 * answered.
+	 * There is one drawing of this list and it is the one that is pressed: the column out in
+	 * the lane of the fighter being answered for ({@link giveOrderFromPanel}). Nothing stands
+	 * beside a fighter any more — three buttons on every one of six fighters was the board
+	 * saying six things at once where the fight only ever asks one, and the lane column is
+	 * both the question and the answer to it.
 	 */
 	function orderButtons(
 		fighter: FighterView,
@@ -490,71 +488,27 @@
 		}));
 	}
 
-	/**
-	 * The same three orders beside a rival — and they are the same three, because that is
-	 * the whole of what the player is guessing at. The column is not an input: it is never
-	 * tapped, and it says nothing about what the rival *can* do, only what it turned out to
-	 * have done. So none of them is greyed for being out of reach, which would answer the
-	 * question the fight is asking, and none is chosen while the rival's order is still
-	 * secret — the controller withholds a rival's `action` right through planning and hands
-	 * it over as the turn is carried out, so the button lights up at the moment the fighter
-	 * acts and stays lit for the rest of the turn.
-	 *
-	 * It lights up in the fighter's own colour, as the player's own column does. And a rival
-	 * wears its gifts the same way the player's own fighters do: what a rival's colour
-	 * hands it is not a secret — it is a thing about the card and not a choice it has made —
-	 * and it is what the player is planning the opening turn against.
-	 */
-	function rivalOrderButtons(fighter: FighterView, turn: number): BoardOrder[] {
-		const gifts = giftedOrders(fighter, turn);
-		return COMBAT_ACTIONS.map((action) => ({
-			id: action,
-			icon: ACTION_ICONS[action],
-			selected: fighter.action === action,
-			disabled: false,
-			color: fighter.color,
-			gift: gifts.has(action)
-		}));
-	}
-
-	// Push every fighter's orders onto the board whenever the fight moves. Both `state` and
-	// `board` are named so Svelte's legacy reactive tracking sees them as dependencies; the
-	// board itself only redraws what actually changed.
+	// Push the player's own fighters' orders onto the board whenever the fight moves. Both
+	// `state` and `board` are named so Svelte's legacy reactive tracking sees them as
+	// dependencies; the board itself only redraws what actually changed.
 	$: syncOrders(state, board);
 
 	function syncOrders(current: CombatState | null, engine: MugenBoardEngine | null): void {
 		if (!engine || !current) return;
+		// Only the player's own side, and only ever as the list the lane column is drawn from:
+		// a rival is not asked anything, so it has no orders to hand the board. What a rival
+		// turned out to have done is read where every other outcome of a turn is — in the
+		// sentence said over it, and in what the figure does on the ground.
 		for (const fighter of current.fighters) {
+			if (fighter.side !== 'info') continue;
 			// Two fighters are asked for nothing more and keep no column at all: one standing on
 			// the white cell it won, which has settled its lane, and one that has been taken
-			// down, which is still on the board — at the back of its own half — and must not go
-			// on wearing a column of orders it can never be given, or be shown one it can never
-			// carry out. An empty list is what clears it.
+			// down, which is still on the board — at the back of its own half — and must not be
+			// shown orders it can never carry out. An empty list is what clears it.
 			const spent = fighter.down || fighter.holdsGround;
-			if (spent) {
-				engine.setOrders(fighter.id, []);
-				continue;
-			}
-			// Both sides wear a column and neither is a way of giving an order: the same three
-			// glyphs read back to the player, saying what each fighter has been told to do (or,
-			// on a rival, turned out to have done). The order itself is given on the panel.
-			//
-			// Each stands on the ground its own fighter holds, at the end of that cell
-			// nearest the board's edge — the player's at the right of its own, the rival's
-			// at the left of its own — so the two columns are the outermost things on the
-			// board and the lane between them is left clear. What a fighter is being told to
-			// do is a thing about that fighter, and it is read on the cell that fighter is
-			// standing on rather than out on the ground the lanes are played for; every one
-			// of them is on its own fighter's row, so a lane read across is what its two
-			// fighters have been told to do.
 			engine.setOrders(
 				fighter.id,
-				fighter.side === 'info'
-					? orderButtons(fighter, current.phase, current.turn)
-					: rivalOrderButtons(fighter, current.turn),
-				fighter.side === 'info'
-					? { cell: 'fighter', side: 'right' }
-					: { cell: 'fighter', side: 'left' }
+				spent ? [] : orderButtons(fighter, current.phase, current.turn)
 			);
 		}
 	}
