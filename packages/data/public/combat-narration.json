@@ -1,16 +1,16 @@
 {
 	"lines": {
 		"exchange": [
-			"{attacker} i {target} es llancen alhora i els cops es maten al mig.",
-			"Surten els dos a la vegada: {attacker} i {target} es troben al mig del carrer.",
-			"{attacker} i {target} piquen alhora — no hi passa ni un dels dos cops.",
-			"Xoc al mig del carrer: {attacker} i {target} es queden en no res.",
+			"{attacker} i {target} es llancen alhora i els cops s'anul·len",
+			"Surten alhora: {attacker} i {target} es troben al mig",
+			"{attacker} i {target} piquen alhora: no hi passa ni un dels dos cops.",
+			"Xoc frontal: {attacker} i {target} es queden en no res.",
 			"Ni {attacker} ni {target}: els dos cops s'aturen l'un a l'altre."
 		],
 		"blocked": [
 			"{attacker} surt a per {target}, que aguanta la guàrdia i el fa relliscar.",
 			"{target} s'havia cobert, i el cop de {attacker} no hi entra.",
-			"{attacker} pica de valent i {target} ho para de ple.",
+			"{attacker} pica de valent però {target} ho para de ple.",
 			"La guàrdia de {target} atura {attacker} en sec.",
 			"{attacker} hi va de cara i troba {target} ben plantat al darrere de la guàrdia."
 		],
