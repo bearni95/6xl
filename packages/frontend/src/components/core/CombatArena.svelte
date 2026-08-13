@@ -1684,8 +1684,8 @@
 							buttonClasses="btn btn-outline btn-square btn-sm"
 						/>
 						</div>
-						<!-- What each of the three orders does, along the foot of the panel, one at a
-						     time (see CombatOrderGuide, which is the whole block).
+						<!-- What each of the three orders does, along the foot of the panel, all three
+						     at once and a line each (see CombatOrderGuide, which is the whole block).
 						     The three buttons stood here — the orders themselves, pressed to answer for
 						     the fighter the panel was turned to. They are given on the board now: the
 						     same three, off the same list, standing in that fighter's own lane where the
