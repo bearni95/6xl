@@ -2,7 +2,7 @@
 	import classNames from 'classnames';
 	import { _ } from 'svelte-i18n';
 	import PlayerAvatar from '$components/core/PlayerAvatar.svelte';
-	import { PLATE_FLUSH_CLASSES } from '$components/core/TownPlate.svelte';
+	import { PLATE_FLUSH_BARE_CLASSES } from '$components/core/TownPlate.svelte';
 	import type { SpawnColor } from '$types/character-spawn.type';
 
 	// Whoever the fight is actually against: the player holding the town, read as an
@@ -17,8 +17,10 @@
 	// A reading and never a way in — this is somebody else's account, and there is no
 	// route from a fight to their page — so nothing here is pressable.
 	//
-	// The same plate surface the town's card carries, flush: the two are one block of
-	// chrome at the top of the screen rather than two cards that happen to be stacked.
+	// Laid out as the town's card is, flush: the two are one block of chrome at the top of
+	// the screen rather than two cards that happen to be stacked. The padding and the ink
+	// only — the paint is the head's, one surface across the whole bar, so that the board
+	// laid under it reads through (see CombatHead).
 
 	// What to call them — already worded for a player who never chose a name, by whoever
 	// read the holder row this is built from.
@@ -32,11 +34,11 @@
 	// The level they have reached, worked out from their experience by whoever built the
 	// plate — never stored, and never recomputed here.
 	export let level: number;
-	// Whether the reading carries a plate of its own. It does in the head of the fight, where
-	// it is one cell of a block of chrome laid over the board and has to be read off its own
-	// surface. It does not where it stands *inside* something already printed on one — the
-	// player's own account at the corner of their orders panel — since a plate on a plate is a
-	// second edge drawn round a thing that already has one.
+	// Whether the reading is laid out as a cell of a plate — the padding and the gap the town's
+	// card is set with, so the two line up as one bar in the head of the fight. It is not a
+	// surface: nothing here paints one either way. Where this stands *inside* something already
+	// laid out — the player's own account at the corner of their orders panel — it takes that
+	// box's own spacing instead.
 	export let plated: boolean = true;
 	// What the reading is a reading of, said to a pointer resting on it. The caller's, because
 	// only the caller knows: the same three facts are somebody else's account in the head of
@@ -61,7 +63,7 @@
 	The level's line is faded rather than tinted (`opacity-70` and not `text-white/70`), so it
 	is seven tenths of whatever ink it is standing in — the plate's white in the head, and
 	whatever the panel is set in where this carries no plate. -->
-<div class={classNames(plated && PLATE_FLUSH_CLASSES, classes)} title={hint}>
+<div class={classNames(plated && PLATE_FLUSH_BARE_CLASSES, classes)} title={hint}>
 	<div class="flex items-center gap-2">
 		<PlayerAvatar
 			{characterId}

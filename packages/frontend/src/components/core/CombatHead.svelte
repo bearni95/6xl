@@ -31,8 +31,8 @@
 	 * gives it its place, and `classes` is how (see both call sites).
 	 *
 	 * **The bar is half a surface**, and it is the only one: the row is printed at `base-100/50`
-	 * and every cell in it carries no paint of its own (`surface={false}` on the plate,
-	 * `PLATE_FLUSH_BARE_CLASSES` on the empty one, and CombatHost never had any). Which is what
+	 * and every cell in it carries no paint of its own (`surface={false}` on the plate, and the
+	 * bare flush list on the account and on the empty cell alike). Which is what
 	 * lets the board read through the head laid over it — the fight is what is being looked at,
 	 * and a reading of it standing on an opaque band is a strip of the picture taken away. Two
 	 * backgrounds could not do it: a plate at eight tenths on a row at five leaves nine tenths,
