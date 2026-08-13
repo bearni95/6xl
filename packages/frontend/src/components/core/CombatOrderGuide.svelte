@@ -44,22 +44,20 @@
      the narration is up only while a turn is being carried out, and this only while one is
      being thought about. At the narration's own size too, being read at the same distance
      from the same plate.
-     Two columns rather than a mark inline with each sentence: the marks are one width and
-     stand in a column of their own, so the three sentences begin on the same edge and a
-     line that has to wrap wraps under itself rather than under the glyph. Both columns are
-     as wide as what stands in them and the pair of them is centred in the plate, so the
-     block sits in the middle of the panel while the sentences still share an edge — a
-     centred *line* would put three different lengths on three different left edges, which
-     is a list that no longer reads down. -->
+     Every line is centred in the plate on its own, mark and sentence together, rather than
+     the three being set in a pair of columns and the block of them centred: columns hold
+     the sentences to one left edge, which puts the whole reading off to one side of a plate
+     that is as wide as the panel. So each row is its own centred line here, and a sentence
+     long enough to wrap wraps centred too. -->
 <ul
 	class={classNames(
-		'grid grid-cols-[auto_auto] items-baseline justify-center gap-x-2 gap-y-1 rounded-box bg-base-100/90 px-3 py-2 text-xl leading-snug shadow-lg',
+		'flex flex-col items-center gap-y-1 rounded-box bg-base-100/90 px-3 py-2 text-center text-xl leading-snug shadow-lg',
 		classes
 	)}
 >
 	{#each COMBAT_ACTIONS as action (action)}
 		{@const glyph = orderGlyph(action)}
-		<li class="col-span-2 grid grid-cols-subgrid items-baseline">
+		<li class="flex items-baseline justify-center gap-x-2">
 			<span class="flex-none"
 				>{#if glyph}<GameGlyph name={glyph} classes="[&>svg]:size-[1em]" />{/if}<span
 					class="sr-only">{$_(`combat.orders.${action}`)}</span
