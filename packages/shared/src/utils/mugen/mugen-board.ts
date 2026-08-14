@@ -658,39 +658,23 @@ const crownFrames = (frames: LoadedFrame[]): CrownFrame[] =>
 
 // --- Order buttons (drawn on the board, in the column between the two lines) -----
 /**
- * What a button in a column is *sized* by: a cell split this many ways. Not how many a
- * column holds — the column runs as long as the list it is handed — but it is the same
- * three now, a fighter being given the three orders there are (charge, defend, shoot),
- * and the size says so: three buttons and the two gaps between them are one cell tall,
- * less the room left around them ({@link ORDER_PAD_RATIO}), so a column of orders is exactly
- * the cell it stands in.
+ * A button's side, in screen px. Square, and the **same size on every screen** — it is not
+ * a fraction of a cell any more.
  *
- * It was four — the three orders and, over them, a slot for what the fighter's colour did
- * of its own accord, which left the three at three quarters of a cell and a quarter of it
- * empty at the top once that slot came off (what a colour grants is said as a border round
- * the order it hands over free, {@link BoardOrder.gift}). Nothing is held there now, so
- * nothing is kept for it.
+ * A cell is whatever the viewport leaves it: eight columns across the width of a phone is
+ * about fifty px a side, and a third of that was a target of some sixteen px for the one
+ * thing on this canvas that is pressed rather than looked at. So the size is stated rather
+ * than derived — the board scales, the thing a thumb has to hit does not — and it is stated
+ * once here.
+ *
+ * It is bigger than a cell on most screens, which is why the column is **centred on its
+ * lane** ({@link MugenBoard.updateLane}) rather than stood inside it: it is a control laid
+ * over the board and no longer a marking on one square of it, and centring is what keeps
+ * what it overhangs even on both sides.
  */
-const ORDER_COLUMN_COUNT = 3;
+const ORDER_SIZE_PX = 96;
 /** Gap between buttons in a column, as a fraction of a button's height. */
 const ORDER_SPACING_RATIO = 0.12;
-/**
- * Room left around a whole column of orders, as a fraction of a cell's side — taken off
- * every side of it, so the buttons stand *inside* their cell rather than on its lines.
- *
- * A column drawn flush to its cell's edges reads as part of the board, and the lanes it is
- * not standing in are a button's width above and below the one it is: what a group of three
- * needs to be is plainly one group, told from the grid it stands on. Taken out of the
- * buttons rather than added around them, since the cell is what there is — so padding a
- * column makes its buttons smaller and never makes it spill into a neighbour's.
- */
-const ORDER_PAD_RATIO = 0.07;
-/** A button's height as a fraction of a cell's side: the count and the gaps above,
- * solved so that many buttons and the gaps between them span one whole cell, and the
- * padding taken off both ends of that cell first. */
-const ORDER_HEIGHT_RATIO =
-	(1 - 2 * ORDER_PAD_RATIO) /
-	(ORDER_COLUMN_COUNT + (ORDER_COLUMN_COUNT - 1) * ORDER_SPACING_RATIO);
 /** The glyph's size inside a button, as a fraction of the button's height. */
 const ORDER_ICON_RATIO = 0.62;
 /** Corner rounding, as a fraction of a button's height. */
@@ -3742,20 +3726,24 @@ export class MugenBoard {
 	}
 
 	/**
-	 * A button's drawn size: a cell's side less the room left around a column
-	 * ({@link ORDER_PAD_RATIO}), split {@link ORDER_COLUMN_COUNT} ways with the gaps taken
-	 * out of it, and **square** — a cell is square and the three of them fill one padded
-	 * side of it end to end, so a button is as wide as its share of that side is tall. One
-	 * size for every fighter, because one size is what a cell is, and one size for the whole
-	 * fight, whatever else comes and goes from the column.
-	 *
-	 * A square this size is close to a quarter of a cell wide, so a column and the padding
-	 * that frames it take about a third of the white cell it is centred in and the ground
-	 * either side of it — the lane the two fighters walk into — is still plainly there.
+	 * A button's drawn size: a stated square ({@link ORDER_SIZE_PX}) with the gap between
+	 * two of them taken as a fraction of it. One size for every fighter and one for the
+	 * whole fight, whatever else comes and goes from the column — and the same one on every
+	 * screen, since what it is is a target for a thumb and a thumb is not scaled by the
+	 * viewport.
 	 */
 	private orderSize(): MarkSize {
-		const height = this.cellWidth() * ORDER_HEIGHT_RATIO;
+		const height = ORDER_SIZE_PX;
 		return { width: height, height, gap: height * ORDER_SPACING_RATIO };
+	}
+
+	/** How tall a strip stands: its own buttons and the gaps between them. Read off the
+	 * strip rather than off the count a column is expected to hold, since what it holds is
+	 * whatever list it was handed. */
+	private stripHeight(strip: OrderStrip): number {
+		const { height, gap } = this.orderSize();
+		const count = strip.buttons.length;
+		return count * height + Math.max(0, count - 1) * gap;
 	}
 
 	/**
@@ -3773,18 +3761,16 @@ export class MugenBoard {
 
 	/**
 	 * Stack the buttons in a column and size their glyphs to fit. The column is laid out
-	 * upward from its own origin — the floor of the cell it stands in
-	 * ({@link updateLane}) — so the bottom button sits on the line under that cell and
-	 * the rest rise from it, while the list still reads top to bottom in the order it was
-	 * handed in. Three buttons and their gaps are a cell tall ({@link ORDER_COLUMN_COUNT}),
-	 * so the top one finishes on the line over it and the column is the cell.
+	 * upward from its own origin — its **foot**, which is where {@link updateLane} puts it —
+	 * so the bottom button sits on that point and the rest rise from it, while the list still
+	 * reads top to bottom in the order it was handed in. Which end the origin is does not
+	 * matter to anything outside this pair of methods, as long as the two agree.
 	 */
 	private layOutOrders(strip: OrderStrip): void {
 		const size = this.orderSize();
 		const { height, gap } = size;
 		const step = height + gap;
-		const column = strip.buttons.length * height + (strip.buttons.length - 1) * gap;
-		const start = -column + height / 2;
+		const start = -this.stripHeight(strip) + height / 2;
 		strip.buttons.forEach((button, i) => {
 			button.container.x = 0;
 			button.container.y = start + i * step;
@@ -3873,15 +3859,18 @@ export class MugenBoard {
 	 * Keep the lane column standing in the white cell of the row being answered for
 	 * ({@link LANE_COLUMN}) — the ground between that fighter and the rival facing it.
 	 *
-	 * **Centred in the cell**, where the columns that once stood beside each fighter were
-	 * flush inside one of its ruled sides: the two ends of a lane belong to the fighters
-	 * holding it, and the middle is the one part of the row that is nobody's. Stood on the
-	 * cell's **floor** and not on the foot line a fighter stands on — a column is a whole cell
-	 * tall ({@link ORDER_COLUMN_COUNT}, its padding included), and a figure plants itself a
-	 * quarter of a cell up from that floor ({@link cellFoot}), so a full cell anchored there
-	 * would hang the same quarter into the row above. The drop from the one to the other is
-	 * measured off the grid itself, so nothing here has to know what fraction of a cell a
-	 * figure stands at.
+	 * **Centred on the cell, both ways**: the two ends of a lane belong to the fighters holding
+	 * it, and the middle is the one part of the row that is nobody's. It used to be stood on
+	 * the cell's floor instead, which was the right anchor while a column was exactly a cell
+	 * tall — it filled the square and finished on the lines. A button is a stated size now
+	 * ({@link ORDER_SIZE_PX}) and three of them are taller than a cell on most screens, so
+	 * there is no longer a floor to stand a column on: what there is is a middle to hang it
+	 * from, and hanging it there is what keeps the overhang even above and below rather than
+	 * piling the whole of it into the row above.
+	 *
+	 * The cell's middle is measured off the grid — the foot line a fighter plants itself on,
+	 * dropped to the floor ({@link footToFloor}) and back up half a cell — so nothing here has
+	 * to know what fraction of a cell a figure stands at.
 	 *
 	 * That place is a **target** rather than a position: the column is eased towards it by
 	 * the share of the remaining distance that {@link LANE_GLIDE_MS} allows for the time that
@@ -3901,9 +3890,12 @@ export class MugenBoard {
 		const strip = this.lane;
 		const actor = this.laneAt ? this.findActor(this.laneAt) : null;
 		if (!strip || !actor) return;
-		const pad = this.cellWidth() * ORDER_PAD_RATIO;
+		const cell = this.cellWidth();
 		const mark = this.cellMark(LANE_COLUMN, actor.homeRow);
-		const y = mark.y + footToFloor() * this.cellWidth() - pad;
+		// The strip is laid out from its foot ({@link layOutOrders}), so the point it is put at
+		// is half a column below the middle of the cell.
+		const middle = mark.y + footToFloor() * cell - cell / 2;
+		const y = middle + this.stripHeight(strip) / 2;
 		const closed = snap ? 1 : 1 - Math.exp(-deltaMs / LANE_GLIDE_MS);
 		strip.container.x += (mark.x - strip.container.x) * closed;
 		strip.container.y += (y - strip.container.y) * closed;
