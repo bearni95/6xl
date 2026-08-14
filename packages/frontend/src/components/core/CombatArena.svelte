@@ -1397,14 +1397,17 @@
 					     now, a third of a screen from the account it is the answer to — the two are
 					     one reading, a fight being between two players, so they are one block of rows
 					     at the top of the view and are read down.
-					     **Half the width**, and the half the head reads from: the row above it is two
-					     halves, the town at one end and whoever holds it at the other, so an account
-					     under the near half stands in that half's own column and the seam between them
-					     goes on being the middle of everything on this bar.
+					     **Half the width, in the middle of the bar**, on the head's own surface
+					     (`bg-base-100/50`): the two are one block of chrome at the top of the view
+					     rather than a bar with something loose under it, and the paint is the head's
+					     value rather than a second one kept in step with it. Centred and not ranged to
+					     an edge, because it is not about either end of the row above — the town is at
+					     one end and its holder at the other, and the account answering for both stands
+					     on the seam the two meet at.
 					     It takes the pointer back off the block round it — the head is a reading and
 					     this is pressed. -->
 					<CombatPlayerBadge
-						classes="pointer-events-auto w-1/2"
+						classes="pointer-events-auto mx-auto w-1/2 bg-base-100/50"
 						canConcede={!!state && !state.outcome && state.phase === 'planning'}
 						over={!!state?.outcome}
 						on:concede={() => controller?.concede()}
@@ -1530,12 +1533,12 @@
 				{#if lyingDown}
 					<CombatHead {location} classes="relative shrink-0" />
 					<!-- And under it, whose side this is, exactly as it stands under the head standing
-					     up: one arrangement of the two accounts whichever way the screen is, and half
-					     the width for the same reason — the row above is a town at one end and its
-					     holder at the other, and the player answering for the near half stands in that
-					     half's column. -->
+					     up: one arrangement of the two accounts whichever way the screen is — half the
+					     width, centred under a row whose two ends are the town and its holder, and on
+					     that row's own surface, so the two read as one block of chrome rather than as
+					     a bar with something loose under it. -->
 					<CombatPlayerBadge
-						classes="relative w-1/2 shrink-0"
+						classes="relative mx-auto w-1/2 shrink-0 bg-base-100/50"
 						canConcede={!!state && !state.outcome && state.phase === 'planning'}
 						over={!!state?.outcome}
 						on:concede={() => controller?.concede()}

@@ -36,9 +36,12 @@
 	 * nought opacity is still a button otherwise, and the one thing that must not be
 	 * reachable by accident is the way out of a fight.
 	 *
-	 * No plate: it stands on whatever it is put on — the sky at the top of the view standing
-	 * up, the sidebar's own column lying down — and a card round three facts already drawn as
-	 * a block would be an edge round a thing that reads as one without it.
+	 * **No surface of its own.** What it is painted on is the caller's — in the arena that is
+	 * the head's own fill, handed in as a class, since the row above and this one are one
+	 * block of chrome and a second value defined here would be a colour kept in step with
+	 * that one. What it *does* bring is the head's spacing: the account is plated (see
+	 * CombatHost) and the pair of buttons carries the same padding, so a press does not shift
+	 * the block it happens in.
 	 */
 
 	/** Whether giving up is a thing that can be done at this moment: between turns, in a
@@ -77,12 +80,16 @@
 			inert={conceding || undefined}
 			on:click={() => (conceding = true)}
 		>
+			<!-- Plated, which here is the padding and the ink of the town's own card and no
+			     surface at all: this row stands directly under the head and on the head's own
+			     paint, so the account under the bar is set exactly as the two accounts in it
+			     are. It was bare while it stood inside the orders panel, which had a card's
+			     spacing of its own to take. -->
 			<CombatHost
 				name={$profile.username || $_('profile.username.none')}
 				characterId={$profile.avatarCharacterId}
 				color={$profile.avatarColor}
 				level={$profile.level}
-				plated={false}
 			/>
 		</button>
 		<!-- The way back from the question, and then the way out of the fight. In that order,
@@ -104,7 +111,7 @@
 		     doing, a player who opened this by mistake may close it. -->
 		<div
 			class={classNames(
-				'col-start-1 row-start-1 flex w-fit gap-2 transition-opacity duration-200',
+				'col-start-1 row-start-1 flex w-fit gap-2 p-1.5 transition-opacity duration-200',
 				!conceding && 'pointer-events-none opacity-0'
 			)}
 			inert={!conceding || undefined}
