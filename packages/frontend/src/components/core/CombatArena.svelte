@@ -632,10 +632,12 @@
 	/**
 	 * Whether the panel is closed to input: there is nothing to plan. Either the turn is
 	 * being carried out, or every standing fighter has been ordered and it is about to be
-	 * ({@link commitWhenReady}), or the fight is decided. It is not emptied or taken away —
-	 * the fighter on show stays on show, faded, because a panel that vanished the moment
-	 * the last order was given would take the plan off the screen at the moment it is being
-	 * played out.
+	 * ({@link commitWhenReady}), or the fight is decided.
+	 *
+	 * It is closed and not changed: the card takes no pointer and the guide's ink comes off,
+	 * and that is the whole of it — the plate is drawn exactly as it is between turns, at the
+	 * same size in the same place, since it is also what the narration is read off and there
+	 * is nothing on it that stops being true while a turn plays out.
 	 */
 	$: panelLocked = !state || state.phase !== 'planning' || state.ready || !!state.outcome;
 
@@ -1250,36 +1252,6 @@
 					     itself, so the saving is banked and there is nothing spare left to spend. -->
 					<MugenBoard {grids} on:ready={(event) => onBoardReady(event.detail)} />
 				{/key}
-				<!-- The head of the fight: what it is over, who it is with, and how it stands (see
-				     CombatHead, which is the whole block). It is drawn here on a screen taller than
-				     it is wide, and in the sidebar with the orders on one lying down — a real
-				     conditional either way, because the two are not one box moved but one block put
-				     in one of two places, and mounting both would put two of every plate and avatar
-				     on the screen for one fight.
-				     Standing up it is the **canvas's** own top edge and is laid over it: this box
-				     hugs the canvas, so `inset-x-0 top-0` in here is the board's top corners and
-				     nothing else. It hung off the sheet before — the top of the *view*, which on a
-				     screen the board does not fill the height of is a band of sky above the fight
-				     with a bar of chrome floating in it — and on a phone it stood in the flow
-				     entirely, taking a strip of screen off a board that is fitted to whatever it is
-				     given. Over the board on every screen now: the head reads against the thing it
-				     is a reading of, and the fight is drawn at the full size of the room.
-				     It is written after the board so that it stands on it — both are positioned and
-				     neither carries a layer of its own, so it is the order they are written in that
-				     decides — and before the panels below, which are the fight stopped on something
-				     to be answered and stand over everything.
-				     It takes no pointer: laid over the board, it is a reading, and the board
-				     underneath is what is played.
-				     It runs the whole width of the board, since that is the width it is laid across
-				     — a bar over the top of the fight, the town at one end and whoever holds it at
-				     the other, with the standing on the seam where the two meet. Shrunk to its own
-				     contents it would be a block of chrome floated in the middle of an edge it
-				     could have spanned, and the seam would no longer be the middle of anything. -->
-				{#if !lyingDown}
-					<div class="pointer-events-none absolute inset-x-0 top-0">
-						<CombatHead {location} />
-					</div>
-				{/if}
 				{#if state?.outcome}
 					<!-- The fight is over, and everything there is left to say about it is said
 					     on one panel in the middle of the board it happened on. The board itself
@@ -1409,6 +1381,36 @@
 					</div>
 				{/if}
 			</div>
+			<!-- The head of the fight: what it is over, who it is with, and how it stands (see
+			     CombatHead, which is the whole block). It is drawn here on a screen taller than
+			     it is wide, and in the sidebar with the orders on one lying down — a real
+			     conditional either way, because the two are not one box moved but one block put
+			     in one of two places, and mounting both would put two of every plate and avatar
+			     on the screen for one fight.
+			     Standing up it is pinned to the top of the **sheet**, which is the top of the
+			     view: what the fight is over and who it is with is read first and stays where a
+			     reader's eye starts, whatever the board and the panel under it leave. It sat on
+			     the canvas's own top edge until the board was held to the foot of the view — with
+			     the slack going to the sky above it, that edge is a good way down the screen, and
+			     a bar riding down there with it read as a caption on the picture rather than the
+			     head of the page.
+			     It is the board's **own column** and not the whole width, spelled exactly as the
+			     sky behind it is (`CombatFlanks` and `CombatGround` spell the same figures): the
+			     town at one end and whoever holds it at the other, with the standing on the seam
+			     where the two meet, and the seam over the middle of the board it is about. On a
+			     phone that column is the whole width and there is no difference.
+			     Written after the board so that it stands on it — both are positioned and neither
+			     carries a layer of its own, so it is the order they are written in that decides —
+			     which matters on the one view where the two meet: a board tall enough to fill the
+			     height leaves no sky, and the head is back on its top edge, over it as it was.
+			     It takes no pointer: it is a reading, and the board under it is what is played. -->
+			{#if !lyingDown}
+				<div
+					class="pointer-events-none absolute top-0 left-1/2 w-[calc(8*min(100vw/8,100dvh/11))] -translate-x-1/2"
+				>
+					<CombatHead {location} />
+				</div>
+			{/if}
 			<!-- The player's line as a list, beside the board or under it — whichever way up the
 			     screen is. It is the same panel either way, and it is the one thing the board
 			     cannot draw for itself: the orders on the canvas are drawn at whatever scale the
@@ -1457,9 +1459,8 @@
 			     next fighter still waiting for one, because planning a turn is answering for each
 			     of the three once and the panel's job is to put the next unanswered one in front
 			     of the player. Answer the last and there is nowhere to go: the turn commits
-			     itself and the panel closes to input, faded but still showing the orders it was
-			     left on, since the plan is the thing being played out and taking it off the
-			     screen at that moment is exactly wrong.
+			     itself and the panel closes to input — drawn exactly as it was, since the plan is
+			     the thing being played out and changing the plate at that moment is exactly wrong.
 			     There is no way round the line by hand any more — a back arrow and a forward one
 			     stood on a row of their own above the orders (see the markup, where what they
 			     were and why they went is written out). The consequence is that an order given
@@ -1539,11 +1540,18 @@
 					     (`landscape:flex-1`), the panel there being the full side of the view.
 					     `gap-2` is the whole of the spacing between the two, which is what makes the
 					     card the sum of its own parts and nothing else. -->
+					<!-- It is **not faded** while a turn is being carried out. It was, and what the
+					     fade was for is gone with the buttons: a plate of orders greyed out says they
+					     cannot be given, where an account and three lines of text are as true mid-turn
+					     as they are between turns, and dimming the very card the narration is read off
+					     dims the fight's own voice with it. It still takes no pointer then — there is
+					     nothing on it to answer with — but it is drawn exactly as it is the rest of the
+					     time, so nothing about the panel changes at the reveal. -->
 					<div
 						class={classNames(
 							'relative flex flex-col gap-2 rounded-box bg-base-100/80 p-2 shadow-xl landscape:min-h-0 landscape:flex-1',
 							{
-								'pointer-events-none opacity-50': panelLocked
+								'pointer-events-none': panelLocked
 							}
 						)}
 					>
@@ -1721,11 +1729,10 @@
 				     over the one plate the player is already reading, **one sentence per row of the
 				     board**, each standing for as long as that row is being played and replaced by
 				     the next row's.
-				     A sibling of the orders' card rather than something inside it, for one
-				     reason: the card is faded out for as long as the turn is being played
-				     (`panelLocked`), and the narration is the thing to read at exactly that moment.
-				     It is laid over the card and takes nothing from it — no room, no pointer and
-				     none of its opacity. Written after it, so it stands on it.
+				     A sibling of the orders' card rather than something inside it: it is laid over
+				     the card and takes nothing from it — no room and no pointer — so the card is the
+				     height of what it holds and this is drawn across it whatever that turns out to
+				     be. Written after it, so it stands on it.
 				     The middle of the panel is where both of the things this plate ever says are
 				     said, one turn apart: the guide while a turn is being planned and this while it
 				     is being carried out, never at once, and the account keeps the top corner
