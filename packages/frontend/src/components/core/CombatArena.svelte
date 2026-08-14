@@ -1709,13 +1709,18 @@
 				     on a timer, so the block that says what a row was is also the block that
 				     carries the reader off it. `playing` is what puts the button up and
 				     `awaiting` is what makes it pressable — the first is the turn being carried
-				     out at all, the second is this one row having finished being shown. -->
+				     out at all, the second is this one row having finished being shown.
+				     It carries no plate of its own — the card it is laid over is one — so it is
+				     held to that card's *content*: the panel's own padding and the card's
+				     together (`inset-x-5`), where a block that brought its own fill stood on the
+				     card's outer edge and kept the words off it itself. The sentence takes the
+				     whole of that width, so it is said as large as the panel can say it. -->
 				<CombatNarration
 					cue={state?.cue ?? null}
 					playing={state?.phase === 'resolving'}
 					awaiting={state?.awaiting ?? false}
 					on:next={() => controller?.next()}
-					classes="absolute inset-x-3 top-1/2 -translate-y-1/2"
+					classes="absolute inset-x-5 top-1/2 -translate-y-1/2"
 				/>
 			</div>
 		</div>
