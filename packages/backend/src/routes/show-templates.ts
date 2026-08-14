@@ -914,7 +914,7 @@ export function ensureTables(): Promise<void> {
 									v_pick := pick_weighted(v_ids, v_weights, v_total);
 									v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
 									insert into character_spawns (user_id, character_id, show_id, location_id, color, box)
-											values (v_uid, v_pick, p_show_id, v_location, v_color, v_box)
+											values (v_uid, v_pick, p_show_id, v_card_location, v_color, v_box)
 											returning * into v_row;
 									v_spawns := v_spawns || to_jsonb(v_row);
 							end loop;
@@ -951,6 +951,11 @@ export function ensureTables(): Promise<void> {
 					declare
 							v_uid uuid := auth.uid();
 							v_location constant text := 'nivell';
+							-- Where the cards go, which is not where the claim goes: the level
+							-- rides on the card so it can say which time its owner levelled up
+							-- once the box is off screen. The claim keeps the bare sentinel --
+							-- the level is already its year.
+							v_card_location constant text := v_location || ':' || p_level;
 							v_box constant text := 'black';
 							v_colors constant text[] := array['red', 'blue', 'yellow'];
 							v_size constant int := 5;
@@ -1020,14 +1025,14 @@ export function ensureTables(): Promise<void> {
 									v_pick := pick_weighted(v_ids, v_weights, v_total);
 									v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
 									insert into character_spawns (user_id, character_id, show_id, location_id, color, box)
-											values (v_uid, v_pick, p_show_id, v_location, v_color, v_box)
+											values (v_uid, v_pick, p_show_id, v_card_location, v_color, v_box)
 											returning * into v_row;
 									v_spawns := v_spawns || to_jsonb(v_row);
 							end loop;
 							v_pick := pick_weighted(v_ids, v_weights, v_total);
 							v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
 							insert into player_avatars (user_id, character_id, color, show_id, location_id)
-									values (v_uid, v_pick, v_color, p_show_id, v_location)
+									values (v_uid, v_pick, v_color, p_show_id, v_card_location)
 									on conflict (user_id, character_id, color) do update
 											set granted_at = player_avatars.granted_at
 									returning * into v_avatar;
@@ -1035,6 +1040,25 @@ export function ensureTables(): Promise<void> {
 					end;
 					$claim_level_booster$;
 					grant execute on function claim_level_booster(bigint, int) to authenticated;
+					-- Cards dealt before the level rode on the card are filed under the bare
+					-- sentinel and all say the bare word with no number. The level is recoverable
+					-- exactly: a claim and its five cards are one transaction and share now()
+					-- to the microsecond -- the same join the box backfill above is made on --
+					-- and the claim's year IS the level. Idempotent.
+					update character_spawns s
+						set location_id = 'nivell:' || c.year
+					from booster_claims c
+					where s.location_id = 'nivell'
+						and c.user_id = s.user_id
+						and c.location_id = 'nivell'
+						and c.claimed_at = s.created_at;
+					update player_avatars a
+						set location_id = 'nivell:' || c.year
+					from booster_claims c
+					where a.location_id = 'nivell'
+						and c.user_id = a.user_id
+						and c.location_id = 'nivell'
+						and c.claimed_at = a.granted_at;
 					-- Combat rewards: the ONLY way a player earns experience. Claiming cards
 					-- and opening boxes award nothing at all — fighting does, a win
 						-- for what it was worth and a loss for the rivals it took down with it.

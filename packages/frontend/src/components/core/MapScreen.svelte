@@ -55,11 +55,7 @@
 	import { locationAdapter } from '$adapters/classes/location.adapter';
 	import { ULTRAMAR, ULTRAMAR_ID } from '$types/location.type';
 	import { WELCOME_BOX_CAPTION, isWelcomeLocation } from '$utils/spawn/welcome-box';
-	import {
-		LEVEL_BOX_CAPTION,
-		isLevelLocation,
-		pendingLevelBoxes
-	} from '$utils/spawn/level-box';
+	import { isLevelLocation, levelPlaceName, pendingLevelBoxes } from '$utils/spawn/level-box';
 	import {
 		challengeAvailableAt,
 		challengeCoolingDown,
@@ -2625,7 +2621,7 @@
 		// The two boxes that belong to no town and never will: their cards say the caption
 		// the box carried where a place would be.
 		if (isWelcomeLocation(member.locationId)) return WELCOME_BOX_CAPTION;
-		if (isLevelLocation(member.locationId)) return LEVEL_BOX_CAPTION;
+		if (isLevelLocation(member.locationId)) return levelPlaceName(member.locationId);
 		if (member.locationId === ULTRAMAR_ID) return ULTRAMAR.municipality;
 		const name = names?.get(member.locationId);
 		return name ? restoreCatalanArticle(name) : standingIn;

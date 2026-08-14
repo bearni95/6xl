@@ -1,6 +1,6 @@
 import { ULTRAMAR, ULTRAMAR_ID } from '../../types/location.type';
 import { WELCOME_BOX_CAPTION, isWelcomeLocation } from './welcome-box';
-import { LEVEL_BOX_CAPTION, isLevelLocation } from './level-box';
+import { isLevelLocation, levelPlaceName } from './level-box';
 import type { SpawnBox, SpawnColor } from '../../types/character-spawn.type';
 import restoreCatalanArticle from '../string/restore-catalan-article';
 
@@ -73,16 +73,16 @@ export interface TeamLineupContext {
  * Ultramar. The two boxes that belong to no town are the ids that are not towns and
  * are not failures to name one either — each says its own caption, the word its box
  * carries where a place would be (see {@link WELCOME_BOX_CAPTION} and
- * {@link LEVEL_BOX_CAPTION}). A level card says `Nivell` and not which level: the
- * level is on the box and not on the card, and what these cards have in common is
- * having come from levelling up at all.
+ * {@link levelPlaceName}). A level card names its level with it — `Nivell 7`, the
+ * whole of what its box said across the head — since which time a player levelled up
+ * is as much where a card is from as which town is.
  */
 export function claimPlaceName(
 	id: string | null | undefined,
 	names: ReadonlyMap<string, string> | null
 ): string {
 	if (isWelcomeLocation(id)) return WELCOME_BOX_CAPTION;
-	if (isLevelLocation(id)) return LEVEL_BOX_CAPTION;
+	if (isLevelLocation(id)) return levelPlaceName(id);
 	if (id && id !== ULTRAMAR_ID) {
 		const name = names?.get(id);
 		if (name) return restoreCatalanArticle(name);

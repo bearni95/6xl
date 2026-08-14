@@ -8,7 +8,11 @@ import {
 	type TeamLineupContext
 } from '$utils/spawn/team-lineup';
 import { WELCOME_BOX_CAPTION, WELCOME_BOX_ID } from '$utils/spawn/welcome-box';
-import { LEVEL_BOX_CAPTION, LEVEL_BOX_ID } from '$utils/spawn/level-box';
+import {
+	LEVEL_BOX_CAPTION,
+	LEVEL_BOX_ID,
+	levelBoxLocationId
+} from '$utils/spawn/level-box';
 
 const characters = new Map([
 	['luffy', { label: 'Monkey D. Luffy', basePath: '/assets/luffy' }],
@@ -34,7 +38,11 @@ describe('claimPlaceName', () => {
 	it('names the two boxes that belong to no town by their own caption', () => {
 		const names = new Map([['ES_08028', 'Barcelona']]);
 		expect(claimPlaceName(WELCOME_BOX_ID, names)).toBe(WELCOME_BOX_CAPTION);
-		// Every level's cards say the same word: the level is on the box, not on the card.
+		// A level card names its level with the word, exactly as the box that dealt it did
+		// across its head — which time somebody levelled up is where that card is from.
+		expect(claimPlaceName(levelBoxLocationId(7), names)).toBe('Nivell 7');
+		// And a card dealt before the level rode on the card says the bare word: it came
+		// from levelling up and cannot say which time.
 		expect(claimPlaceName(LEVEL_BOX_ID, names)).toBe(LEVEL_BOX_CAPTION);
 	});
 
@@ -60,6 +68,7 @@ describe('claimMintedAt', () => {
 		// Their panel says a caption where the place goes, and a caption has no season.
 		expect(claimMintedAt(WELCOME_BOX_ID, minted)).toBeNull();
 		expect(claimMintedAt(LEVEL_BOX_ID, minted)).toBeNull();
+		expect(claimMintedAt(levelBoxLocationId(7), minted)).toBeNull();
 	});
 });
 

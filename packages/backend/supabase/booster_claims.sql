@@ -521,7 +521,7 @@ begin
 		v_pick := public.pick_weighted(v_ids, v_weights, v_total);
 		v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
 		insert into public.character_spawns (user_id, character_id, show_id, location_id, color, box)
-			values (v_uid, v_pick, p_show_id, v_location, v_color, v_box)
+			values (v_uid, v_pick, p_show_id, v_card_location, v_color, v_box)
 			returning * into v_row;
 		v_spawns := v_spawns || to_jsonb(v_row);
 	end loop;
@@ -533,7 +533,7 @@ begin
 	v_pick := public.pick_weighted(v_ids, v_weights, v_total);
 	v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
 	insert into public.player_avatars (user_id, character_id, color, show_id, location_id)
-		values (v_uid, v_pick, v_color, p_show_id, v_location)
+		values (v_uid, v_pick, v_color, p_show_id, v_card_location)
 		on conflict (user_id, character_id, color) do update
 			set granted_at = player_avatars.granted_at
 		returning * into v_avatar;
@@ -580,6 +580,12 @@ declare
 	v_uid uuid := auth.uid();
 	-- The three that make this box's claim key (see above); the year is the level.
 	v_location constant text := 'nivell';
+	-- Where this box's *cards* are filed, which is not where its claim is: the level
+	-- goes on the card, so a card can say which time its owner levelled up long after
+	-- the box that dealt it is off the screen. The claim keeps the bare sentinel — the
+	-- level is already its `year`, and putting it in the town as well would file one box
+	-- under two names. See `levelBoxLocationId` in @3xl/shared's level-box.ts.
+	v_card_location constant text := v_location || ':' || p_level;
 	v_box constant text := 'black';
 	v_colors constant text[] := array['red', 'blue', 'yellow'];
 	v_size constant int := 5;
@@ -665,7 +671,7 @@ begin
 		v_pick := public.pick_weighted(v_ids, v_weights, v_total);
 		v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
 		insert into public.character_spawns (user_id, character_id, show_id, location_id, color, box)
-			values (v_uid, v_pick, p_show_id, v_location, v_color, v_box)
+			values (v_uid, v_pick, p_show_id, v_card_location, v_color, v_box)
 			returning * into v_row;
 		v_spawns := v_spawns || to_jsonb(v_row);
 	end loop;
@@ -675,7 +681,7 @@ begin
 	v_pick := public.pick_weighted(v_ids, v_weights, v_total);
 	v_color := v_colors[1 + floor(random() * array_length(v_colors, 1))];
 	insert into public.player_avatars (user_id, character_id, color, show_id, location_id)
-		values (v_uid, v_pick, v_color, p_show_id, v_location)
+		values (v_uid, v_pick, v_color, p_show_id, v_card_location)
 		on conflict (user_id, character_id, color) do update
 			set granted_at = player_avatars.granted_at
 		returning * into v_avatar;
@@ -687,3 +693,27 @@ end;
 $$;
 
 grant execute on function public.claim_level_booster(bigint, int) to authenticated;
+
+-- Cards dealt before the level was written onto one are all filed under the bare
+-- sentinel, so every one of them says `Nivell` and none says which. The level is
+-- recoverable exactly: a claim and the five cards it dealt are one transaction, so they
+-- share `now()` to the microsecond — the same join the `box` backfill above is made on —
+-- and the claim's `year` IS the level. Cards with no such claim (there are none, but the
+-- join answers for it) keep the bare sentinel and go on saying the bare word.
+--
+-- Idempotent: after this there are no cards left under it to move.
+update public.character_spawns s
+	set location_id = 'nivell:' || c.year
+from public.booster_claims c
+where s.location_id = 'nivell'
+	and c.user_id = s.user_id
+	and c.location_id = 'nivell'
+	and c.claimed_at = s.created_at;
+
+update public.player_avatars a
+	set location_id = 'nivell:' || c.year
+from public.booster_claims c
+where a.location_id = 'nivell'
+	and c.user_id = a.user_id
+	and c.location_id = 'nivell'
+	and c.claimed_at = a.granted_at;
