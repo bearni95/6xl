@@ -1409,30 +1409,26 @@
 					     **Its lower corners are rounded** and its upper ones are not: it hangs off the
 					     bar above rather than standing on its own, and the two corners it shares with
 					     that bar are no corners at all.
-					     Each cell takes the pointer back off the block round it — the head is a reading
-					     and both of these are pressed. -->
-					<div class="grid grid-cols-[1fr_50%_1fr] items-start">
-						<CombatPlayerBadge
-							classes="pointer-events-auto col-start-2 rounded-b-lg bg-base-100/50"
-							canConcede={!!state && !state.outcome && state.phase === 'planning'}
-							over={!!state?.outcome}
-							on:concede={() => controller?.concede()}
-						/>
-						<!-- How many fights have finished everywhere else while this one has been going
-						     on, and the sheet that reads them out (see CombatFeedButton, which draws
-						     nothing until one has). It stood at the top corner of the panel at the foot
-						     of the view, which is where the account was: the two are the only readings
-						     in the arena that are not this fight, so they left together and this takes
-						     the far end of the very row the account is centred in. It stood at the end
-						     of the score banner in the head before that, which is the same end of the
-						     same bar, one row up.
-						     Held against the far edge of its own column, so it is the corner of the
-						     block and not a mark somewhere along it. -->
+					     It takes the pointer back off the block round it — the head is a reading and
+					     this is pressed.
+					     At its far end stands the way into the feed of fights finishing everywhere
+					     else (see CombatFeedButton, which draws nothing at all until one has). It sat
+					     at the top corner of the panel at the foot of the view, which is where the
+					     account sat: the two are the only readings in the arena that are not this
+					     fight, so they left together and it is on the card the account is, at the end
+					     away from the face. It stood at the end of the score banner in the head before
+					     that, which is the same end of the same block, one row up. -->
+					<CombatPlayerBadge
+						classes="pointer-events-auto mx-auto w-1/2 rounded-b-lg bg-base-100/50"
+						canConcede={!!state && !state.outcome && state.phase === 'planning'}
+						over={!!state?.outcome}
+						on:concede={() => controller?.concede()}
+					>
 						<CombatFeedButton
-							classes="pointer-events-auto col-start-3 justify-self-end p-1.5"
+							slot="end"
 							buttonClasses="btn btn-outline btn-square btn-sm"
 						/>
-					</div>
+					</CombatPlayerBadge>
 				</div>
 			{/if}
 			<!-- The player's line as a list, beside the board or under it — whichever way up the
@@ -1553,23 +1549,19 @@
 				     fighter's picture below, which is the thing here with room to give. -->
 				{#if lyingDown}
 					<CombatHead {location} classes="relative shrink-0" />
-					<!-- And under it, whose side this is and the way into the feed beside it, exactly
-					     as the two stand under the head standing up: one arrangement whichever way the
-					     screen is — the account half the width and centred under a row whose two ends
-					     are the town and its holder, on that row's own surface and with its lower
-					     corners rounded, and the feed at the far end of the same row. -->
-					<div class="relative grid shrink-0 grid-cols-[1fr_50%_1fr] items-start">
-						<CombatPlayerBadge
-							classes="col-start-2 rounded-b-lg bg-base-100/50"
-							canConcede={!!state && !state.outcome && state.phase === 'planning'}
-							over={!!state?.outcome}
-							on:concede={() => controller?.concede()}
-						/>
-						<CombatFeedButton
-							classes="col-start-3 justify-self-end p-1.5"
-							buttonClasses="btn btn-outline btn-square btn-sm"
-						/>
-					</div>
+					<!-- And under it, whose side this is and the way into the feed at the end of the
+					     same card, exactly as the two stand under the head standing up: one
+					     arrangement whichever way the screen is — half the width, centred under a row
+					     whose two ends are the town and its holder, on that row's own surface, with
+					     its lower corners rounded. -->
+					<CombatPlayerBadge
+						classes="relative mx-auto w-1/2 shrink-0 rounded-b-lg bg-base-100/50"
+						canConcede={!!state && !state.outcome && state.phase === 'planning'}
+						over={!!state?.outcome}
+						on:concede={() => controller?.concede()}
+					>
+						<CombatFeedButton slot="end" buttonClasses="btn btn-outline btn-square btn-sm" />
+					</CombatPlayerBadge>
 				{/if}
 				{#if shownRow}
 					<!-- The card is **the three lines saying what an order does, and nothing else**.

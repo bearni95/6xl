@@ -74,80 +74,91 @@
 	     with, because this row is a face on a bar of its own rather than a cell of one — an
 	     avatar flush against the edges of the paint under it reads as a picture that has been
 	     cropped by the plate. -->
-	<div class={classNames('grid p-2.5', classes)}>
-		<!-- The account, and the press. The whole block is the target: there is one thing to do
-		     here and the block is the thing to press, which is the same reading the map's own
-		     row is pressed under. It says nothing about what the press does — the account is
-		     what is drawn, and what it turns into is the answer. -->
-		<button
-			type="button"
-			class={classNames(
-				'col-start-1 row-start-1 w-full cursor-pointer text-left transition-opacity duration-200',
-				conceding && 'pointer-events-none opacity-0'
-			)}
-			inert={conceding || undefined}
-			on:click={() => (conceding = true)}
-		>
-			<!-- Bare: the room round it is the box's own (above), one padding for both faces of
-			     this cell, so the plate's own would be a second one inside it. -->
-			<CombatHost
-				name={$profile.username || $_('profile.username.none')}
-				characterId={$profile.avatarCharacterId}
-				color={$profile.avatarColor}
-				level={$profile.level}
-				plated={false}
-			/>
-		</button>
-		<!-- The way back from the question, and then the way out of the fight. In that order,
-		     the harmless one nearest the edge the row is read from: this is a question the block
-		     asked without being asked to, so the answer that undoes it is the one under the hand
-		     first, and the destructive one is the one that has to be reached past it.
-		     Two marks and no words. The flag is the head's own (`lorc/flying-flag`, white on
-		     red), so giving up is one picture wherever the arena offers it — this is a second way
-		     to reach that order and not a second control — and the cross is what this game closes
-		     anything with. Both carry the catalogue's own wording as their label, said to a
-		     screen reader and to a pointer resting on them, which is where the words went rather
-		     than off the screen.
-		     The way back is outlined and the way out is filled: one of the two is a thing that
-		     happens and the other is the absence of it, and a filled shape beside an outlined one
-		     says which is which before either is read. Yellow for it, the one colour here that is
-		     neither the fight's two sides nor the red of the thing it undoes.
-		     Between turns only for the flag, exactly as the head's is: a turn already being
-		     carried out settles itself. The way back is never held shut — whatever the fight is
-		     doing, a player who opened this by mistake may close it. -->
-		<div
-			class={classNames(
-				'col-start-1 row-start-1 flex w-fit gap-2 transition-opacity duration-200',
-				!conceding && 'pointer-events-none opacity-0'
-			)}
-			inert={!conceding || undefined}
-		>
+	<div class={classNames('flex items-center gap-2 p-2.5', classes)}>
+		<!-- The account and everything it turns into, in one cell that takes the width, with
+		     whatever the caller hangs on the far end of the card standing after it (`end`). A
+		     slot rather than a prop, and outside the press rather than inside it: a button
+		     inside a button is not markup a browser will keep, and what goes there is the
+		     caller's business — in the arena it is the way into the feed of fights finishing
+		     elsewhere, which is the other reading in there that is not this fight. -->
+		<div class="grid min-w-0 flex-1">
+			<!-- The account, and the press. The whole block is the target: there is one thing to do
+			     here and the block is the thing to press, which is the same reading the map's own
+			     row is pressed under. It says nothing about what the press does — the account is
+			     what is drawn, and what it turns into is the answer. -->
 			<button
 				type="button"
-				class="btn btn-outline btn-warning btn-square btn-sm"
-				title={$_('common.cancel')}
-				aria-label={$_('common.cancel')}
-				on:click={() => (conceding = false)}
+				class={classNames(
+					'col-start-1 row-start-1 w-full cursor-pointer text-left transition-opacity duration-200',
+					conceding && 'pointer-events-none opacity-0'
+				)}
+				inert={conceding || undefined}
+				on:click={() => (conceding = true)}
 			>
-				<!-- An inline cross, drawn in the document like the panel's own arrows, so it takes
-				     its colour from the button it stands in — which is the whole of what an outlined
-				     button is: its own ink on nothing. -->
-				<svg viewBox="0 0 24 24" fill="currentColor" class="size-4" aria-hidden="true">
-					<path
-						d="M18.3 5.71 12 12.01l-6.3-6.3-1.41 1.41 6.3 6.3-6.3 6.3 1.41 1.41 6.3-6.3 6.3 6.3 1.41-1.41-6.3-6.3 6.3-6.3z"
-					/>
-				</svg>
+				<!-- Bare: the room round it is the box's own (above), one padding for both faces of
+				     this cell, so the plate's own would be a second one inside it. -->
+				<CombatHost
+					name={$profile.username || $_('profile.username.none')}
+					characterId={$profile.avatarCharacterId}
+					color={$profile.avatarColor}
+					level={$profile.level}
+					plated={false}
+				/>
 			</button>
-			<button
-				type="button"
-				class="btn border-red-500 bg-red-500 text-white btn-square btn-sm"
-				disabled={!canConcede}
-				title={$_('combat.concede')}
-				aria-label={$_('combat.concede')}
-				on:click={() => dispatch('concede')}
+			<!-- The way back from the question, and then the way out of the fight. In that order,
+			     the harmless one nearest the edge the row is read from: this is a question the block
+			     asked without being asked to, so the answer that undoes it is the one under the hand
+			     first, and the destructive one is the one that has to be reached past it.
+			     Two marks and no words. The flag is the head's own (`lorc/flying-flag`, white on
+			     red), so giving up is one picture wherever the arena offers it — this is a second way
+			     to reach that order and not a second control — and the cross is what this game closes
+			     anything with. Both carry the catalogue's own wording as their label, said to a
+			     screen reader and to a pointer resting on them, which is where the words went rather
+			     than off the screen.
+			     The way back is outlined and the way out is filled: one of the two is a thing that
+			     happens and the other is the absence of it, and a filled shape beside an outlined one
+			     says which is which before either is read. Yellow for it, the one colour here that is
+			     neither the fight's two sides nor the red of the thing it undoes.
+			     Between turns only for the flag, exactly as the head's is: a turn already being
+			     carried out settles itself. The way back is never held shut — whatever the fight is
+			     doing, a player who opened this by mistake may close it. -->
+			<div
+				class={classNames(
+					'col-start-1 row-start-1 flex w-fit gap-2 transition-opacity duration-200',
+					!conceding && 'pointer-events-none opacity-0'
+				)}
+				inert={!conceding || undefined}
 			>
-				<GameGlyph name="lorc/flying-flag" classes="[&>svg]:size-5" />
-			</button>
+				<button
+					type="button"
+					class="btn btn-outline btn-warning btn-square btn-sm"
+					title={$_('common.cancel')}
+					aria-label={$_('common.cancel')}
+					on:click={() => (conceding = false)}
+				>
+					<!-- An inline cross, drawn in the document like the panel's own arrows, so it takes
+					     its colour from the button it stands in — which is the whole of what an outlined
+					     button is: its own ink on nothing. -->
+					<svg viewBox="0 0 24 24" fill="currentColor" class="size-4" aria-hidden="true">
+						<path
+							d="M18.3 5.71 12 12.01l-6.3-6.3-1.41 1.41 6.3 6.3-6.3 6.3 1.41 1.41 6.3-6.3 6.3 6.3 1.41-1.41-6.3-6.3 6.3-6.3z"
+						/>
+					</svg>
+				</button>
+				<button
+					type="button"
+					class="btn border-red-500 bg-red-500 text-white btn-square btn-sm"
+					disabled={!canConcede}
+					title={$_('combat.concede')}
+					aria-label={$_('combat.concede')}
+					on:click={() => dispatch('concede')}
+				>
+					<GameGlyph name="lorc/flying-flag" classes="[&>svg]:size-5" />
+				</button>
+			</div>
 		</div>
+		<!-- The far end of the card: whatever the caller hangs there, standing after the account
+		     and outside the press it is. -->
+		<slot name="end" />
 	</div>
 {/if}
