@@ -2440,6 +2440,7 @@
 		if (!town) return [];
 		const standingIn = restoreCatalanArticle(findNode(nodes, town)?.name ?? '');
 		return (teams.get(town) ?? []).map((member) => ({
+			characterId: member.characterId,
 			label: charactersById.get(member.characterId)?.label ?? member.characterId,
 			basePath: charactersById.get(member.characterId)?.basePath ?? null,
 			color: member.color,

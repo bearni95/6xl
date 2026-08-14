@@ -54,6 +54,7 @@
 		type CombatColor
 	} from '$types/character-definition.type';
 	import { characters as availableCharacters } from '@3xl/data';
+	import { charactersById } from '$services/characters';
 	import { authService } from '$services/auth.service';
 	import { openSignIn } from '$services/signInModal';
 	import { openRoster } from '$services/roster';
@@ -165,8 +166,6 @@
 	// speaks of them.
 	const ACTION_ICONS: Record<CombatAction, string> = ORDER_ICONS;
 
-	const characterById = new Map(availableCharacters.map((option) => [option.id, option]));
-
 	// The blue side is the player's team; the red side (the CPU) either mirrors it or,
 	// in a challenge, fields the supplied OG team. Both draw from the player's one
 	// team — there is no in-board picker.
@@ -276,7 +275,7 @@
 		spawns: Map<string, CharacterSpawn>
 	): BoardCharacter {
 		const spawn = spawns.get(spawnId);
-		const option = (spawn && characterById.get(spawn.characterId)) ?? availableCharacters[0];
+		const option = (spawn && charactersById.get(spawn.characterId)) ?? availableCharacters[0];
 		return {
 			id: instanceId(side, spawnId),
 			basePath: option.basePath,
@@ -736,7 +735,15 @@
 				const faceFile = definition?.face || manifest?.face?.file || null;
 				return {
 					...entry,
-					name: manifest?.name ?? '',
+					// What the fight calls this fighter, which is what the narration letters over
+					// every encounter it is in: the registry's label — the name the admin gave the
+					// character on `/characters`, and the name every card in the game already wears
+					// — and not the manifest's, which is whatever the MUGEN archive was shipped
+					// under and is a different word for the same fighter (`Piccolo` where the game
+					// says Cor Petit). The archive's own name is kept as the fallback: it is a
+					// better thing to read mid-fight than the id of a character the registry no
+					// longer holds.
+					name: charactersById.get(characterId)?.label ?? manifest?.name ?? '',
 					face: faceFile ? `${entry.basePath}/${faceFile}` : null,
 					moves: definition?.moves ?? [],
 					color

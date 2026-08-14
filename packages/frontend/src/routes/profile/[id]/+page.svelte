@@ -712,6 +712,7 @@
 							gives, since the ones already standing are mounted and never ask again. -->
 						{#each visible as card}
 							<CharacterStatue
+								characterId={card.characterId}
 								label={card.label}
 								basePath={card.basePath}
 								color={card.color}

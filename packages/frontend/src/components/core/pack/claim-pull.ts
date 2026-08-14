@@ -1,5 +1,5 @@
-import { characters } from '@3xl/data';
 import { resolveCharacterFaceUrl } from '$utils/mugen/character-face';
+import { charactersById, characterLabel } from '$services/characters';
 import { spawnKey } from '$utils/spawn/owned';
 import { claimMintedAt } from '$utils/spawn/team-lineup';
 import type { CharacterSpawn } from '$types/character-spawn.type';
@@ -19,14 +19,9 @@ import type { ClaimPull } from './scene/pull.type';
 // player is given on arriving. Two copies of this would be two answers to what a card
 // looks like, differing first in some small way and then in a visible one.
 
-/** The registry by id — what a card's label and sprite folder are looked up in. */
-export const charactersById = new Map(characters.map((character) => [character.id, character]));
-
-/** A character's display name, falling back to its id: an archive that no longer holds a
- * character must not take the card off the screen with it. */
-export function characterLabel(id: string): string {
-	return charactersById.get(id)?.label ?? id;
-}
+// The registry by id and the name it answers with live in `$services/characters` — a card
+// and a fight and a statue all ask the same question of it, so there is one place asked.
+export { charactersById, characterLabel };
 
 /** Everything about a pull that is not on the spawn itself. */
 export interface ClaimPullContext {

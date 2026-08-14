@@ -37,6 +37,7 @@
 	// same grounds — a side that was never pulled out of anything is printed black, the
 	// statue's own default and what the commoner box is.
 	export let members: {
+		characterId: string;
 		label: string;
 		basePath: string | null;
 		color: SpawnColor;
@@ -402,6 +403,7 @@
 				</div>
 			{:else}
 				{@const statue = {
+					characterId: cell.member.characterId,
 					label: cell.member.label,
 					basePath: cell.member.basePath,
 					color: cell.member.color,

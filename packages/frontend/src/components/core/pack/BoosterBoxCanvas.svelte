@@ -99,6 +99,7 @@
 	/** One pull as the row draws a member: the card itself, minus everything only the claim
 	 * cared about. */
 	const toMember = (pull: ClaimPull) => ({
+		characterId: pull.spawn.characterId,
 		label: pull.label,
 		basePath: pull.basePath,
 		color: pull.color,

@@ -325,6 +325,7 @@
 		_shows: Map<string, { id: number; name: string }[]>
 	) {
 		return {
+			characterId: spawn.characterId,
 			label: labelFor(spawn.characterId),
 			basePath: basePathFor(spawn.characterId),
 			color: spawn.color,
@@ -755,6 +756,7 @@
 								on:click={() => handleCardTap(copy)}
 							>
 								<CharacterStatue
+									characterId={statue.characterId}
 									label={statue.label}
 									basePath={statue.basePath}
 									color={statue.color}

@@ -79,6 +79,9 @@ describe('teamLineupMembers', () => {
 		);
 
 		expect(member).toEqual({
+			// Carried through so the statue can letter itself off the registry rather than off
+			// whatever name the surface standing it up happens to hold.
+			characterId: 'luffy',
 			label: 'Monkey D. Luffy',
 			basePath: '/assets/luffy',
 			color: SpawnColor.Red,

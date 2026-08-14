@@ -357,6 +357,7 @@
 					{#each albumCells as cell (cell.key)}
 						<div class={classNames({ 'opacity-50': !cell.owned })}>
 							<CharacterStatue
+								characterId={cell.character.id}
 								label={cell.character.label}
 								basePath={cell.character.basePath}
 								showId={cell.showId}

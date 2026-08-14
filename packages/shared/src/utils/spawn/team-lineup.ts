@@ -15,6 +15,10 @@ import restoreCatalanArticle from '../string/restore-catalan-article';
  * assignment the claim roll already reads.
  */
 export interface TeamLineupMember {
+	/** Which character it is. The statue letters itself off this — a name is the
+	 * registry's answer to an id and not something a line-up decides — so `label` beside
+	 * it is only what to say where the registry no longer holds the character. */
+	characterId: string;
 	label: string;
 	basePath: string | null;
 	color: SpawnColor;
@@ -122,6 +126,7 @@ export function teamLineupMembers(
 	return spawns.map((spawn) => {
 		const character = context.characters.get(spawn.characterId);
 		return {
+			characterId: spawn.characterId,
 			label: character?.label ?? spawn.characterId,
 			basePath: character?.basePath ?? null,
 			color: spawn.color,

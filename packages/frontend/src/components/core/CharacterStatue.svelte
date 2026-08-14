@@ -7,6 +7,7 @@
 	import { forShow } from '$utils/show/show-icon';
 	import { showGlyphs } from '$services/shows.service';
 	import { SPAWN_FILL_CLASSES } from '$components/core/spawn-colors';
+	import { charactersById } from '$services/characters';
 	import { SpawnBox, type SpawnColor } from '$types/character-spawn.type';
 
 	// One character, as this game draws one: a statue of them — standing on a tilted
@@ -28,6 +29,16 @@
 	// width out on the map — the difference between those surfaces is the width they hand
 	// this statue, never a second drawing of the same thing.
 
+	// Which character this is a statue of. What the panel letters is read off the registry
+	// from it — the label the admin set on `/characters`, which is the name this game calls
+	// that character by — rather than taken from whoever stood the card up. A surface holds
+	// a `character_spawns` row, and a row holds an id: passing the id and having the card
+	// name itself is what keeps a statue from ever being lettered `piccolo`, or `Piccolo`,
+	// where the game says Cor Petit.
+	export let characterId: string | null = null;
+	// What to letter it when there is no character id, or none the registry still holds —
+	// the caller's own reading of the same question, and the last thing standing between an
+	// archive that dropped a character and a card with nothing written on it.
 	export let label: string = '';
 	export let basePath: string | null = null;
 	// The colour this copy bends — the whole of what one claimed card brings to a fight that
@@ -214,6 +225,11 @@
 	// picture and the reading below it are the same thing.
 	$: fill = color ? SPAWN_FILL_CLASSES[color] : 'bg-zinc-800';
 
+	// The name on the panel, and the one the sprite is announced under: the registry's,
+	// then the caller's. `characterId` is named directly so the statement re-runs when a
+	// cell is handed a different character.
+	$: name = (characterId ? charactersById.get(characterId)?.label : null) ?? label;
+
 	$: showIcon = forShow($showGlyphs, showId);
 
 	// The gazetteer files the towns come from park the article after a comma to sort by
@@ -269,7 +285,7 @@
 				character arrives is that the colour stops being square. -->
 			<IdleSprite
 				{basePath}
-				{label}
+				label={name}
 				{flipped}
 				{alwaysReveal}
 				{veiled}
@@ -333,9 +349,9 @@
 				'truncate px-1 py-0.5 text-center text-sm font-semibold',
 				stock.rowName
 			)}
-			title={label}
+			title={name}
 		>
-			{label}
+			{name}
 		</div>
 		{#if caption || mark}
 			<!-- The place and the year it was minted share the row: the town gives way first,

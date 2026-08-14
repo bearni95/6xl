@@ -321,6 +321,7 @@
 											says instead is when its picture is up, which is what the box is waiting to
 											hear. -->
 										<CharacterStatue
+											characterId={pull.spawn.characterId}
 											label={pull.label}
 											basePath={pull.basePath}
 											color={pull.color}

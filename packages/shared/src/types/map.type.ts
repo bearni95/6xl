@@ -122,6 +122,7 @@ export interface MapMarker {
 	 * terrain of cards with no map left under it. Absent or empty means the same thing.
 	 */
 	team?: {
+		characterId: string;
 		label: string;
 		basePath: string | null;
 		color: SpawnColor;
