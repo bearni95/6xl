@@ -1185,11 +1185,19 @@ export function ensureTables(): Promise<void> {
 					-- The avatar travels as the pair that IS one (see player_profiles), so
 					-- the pin draws the same face the profile card does, and a player who
 					-- changes either is changed on every town they hold.
+					--
+					-- exp travels with them, and only so the level can be worked out from
+					-- it: the band a holder's side flies names them the way every other
+					-- surface in the game does, name and level together (see TeamLineup).
+					-- The level is never stored anywhere — it is levelForExp(exp) wherever
+					-- it is read — so the experience is what has to travel. It publishes
+					-- nothing new: player_profiles_public already serves that column for
+					-- every account to the whole world.
 					create or replace view municipality_holders_public
 						with (security_invoker = false) as
 						select h.location_id, h.user_id, n.username as holder_name,
 								h.team, h.turnover, h.taken_at,
-								n.avatar_character_id, n.avatar_color
+								n.avatar_character_id, n.avatar_color, n.exp
 						from municipality_holders h
 						left join player_profiles n on n.user_id = h.user_id;
 					grant select on municipality_holders_public to anon, authenticated;
