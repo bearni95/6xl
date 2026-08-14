@@ -1169,13 +1169,15 @@
 		     flow and laid on the board's top edge, the board keeping the whole box and the
 		     middle of it (`sm:` and up: `absolute`, and this centring the canvas alone). On a
 		     phone the board is limited by the width instead — a view far narrower than the
-		     field is deep, which leaves a band of nothing above and below it — so the head is
-		     left in the flow, and with it the orders, and the three of them are spread down the whole
-		     height of the view: the head at the top, the fighters' rows at the foot under the
-		     thumb that presses them, and the board in what is left between the two. Whatever
-		     room the screen turns out to have goes into the two gaps rather than into a band
-		     under everything, and each of the three keeps the end of the view it belongs to on
-		     a tall phone and a short one alike.
+		     field is deep, which leaves a band of nothing above and below it — so the board and
+		     the panel under it are held to the **foot** of the view (`justify-end`) and the
+		     whole of the room left over is the sky above the fight. The panel is as tall as what
+		     it has to say and no taller (below), where it used to be the item that grew into
+		     everything the board did not want: a plate stretched down a third of a phone to hold
+		     three lines of text, with its own emptiness under them. Sky is the one thing here
+		     that is worth nothing per pixel, so it is what takes the slack — the board keeps its
+		     size either way, being fitted to the width, and the fight and the thing that answers
+		     for it stay together under the thumb.
 		     Which end of the width the board takes changes with the same thing. Standing up the
 		     board is the whole width and there is no end to take. Lying down the width is what
 		     is left over, and the whole of it goes to the orders in one piece rather than being
@@ -1184,7 +1186,7 @@
 		     past its right one (below). The bands beside a centred board were the room the
 		     orders wanted, and half of it was on the wrong side of them. -->
 		<div
-			class="relative isolate flex h-full w-full flex-col items-center justify-between sm:justify-center landscape:items-start"
+			class="relative isolate flex h-full w-full flex-col items-center justify-end sm:justify-center landscape:items-start"
 		>
 			<!-- The sky, which is the page's and not the canvas's: the board's top row and the
 			     gaps in the fringe the field starts with are drawn on nothing at all, so what
@@ -1462,15 +1464,18 @@
 			     stood on a row of their own above the orders (see the markup, where what they
 			     were and why they went is written out). The consequence is that an order given
 			     stands for the turn it was given in.
-			     Standing up it takes whatever the board leaves and not a fixed height of its own:
-			     the canvas is `min(100vw, 100dvh × aspect)` and on a phone the width is what runs
-			     out, so what is under the board is however much of the view a board that shape did
-			     not need. The panel is the flex item that grows into it, the head and the board
-			     being sized by what is in them, so nothing between the foot of the board and the
-			     foot of the screen goes spare. `min-h-0` so that on a view with nothing left over
-			     the panel yields rather than pushing the board off the bottom. Lying down none of
-			     that applies: the panel is out of the flow, and the height it is drawn at is the
-			     view's.
+			     Standing up it is **as tall as what is in it** and nothing more. The canvas is
+			     `min(100vw, 100dvh × aspect)` and on a phone the width is what runs out, so a
+			     board that shape leaves a good part of the view over — and this used to be the
+			     flex item that grew into all of it, which meant a plate a third of a phone tall
+			     carrying an account and three lines of text with its own emptiness under them.
+			     The room goes to the sky above the board instead (`justify-end` on the sheet), so
+			     what is spare is drawn as the thing it is rather than as an oversized plate, and
+			     the fight and the panel that answers for it stay together at the end of the view
+			     the thumb is at. `min-h-0` so that on a view with nothing to spare the panel
+			     yields rather than pushing the board off the bottom. Lying down none of that
+			     applies: the panel is out of the flow and the height it is drawn at is the view's,
+			     which is what `landscape:flex-1` hands on to the card inside it.
 			     Which fighter it is turned to is said on the board rather than here — that
 			     fighter, and no other, walks on the spot on its own cell while it is waiting to be
 			     told something, with its own three orders standing in its lane (see `syncPacing`). So the
@@ -1495,7 +1500,7 @@
 			     board and its top edge is the top of the view, which is an edge of the screen and
 			     takes the padding back (`landscape:pt-3`). -->
 			<div
-				class="relative flex min-h-0 w-full flex-1 flex-col gap-3 p-3 pt-0 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:left-[calc(8*min(100vw/8,100dvh/11))] landscape:w-auto landscape:pt-3"
+				class="relative flex min-h-0 w-full flex-col gap-3 p-3 pt-0 landscape:absolute landscape:inset-y-0 landscape:right-0 landscape:left-[calc(8*min(100vw/8,100dvh/11))] landscape:w-auto landscape:flex-1 landscape:pt-3"
 			>
 				<!-- What the band stands on: the board's own ground, carried on into the document
 				     past the last row the canvas had room to draw. It is laid under the whole of
@@ -1525,10 +1530,22 @@
 					<CombatHead {location} classes="relative shrink-0" />
 				{/if}
 				{#if shownRow}
+					<!-- The card is a **column of what it holds**, standing up: the account's row and,
+					     under it, the three lines saying what an order does. Both stood out of the flow
+					     while the card was stretched down the view by `flex-1` — there was room to pin
+					     things to the corners and the middle of — and a card whose every child is
+					     absolute has no content to be the height of, which is the whole of why they
+					     are in the flow now. Lying down it still takes the height of the panel
+					     (`landscape:flex-1`), the panel there being the full side of the view.
+					     `gap-2` is the whole of the spacing between the two, which is what makes the
+					     card the sum of its own parts and nothing else. -->
 					<div
-						class={classNames('relative min-h-0 flex-1 rounded-box bg-base-100/80 p-2 shadow-xl', {
-							'pointer-events-none opacity-50': panelLocked
-						})}
+						class={classNames(
+							'relative flex flex-col gap-2 rounded-box bg-base-100/80 p-2 shadow-xl landscape:min-h-0 landscape:flex-1',
+							{
+								'pointer-events-none opacity-50': panelLocked
+							}
+						)}
 					>
 						<!-- Whose side this is, at the corner of the panel that fields it: the same three
 						     facts the head says about the player holding the town, said about the player
@@ -1544,9 +1561,10 @@
 						     everywhere else.
 						     No plate: this is inside one already, and a plate on a plate is a second edge
 						     round a thing that has one. The face leads the reading, since the corner
-						     it stands in is the near one. Laid over the panel rather than standing in it
-						     (`absolute`), so it holds its own corner whatever height the card is drawn
-						     at — the same reason the guide is laid across the middle of it.
+						     it stands in is the near one. It **stands in** the card rather than being laid
+						     over it: the card is as tall as what is in it now, so a row pinned to the top
+						     corners would have been height the card could not see and the three lines
+						     under it would have been drawn straight through the account.
 						     The row is three columns wide, the account in the first of them and the way
 						     into the feed in the last (below), the middle one standing empty. It is not
 						     a shrink-to-fit block any
@@ -1558,7 +1576,7 @@
 						     The row itself is drawn whether or not there is an account to name in it:
 						     the two corners are two different readings that happen to share a row, and
 						     the feed is not about who is playing. -->
-						<div class="absolute inset-x-2 top-2 z-10 grid grid-cols-3 gap-2">
+						<div class="relative z-10 grid shrink-0 grid-cols-3 gap-2">
 							{#if $profile}
 								<!-- The one cell that holds anything, and it holds both faces of it at once:
 								     the account, and the way out the account is pressed for. They are stacked
@@ -1679,19 +1697,22 @@
 						     What the panel is for now is the one thing neither column of glyphs can say —
 						     what pressing one of them does — which is exactly what a player who has just
 						     arrived is short of.
-						     **Centred in the card, not pinned to its foot.** It is the whole of what the
-						     panel says while a turn is being planned, and a block held to the bottom edge
-						     left the card empty above it and read as a footnote to nothing. The middle is
-						     where the narration stands over this very card, and the two are the same
-						     voice in the same place, one turn apart — the account keeps the top corner
-						     and nothing else is on the plate.
-						     Only while there is something to plan: it is an explanation of a choice, and
-						     while the turn is being carried out there is no choice on the panel to
-						     explain. The card is faded through all of that anyway, and what is read over
-						     it then is the narration. -->
-						{#if !panelLocked}
-							<CombatOrderGuide classes="absolute inset-x-2 top-1/2 -translate-y-1/2" />
-						{/if}
+						     **It is what the card is the height of.** The three lines stand in the flow
+						     under the account's row and *are* the card's height standing up, the card
+						     being the sum of what it holds. `my-auto` is what centres them in the room
+						     left over lying down, where the card is stretched down the whole side of the
+						     view and there is a great deal of it; standing up there is none left over and
+						     the same class does nothing. It was pinned across the middle of a stretched
+						     plate until the plate stopped being stretched.
+						     **Hidden while a turn plays out rather than taken down.** It explains a choice
+						     and there is no choice on the panel while the turn is being carried out — but
+						     unmounting it would take its height with it, and the panel is what the board
+						     is stood on top of, so the fight would shift down the view at every reveal and
+						     back up at every commit. `invisible` keeps the room and takes the ink, which
+						     is what the narration is then drawn over. -->
+						<CombatOrderGuide
+							classes={classNames('my-auto', { invisible: panelLocked })}
+						/>
 					</div>
 				{/if}
 				<!-- What the fight is saying about the encounter being played out, laid across the
