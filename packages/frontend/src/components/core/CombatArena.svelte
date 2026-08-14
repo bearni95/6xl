@@ -1403,15 +1403,36 @@
 					     value rather than a second one kept in step with it. Centred and not ranged to
 					     an edge, because it is not about either end of the row above — the town is at
 					     one end and its holder at the other, and the account answering for both stands
-					     on the seam the two meet at.
-					     It takes the pointer back off the block round it — the head is a reading and
-					     this is pressed. -->
-					<CombatPlayerBadge
-						classes="pointer-events-auto mx-auto w-1/2 bg-base-100/50"
-						canConcede={!!state && !state.outcome && state.phase === 'planning'}
-						over={!!state?.outcome}
-						on:concede={() => controller?.concede()}
-					/>
+					     on the seam the two meet at. Three columns and the middle one half the width,
+					     spelled as the head spells its own (`grid-cols-[1fr_50%_1fr]`), so the centring
+					     is the grid's and holds whatever stands in the columns either side.
+					     **Its lower corners are rounded** and its upper ones are not: it hangs off the
+					     bar above rather than standing on its own, and the two corners it shares with
+					     that bar are no corners at all.
+					     Each cell takes the pointer back off the block round it — the head is a reading
+					     and both of these are pressed. -->
+					<div class="grid grid-cols-[1fr_50%_1fr] items-start">
+						<CombatPlayerBadge
+							classes="pointer-events-auto col-start-2 rounded-b-lg bg-base-100/50"
+							canConcede={!!state && !state.outcome && state.phase === 'planning'}
+							over={!!state?.outcome}
+							on:concede={() => controller?.concede()}
+						/>
+						<!-- How many fights have finished everywhere else while this one has been going
+						     on, and the sheet that reads them out (see CombatFeedButton, which draws
+						     nothing until one has). It stood at the top corner of the panel at the foot
+						     of the view, which is where the account was: the two are the only readings
+						     in the arena that are not this fight, so they left together and this takes
+						     the far end of the very row the account is centred in. It stood at the end
+						     of the score banner in the head before that, which is the same end of the
+						     same bar, one row up.
+						     Held against the far edge of its own column, so it is the corner of the
+						     block and not a mark somewhere along it. -->
+						<CombatFeedButton
+							classes="pointer-events-auto col-start-3 justify-self-end p-1.5"
+							buttonClasses="btn btn-outline btn-square btn-sm"
+						/>
+					</div>
 				</div>
 			{/if}
 			<!-- The player's line as a list, beside the board or under it — whichever way up the
@@ -1532,28 +1553,34 @@
 				     fighter's picture below, which is the thing here with room to give. -->
 				{#if lyingDown}
 					<CombatHead {location} classes="relative shrink-0" />
-					<!-- And under it, whose side this is, exactly as it stands under the head standing
-					     up: one arrangement of the two accounts whichever way the screen is — half the
-					     width, centred under a row whose two ends are the town and its holder, and on
-					     that row's own surface, so the two read as one block of chrome rather than as
-					     a bar with something loose under it. -->
-					<CombatPlayerBadge
-						classes="relative mx-auto w-1/2 shrink-0 bg-base-100/50"
-						canConcede={!!state && !state.outcome && state.phase === 'planning'}
-						over={!!state?.outcome}
-						on:concede={() => controller?.concede()}
-					/>
+					<!-- And under it, whose side this is and the way into the feed beside it, exactly
+					     as the two stand under the head standing up: one arrangement whichever way the
+					     screen is — the account half the width and centred under a row whose two ends
+					     are the town and its holder, on that row's own surface and with its lower
+					     corners rounded, and the feed at the far end of the same row. -->
+					<div class="relative grid shrink-0 grid-cols-[1fr_50%_1fr] items-start">
+						<CombatPlayerBadge
+							classes="col-start-2 rounded-b-lg bg-base-100/50"
+							canConcede={!!state && !state.outcome && state.phase === 'planning'}
+							over={!!state?.outcome}
+							on:concede={() => controller?.concede()}
+						/>
+						<CombatFeedButton
+							classes="col-start-3 justify-self-end p-1.5"
+							buttonClasses="btn btn-outline btn-square btn-sm"
+						/>
+					</div>
 				{/if}
 				{#if shownRow}
-					<!-- The card is a **column of what it holds**, standing up: the account's row and,
-					     under it, the three lines saying what an order does. Both stood out of the flow
-					     while the card was stretched down the view by `flex-1` — there was room to pin
-					     things to the corners and the middle of — and a card whose every child is
-					     absolute has no content to be the height of, which is the whole of why they
-					     are in the flow now. Lying down it still takes the height of the panel
-					     (`landscape:flex-1`), the panel there being the full side of the view.
-					     `gap-2` is the whole of the spacing between the two, which is what makes the
-					     card the sum of its own parts and nothing else. -->
+					<!-- The card is **the three lines saying what an order does, and nothing else**.
+					     They stood out of the flow while it was stretched down the view by `flex-1` —
+					     there was room to pin things to the corners and the middle of — and a card
+					     whose every child is absolute has no content to be the height of, which is the
+					     whole of why they are in the flow now. The account and the way into the feed
+					     that used to head it are both up at the top of the view with the rest of what
+					     is not this fight; what is left is the one thing here that is about the fight,
+					     and the card is the size of it. Lying down it still takes the height of the
+					     panel (`landscape:flex-1`), the panel there being the full side of the view. -->
 					<!-- It is **not faded** while a turn is being carried out. It was, and what the
 					     fade was for is gone with the buttons: a plate of orders greyed out says they
 					     cannot be given, where an account and three lines of text are as true mid-turn
@@ -1569,17 +1596,6 @@
 							}
 						)}
 					>
-						<!-- How many fights have finished everywhere else while this one has been going
-						     on, and the sheet that reads them out (see CombatFeedButton, which draws
-						     nothing until one has). It is the one thing left on this row: the account
-						     that stood across from it has a row of its own now, under the head of the
-						     fight, where what is said about the player is said (see CombatPlayerBadge).
-						     Held against the far edge of the card, so it is the corner of the panel and
-						     not a mark somewhere along its top. It stood at the end of the score banner
-						     in the head until that banner came off. -->
-						<div class="relative z-10 flex shrink-0 justify-end">
-							<CombatFeedButton buttonClasses="btn btn-outline btn-square btn-sm" />
-						</div>
 						<!-- What each of the three orders does, across the middle of the panel, all three
 						     at once and a line each (see CombatOrderGuide, which is the whole block).
 						     The three buttons stood here — the orders themselves, pressed to answer for

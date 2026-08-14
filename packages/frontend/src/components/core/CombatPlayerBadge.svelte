@@ -36,12 +36,13 @@
 	 * nought opacity is still a button otherwise, and the one thing that must not be
 	 * reachable by accident is the way out of a fight.
 	 *
-	 * **No surface of its own.** What it is painted on is the caller's — in the arena that is
-	 * the head's own fill, handed in as a class, since the row above and this one are one
+	 * **No surface of its own, and one padding for both faces.** What it is painted on is the
+	 * caller's — in the arena that is the head's own fill and the rounding of the corners it
+	 * does not share with the bar above, handed in as classes, since the two rows are one
 	 * block of chrome and a second value defined here would be a colour kept in step with
-	 * that one. What it *does* bring is the head's spacing: the account is plated (see
-	 * CombatHost) and the pair of buttons carries the same padding, so a press does not shift
-	 * the block it happens in.
+	 * that one. The room round what stands in it is this component's, once, on the box the
+	 * two are stacked in rather than on each of them: a padding apiece is two values that
+	 * have to agree for the block not to breathe as it is pressed.
 	 */
 
 	/** Whether giving up is a thing that can be done at this moment: between turns, in a
@@ -66,7 +67,14 @@
 </script>
 
 {#if $profile}
-	<div class={classNames('grid', classes)}>
+	<!-- The room round what is in here is **this box's**, and it is one padding rather than
+	     one per thing standing in the cell: the account and the pair of buttons it turns into
+	     are over each other, so a padding apiece is two values that have to agree for the
+	     block not to breathe as it is pressed. `p-2.5` is more than the town's card is set
+	     with, because this row is a face on a bar of its own rather than a cell of one — an
+	     avatar flush against the edges of the paint under it reads as a picture that has been
+	     cropped by the plate. -->
+	<div class={classNames('grid p-2.5', classes)}>
 		<!-- The account, and the press. The whole block is the target: there is one thing to do
 		     here and the block is the thing to press, which is the same reading the map's own
 		     row is pressed under. It says nothing about what the press does — the account is
@@ -80,16 +88,14 @@
 			inert={conceding || undefined}
 			on:click={() => (conceding = true)}
 		>
-			<!-- Plated, which here is the padding and the ink of the town's own card and no
-			     surface at all: this row stands directly under the head and on the head's own
-			     paint, so the account under the bar is set exactly as the two accounts in it
-			     are. It was bare while it stood inside the orders panel, which had a card's
-			     spacing of its own to take. -->
+			<!-- Bare: the room round it is the box's own (above), one padding for both faces of
+			     this cell, so the plate's own would be a second one inside it. -->
 			<CombatHost
 				name={$profile.username || $_('profile.username.none')}
 				characterId={$profile.avatarCharacterId}
 				color={$profile.avatarColor}
 				level={$profile.level}
+				plated={false}
 			/>
 		</button>
 		<!-- The way back from the question, and then the way out of the fight. In that order,
@@ -111,7 +117,7 @@
 		     doing, a player who opened this by mistake may close it. -->
 		<div
 			class={classNames(
-				'col-start-1 row-start-1 flex w-fit gap-2 p-1.5 transition-opacity duration-200',
+				'col-start-1 row-start-1 flex w-fit gap-2 transition-opacity duration-200',
 				!conceding && 'pointer-events-none opacity-0'
 			)}
 			inert={!conceding || undefined}
