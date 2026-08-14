@@ -33,25 +33,34 @@
 	 * reading is over the moment the eye reaches the bottom of it. Nothing here moves,
 	 * nothing is pressed, and there is no timer: the block is as tall as it will ever be from
 	 * the first frame, which is what the panel it is pinned to the foot of needs of it.
+	 *
+	 * **It is not plated.** The lines stand on the panel's own card, across the whole width
+	 * it gives them, exactly as the narration does over the middle of that same card: the
+	 * card is the plate, and a fill and an edge of their own inside it were a box drawn round
+	 * a thing that already had one.
 	 */
 	export let classes: string = '';
 </script>
 
-<!-- One plate holding the three, drawn as the fight's own narration is drawn (see
-     CombatNarration): the same plate and the same ink, because it is the same voice saying
-     the same kind of thing about the same board — what a row is doing while a turn plays
-     out, and what an order does while one is being planned. The two never stand at once:
-     the narration is up only while a turn is being carried out, and this only while one is
-     being thought about. At the narration's own size too, being read at the same distance
-     from the same plate.
-     Every line is centred in the plate on its own, mark and sentence together, rather than
-     the three being set in a pair of columns and the block of them centred: columns hold
-     the sentences to one left edge, which puts the whole reading off to one side of a plate
-     that is as wide as the panel. So each row is its own centred line here, and a sentence
-     long enough to wrap wraps centred too. -->
+<!-- The three lines and nothing round them, drawn as the fight's own narration is drawn
+     (see CombatNarration): the same ink at the same size, because it is the same voice
+     saying the same kind of thing about the same board — what a row is doing while a turn
+     plays out, and what an order does while one is being planned. The two never stand at
+     once: the narration is up only while a turn is being carried out, and this only while
+     one is being thought about.
+     **No plate of its own.** It is laid on the panel's card, which is a plate already, and
+     a second fill with a second edge and a second shadow inside that one read as a box
+     pasted onto the panel rather than as the panel talking. What kept the words off the
+     card's edge was this block's own padding; the card's is what does it now, so the three
+     lines take the whole width they are given.
+     Every line is centred on its own, mark and sentence together, rather than the three
+     being set in a pair of columns and the block of them centred: columns hold the
+     sentences to one left edge, which puts the whole reading off to one side of a block as
+     wide as the panel. So each row is its own centred line here, and a sentence long enough
+     to wrap wraps centred too. -->
 <ul
 	class={classNames(
-		'flex flex-col items-center gap-y-1 rounded-box bg-base-100/90 px-3 py-2 text-center text-xl leading-snug shadow-lg',
+		'flex w-full flex-col items-center gap-y-1 text-center text-xl leading-snug',
 		classes
 	)}
 >
