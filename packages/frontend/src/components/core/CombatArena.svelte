@@ -1546,7 +1546,7 @@
 						     round a thing that has one. The face leads the reading, since the corner
 						     it stands in is the near one. Laid over the panel rather than standing in it
 						     (`absolute`), so it holds its own corner whatever height the card is drawn
-						     at — the same reason the orders are laid along the foot of it.
+						     at — the same reason the guide is laid across the middle of it.
 						     The row is three columns wide, the account in the first of them and the way
 						     into the feed in the last (below), the middle one standing empty. It is not
 						     a shrink-to-fit block any
@@ -1668,7 +1668,7 @@
 							buttonClasses="btn btn-outline btn-square btn-sm"
 						/>
 						</div>
-						<!-- What each of the three orders does, along the foot of the panel, all three
+						<!-- What each of the three orders does, across the middle of the panel, all three
 						     at once and a line each (see CombatOrderGuide, which is the whole block).
 						     The three buttons stood here — the orders themselves, pressed to answer for
 						     the fighter the panel was turned to. They are given on the board now: the
@@ -1676,16 +1676,21 @@
 						     question is being asked (see `onBoardReady`). Two plates carrying one set of
 						     buttons was the reader looking at the answer in one place and the fight in
 						     another, and the copy that had to go was the one furthest from the board.
-						     What the foot is for now is the one thing neither column of glyphs can say —
+						     What the panel is for now is the one thing neither column of glyphs can say —
 						     what pressing one of them does — which is exactly what a player who has just
-						     arrived is short of, and exactly what the room the buttons left is the size
-						     of.
+						     arrived is short of.
+						     **Centred in the card, not pinned to its foot.** It is the whole of what the
+						     panel says while a turn is being planned, and a block held to the bottom edge
+						     left the card empty above it and read as a footnote to nothing. The middle is
+						     where the narration stands over this very card, and the two are the same
+						     voice in the same place, one turn apart — the account keeps the top corner
+						     and nothing else is on the plate.
 						     Only while there is something to plan: it is an explanation of a choice, and
 						     while the turn is being carried out there is no choice on the panel to
 						     explain. The card is faded through all of that anyway, and what is read over
-						     it then is the narration, which stands in the middle of this same plate. -->
+						     it then is the narration. -->
 						{#if !panelLocked}
-							<CombatOrderGuide classes="absolute inset-x-2 bottom-2" />
+							<CombatOrderGuide classes="absolute inset-x-2 top-1/2 -translate-y-1/2" />
 						{/if}
 					</div>
 				{/if}
@@ -1700,10 +1705,11 @@
 				     (`panelLocked`), and the narration is the thing to read at exactly that moment.
 				     It is laid over the card and takes nothing from it — no room, no pointer and
 				     none of its opacity. Written after it, so it stands on it.
-				     The middle of the panel is the one band of it that is never anything else: the
-				     account is at the top corner and the orders are along the foot, so a line here
-				     covers nothing that is read or pressed. It is gone between turns, since the cue
-				     is (see the controller's `finishTurn`).
+				     The middle of the panel is where both of the things this plate ever says are
+				     said, one turn apart: the guide while a turn is being planned and this while it
+				     is being carried out, never at once, and the account keeps the top corner
+				     whichever of them is up. So a line here covers nothing that is read or pressed.
+				     It is gone between turns, since the cue is (see the controller's `finishTurn`).
 				     The way on from each encounter is drawn there too, and pressed back into the
 				     controller: a turn is walked through a row at a time now rather than played
 				     on a timer, so the block that says what a row was is also the block that

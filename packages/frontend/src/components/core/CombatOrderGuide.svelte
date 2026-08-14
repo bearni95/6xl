@@ -6,13 +6,12 @@
 	import { COMBAT_ACTIONS } from '$services/combat.controller';
 
 	/**
-	 * What each of the three orders does, said along the foot of the player's panel while a
-	 * turn is being planned — all three at once, one line each.
+	 * What each of the three orders does, said across the middle of the player's panel while
+	 * a turn is being planned — all three at once, one line each.
 	 *
 	 * The orders themselves are given on the board now — the column standing in the lane of
-	 * the fighter being answered for — so the foot of the panel, which is where the three
-	 * buttons used to be, is free for the one thing the board cannot say: what pressing one
-	 * of them *means*. The glyph is the very mark on the button being explained
+	 * the fighter being answered for — so the panel, which is where the three buttons used to
+	 * be, is free for the one thing the board cannot say: what pressing one of them *means*. The glyph is the very mark on the button being explained
 	 * ({@link orderGlyph}), which is the whole of what ties a line to an order here: the
 	 * order is not named in words, since its name is already lettered under the pointer on
 	 * the board and a plate that says `Carrega — ` before every line is a column of labels
@@ -32,7 +31,8 @@
 	 * room one long one took, so all three stand, in the order the fight lists them, and the
 	 * reading is over the moment the eye reaches the bottom of it. Nothing here moves,
 	 * nothing is pressed, and there is no timer: the block is as tall as it will ever be from
-	 * the first frame, which is what the panel it is pinned to the foot of needs of it.
+	 * the first frame, which is what a block centred in the card needs to be — one that grew
+	 * would push off both edges at once.
 	 *
 	 * **It is not plated.** The lines stand on the panel's own card, across the whole width
 	 * it gives them, exactly as the narration does over the middle of that same card: the
