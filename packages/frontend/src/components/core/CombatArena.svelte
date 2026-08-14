@@ -1564,15 +1564,16 @@
 					</CombatPlayerBadge>
 				{/if}
 				{#if shownRow}
-					<!-- The card is **the three lines saying what an order does, and nothing else**.
-					     They stood out of the flow while it was stretched down the view by `flex-1` —
-					     there was room to pin things to the corners and the middle of — and a card
-					     whose every child is absolute has no content to be the height of, which is the
-					     whole of why they are in the flow now. The account and the way into the feed
-					     that used to head it are both up at the top of the view with the rest of what
-					     is not this fight; what is left is the one thing here that is about the fight,
-					     and the card is the size of it. Lying down it still takes the height of the
-					     panel (`landscape:flex-1`), the panel there being the full side of the view. -->
+					<!-- The card is **what the panel has to say, and nothing else**: what an order does
+					     while a turn is being planned, and what the last row came to while one is being
+					     carried out. Everything in it stood out of the flow while it was stretched down
+					     the view by `flex-1` — there was room to pin things to the corners and the
+					     middle of — and a card whose every child is absolute has no content to be the
+					     height of, which is the whole of why they are in the flow now. The account and
+					     the way into the feed that used to head it are both up at the top of the view
+					     with the rest of what is not this fight. Lying down it still takes the height of
+					     the panel (`landscape:flex-1`), the panel there being the full side of the
+					     view. -->
 					<!-- It is **not faded** while a turn is being carried out. It was, and what the
 					     fade was for is gone with the buttons: a plate of orders greyed out says they
 					     cannot be given, where an account and three lines of text are as true mid-turn
@@ -1580,9 +1581,17 @@
 					     dims the fight's own voice with it. It still takes no pointer then — there is
 					     nothing on it to answer with — but it is drawn exactly as it is the rest of the
 					     time, so nothing about the panel changes at the reveal. -->
+					<!-- **One cell, two things that are never up at once**: the guide while a turn is
+					     being planned and the narration while it is being carried out, stacked in the
+					     same grid cell (`col-start-1 row-start-1` on each) rather than laid over the
+					     card from outside. Which is what makes the card the height of whichever of
+					     them is taller, and therefore what puts the card's own padding under the way
+					     on — the narration hung over this plate absolutely for a while and took no room
+					     in it at all, so a sentence that ran to two lines pushed its button through the
+					     bottom edge and out onto the ground. -->
 					<div
 						class={classNames(
-							'relative flex flex-col gap-2 rounded-box bg-base-100/80 p-2 shadow-xl landscape:min-h-0 landscape:flex-1',
+							'relative grid rounded-box bg-base-100/80 p-2 shadow-xl landscape:min-h-0 landscape:flex-1',
 							{
 								'pointer-events-none': panelLocked
 							}
@@ -1613,43 +1622,42 @@
 						     back up at every commit. `invisible` keeps the room and takes the ink, which
 						     is what the narration is then drawn over. -->
 						<CombatOrderGuide
-							classes={classNames('my-auto', { invisible: panelLocked })}
+							classes={classNames('col-start-1 row-start-1 my-auto', {
+								invisible: panelLocked
+							})}
+						/>
+						<!-- What the fight is saying about the encounter being played out (see
+						     CombatNarration, which is the whole block). The board prints no word over any
+						     fighter, so this is where the fight is put into words: on the one plate the
+						     player is already reading, **one sentence per row of the board**, each
+						     standing for as long as that row is being played and replaced by the next
+						     row's. It is gone between turns, since the cue is (see the controller's
+						     `finishTurn`), and the guide is what the cell is the height of then.
+						     **In the card and not over it.** It hung across this plate absolutely while
+						     the plate was faded and the sentence had to stay lit through it; nothing is
+						     faded now, and a block laid over a card takes no room in it — which is
+						     exactly the room the way on needs under it. Standing in the cell, the card is
+						     as tall as the longer of the two things it can hold and its own padding falls
+						     under the button as it falls under everything else.
+						     `my-auto` centres it in the cell, which is the guide's own arrangement: the
+						     two say the same kind of thing in the same place, one turn apart.
+						     The way on from each encounter is drawn there too, and pressed back into the
+						     controller: a turn is walked through a row at a time now rather than played
+						     on a timer, so the block that says what a row was is also the block that
+						     carries the reader off it. `playing` is what puts the button up and
+						     `awaiting` is what makes it pressable — the first is the turn being carried
+						     out at all, the second is this one row having finished being shown. The card
+						     takes no pointer while a turn plays out and the button takes its own back,
+						     which is the whole of what is pressable on this plate then. -->
+						<CombatNarration
+							cue={state?.cue ?? null}
+							playing={state?.phase === 'resolving'}
+							awaiting={state?.awaiting ?? false}
+							on:next={() => controller?.next()}
+							classes="col-start-1 row-start-1 my-auto"
 						/>
 					</div>
 				{/if}
-				<!-- What the fight is saying about the encounter being played out, laid across the
-				     middle of this panel (see CombatNarration, which is the whole block). The board
-				     prints no word over any fighter, so this is where the fight is put into words:
-				     over the one plate the player is already reading, **one sentence per row of the
-				     board**, each standing for as long as that row is being played and replaced by
-				     the next row's.
-				     A sibling of the orders' card rather than something inside it: it is laid over
-				     the card and takes nothing from it — no room and no pointer — so the card is the
-				     height of what it holds and this is drawn across it whatever that turns out to
-				     be. Written after it, so it stands on it.
-				     The middle of the panel is where both of the things this plate ever says are
-				     said, one turn apart: the guide while a turn is being planned and this while it
-				     is being carried out, never at once, and the account keeps the top corner
-				     whichever of them is up. So a line here covers nothing that is read or pressed.
-				     It is gone between turns, since the cue is (see the controller's `finishTurn`).
-				     The way on from each encounter is drawn there too, and pressed back into the
-				     controller: a turn is walked through a row at a time now rather than played
-				     on a timer, so the block that says what a row was is also the block that
-				     carries the reader off it. `playing` is what puts the button up and
-				     `awaiting` is what makes it pressable — the first is the turn being carried
-				     out at all, the second is this one row having finished being shown.
-				     It carries no plate of its own — the card it is laid over is one — so it is
-				     held to that card's *content*: the panel's own padding and the card's
-				     together (`inset-x-5`), where a block that brought its own fill stood on the
-				     card's outer edge and kept the words off it itself. The sentence takes the
-				     whole of that width, so it is said as large as the panel can say it. -->
-				<CombatNarration
-					cue={state?.cue ?? null}
-					playing={state?.phase === 'resolving'}
-					awaiting={state?.awaiting ?? false}
-					on:next={() => controller?.next()}
-					classes="absolute inset-x-5 top-1/2 -translate-y-1/2"
-				/>
 			</div>
 		</div>
 	{/if}

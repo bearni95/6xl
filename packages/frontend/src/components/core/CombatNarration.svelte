@@ -53,11 +53,15 @@
 	 * from the start — text growing into a centred, balanced box would re-wrap under the eye
 	 * on every word.
 	 *
-	 * **Nothing here is plated.** The words stand directly on the panel's own card, across the
-	 * whole width they are given, because that card is the plate — a fill and a shadow of its
-	 * own inside one is a second edge round a thing that already has an edge, and it made the
-	 * sentence a caption stuck to the panel instead of the panel talking. The way on below it
-	 * is a button and stays one: it is the thing to press, not a thing to read.
+	 * **Nothing here is plated, and it stands in the card rather than over it.** The words are
+	 * drawn directly on the panel's own card, across the whole width they are given, because
+	 * that card is the plate — a fill and a shadow of its own inside one is a second edge
+	 * round a thing that already has an edge, and it made the sentence a caption stuck to the
+	 * panel instead of the panel talking. And it is in the card's flow: laid over it, this
+	 * took no room in it, so a sentence that ran long pushed the way on through the plate's
+	 * bottom edge; standing in it, the card is the height of this and its padding falls under
+	 * the button. The way on is a button and stays one: it is the thing to press, not a thing
+	 * to read.
 	 *
 	 * No line is drawn when there is no cue or the event has no line authored for it: between
 	 * turns the panel is the player's to plan on, and a plate that stayed up empty would be a
@@ -141,10 +145,10 @@
 </script>
 
 {#if line || playing || awaiting}
-	<!-- The block takes no pointer — it is laid over a panel that is pressed, and a caption
-	     is a reading, not a surface. The one thing in it that *is* pressed takes its own
-	     back. It is a stack and nothing else: no fill, no edge and no shadow, the card under
-	     it being the plate the two of them are read off. -->
+	<!-- The block takes no pointer — a caption is a reading, not a surface, and the card it
+	     stands in is what carries whatever else on this panel is pressed. The one thing in it
+	     that *is* pressed takes its own back. It is a stack and nothing else: no fill, no edge
+	     and no shadow, the card round it being the plate the two of them are read off. -->
 	<div class={classNames('pointer-events-none z-20 flex flex-col items-center gap-2', classes)}>
 		{#if line}
 			<!-- Read out as it changes as well as drawn: the narration is the one part of a turn
@@ -152,10 +156,10 @@
 			     because it arrives beat after beat and must not cut across whatever is being
 			     read. The live region is the sentence itself and not the box around it, so the
 			     button coming alive under it is not a change to be read out. -->
-			<!-- No plate of its own: it is laid across the middle of the panel's own card, which
-			     is a plate already, and a box with its own fill and its own shadow inside one was
-			     a second edge round a thing that has one — the line read as a caption pasted onto
-			     the panel rather than as the panel speaking. It stands on the whole width it is
+			<!-- No plate of its own: it stands in the panel's own card, which is a plate already,
+			     and a box with its own fill and its own shadow inside one was a second edge round
+			     a thing that has one — the line read as a caption pasted onto the panel rather
+			     than as the panel speaking. It stands on the whole width it is
 			     given rather than on as much of it as the sentence needs (`max-w-md` and a
 			     shrink-to-fit box before), so a short line and a long one are the same block in
 			     the same place and the words are as large as the room allows. -->
