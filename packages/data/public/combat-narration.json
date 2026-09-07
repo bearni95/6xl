@@ -23,7 +23,7 @@
 		"hit": [
 			"El cop de {attacker} entra i {target} cau: el carrer és seu.",
 			"{attacker} encerta de ple, {target} se'n va a terra i el terreny canvia de mans.",
-			"{target} no ho ha vist venir — {attacker} el tomba i es queda la casella.",
+			"{target} no ho ha vist venir!{attacker} el tomba",
 			"Res no atura {attacker}: {target} queda fora de combat i recula.",
 			"{attacker} obre la guàrdia de {target}, l'abat i planta els peus al mig."
 		],
@@ -36,7 +36,7 @@
 			"{one} i {other} es miren i carreguen tots dos.",
 			"Ningú no es mou: {one} i {other} passen el torn carregant.",
 			"{one} i {other} guarden el cop per al torn que ve.",
-			"Cap dels dos té pressa — {one} i {other} carreguen."
+			"Cap dels dos té pressa: {one} i {other} carreguen."
 		],
 		"bothCover": [
 			"{one} i {other} es cobreixen tots dos i no passa res.",
